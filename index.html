@@ -245,7 +245,18 @@
     #analyzePanel.show { display: block; }
     #analyzeBtn.active, #azRunBtn.primary { font-weight: 650; }
     #azKey { width: 220px; }
-    #azModel { width: 180px; min-width: 140px; }
+    #azModel { width: 260px; min-width: 180px; }
+    #azModelCustom { width: 220px; min-width: 140px; }
+    #azModelCustom.hidden { display: none; }
+    #azModelHint {
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: #f0c040;
+    }
+    #azModelHint.err { color: var(--red); }
+    #azModelHint:empty, #azModelHint.hidden { display: none; }
+    #azSwitchModel { margin-left: 8px; }
     #azStart, #azEnd, #azInterval { width: 72px; }
     .az-note { color: var(--muted); font-size: 11px; line-height: 1.45; max-width: 62em; }
     .az-note a { color: var(--accent); }
@@ -957,7 +968,8 @@
         </div>
         <div class="group">
           <span class="label">모델</span>
-          <input type="text" id="azModel" value="gemini-2.5-flash" spellcheck="false" autocomplete="off">
+          <select id="azModel" title="분석에 쓸 모델"></select>
+          <input type="text" id="azModelCustom" class="hidden" spellcheck="false" autocomplete="off" placeholder="모델 ID를 직접 입력">
         </div>
         <div class="group">
           <span class="label">API 키</span>
@@ -988,6 +1000,7 @@
       </details>
       <p class="az-note">API 키는 이 브라우저(localStorage)에만 저장되고, 요청은 해당 제공 업체로 바로 보내. 이 앱 저장소나 서버에는 올라가지 않아. 키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a> · <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI API keys</a></p>
       <div id="azStatus"></div>
+      <div id="azModelHint" class="hidden"></div>
       <div id="azPalette"></div>
       <div id="azOut"></div>
     </div>
@@ -2520,7 +2533,35 @@
         model: { gemini: "fv-az-model-gemini", openai: "fv-az-model-openai" },
         key: { gemini: "fv-az-key-gemini", openai: "fv-az-key-openai" }
       };
-      const AZ_DEFAULT_MODEL = { gemini: "gemini-2.5-flash", openai: "gpt-4o-mini" };
+      const AZ_DEFAULT_MODEL = { gemini: "gemini-3.8-flash", openai: "gpt-6-luna" };
+      const AZ_MIGRATE_MODEL = {
+        gemini: {
+          "gemini-2.5-flash": "gemini-3.8-flash",
+          "gemini-2.5-flash-lite": "gemini-3.5-flash-lite",
+          "gemini-2.5-pro": "gemini-3.8-flash"
+        },
+        openai: {}
+      };
+      const AZ_MODELS = {
+        gemini: [
+          { id: "gemini-3.8-flash", label: "gemini-3.8-flash (기본 · Flash)" },
+          { id: "gemini-4-hydrogen", label: "gemini-4-hydrogen (일상 · Gemini 4)" },
+          { id: "gemini-4-neon", label: "gemini-4-neon" },
+          { id: "gemini-4-carbon", label: "gemini-4-carbon (고성능 · 유료)" },
+          { id: "gemini-4-argon", label: "gemini-4-argon (유료)" },
+          { id: "gemini-3.6-flash", label: "gemini-3.6-flash" },
+          { id: "gemini-3.5-flash-lite", label: "gemini-3.5-flash-lite" },
+          { id: "custom", label: "직접 입력…" }
+        ],
+        openai: [
+          { id: "gpt-6-luna", label: "gpt-6-luna (기본 · 저비용 비전)" },
+          { id: "gpt-6.2-sol", label: "gpt-6.2-sol" },
+          { id: "gpt-6.2-astra", label: "gpt-6.2-astra (고성능)" },
+          { id: "gpt-4o-mini", label: "gpt-4o-mini (지원 종료 예정)" },
+          { id: "gpt-4o", label: "gpt-4o (지원 종료 예정)" },
+          { id: "custom", label: "직접 입력…" }
+        ]
+      };
       const AZ_TAINTED_MSG = "이 환경에서는 내장 프레임 픽셀을 읽을 수 없어. 분석은 GitHub Pages 같은 웹 버전에서 쓰거나, 「영상 불러오기」로 연 영상에서 할 수 있어.";
       let azMode = "current";
       let azBusy = false;
@@ -2539,15 +2580,118 @@
       }
       function azProvider() { return $("azProvider").value === "openai" ? "openai" : "gemini"; }
       function azModel() {
-        const m = ($("azModel").value || "").trim();
+        const sel = $("azModel");
+        let m = "";
+        if (sel && sel.value === "custom") m = ($("azModelCustom").value || "").trim();
+        else if (sel) m = (sel.value || "").trim();
+        if (m === "custom") m = ($("azModelCustom").value || "").trim();
         return m || AZ_DEFAULT_MODEL[azProvider()];
+      }
+      function azMigrateModel(provider, model) {
+        const map = AZ_MIGRATE_MODEL[provider] || {};
+        return map[model] || model;
+      }
+      function fillAzModelSelect(provider, selected) {
+        const sel = $("azModel");
+        const custom = $("azModelCustom");
+        const list = AZ_MODELS[provider] || AZ_MODELS.gemini;
+        const want = selected || AZ_DEFAULT_MODEL[provider];
+        sel.innerHTML = "";
+        let found = false;
+        for (let i = 0; i < list.length; i++) {
+          const opt = document.createElement("option");
+          opt.value = list[i].id;
+          opt.textContent = list[i].label;
+          sel.appendChild(opt);
+          if (list[i].id !== "custom" && list[i].id === want) found = true;
+        }
+        if (found) {
+          sel.value = want;
+          custom.value = "";
+          custom.classList.add("hidden");
+        } else {
+          sel.value = "custom";
+          custom.value = want;
+          custom.classList.remove("hidden");
+        }
+      }
+      function azApplyModel(id) {
+        const p = azProvider();
+        const mid = (id || "").trim();
+        if (!mid) return;
+        fillAzModelSelect(p, mid);
+        azSaveProviderFields();
+      }
+      function clearAzModelHint() {
+        const el = $("azModelHint");
+        if (!el) return;
+        el.innerHTML = "";
+        el.className = "hidden";
+      }
+      function suggestedModelsFromError(text) {
+        const out = [];
+        const seen = {};
+        const add = function (id) {
+          id = String(id || "").trim().replace(/[.,;:)+]+$/, "");
+          if (!id || id === "custom" || seen[id]) return;
+          if (!/^(gemini|gpt|o[1-9]|chatgpt)[-a-z0-9._]{2,80}$/i.test(id)) return;
+          if (/^(generateContent|interactions|models)$/i.test(id)) return;
+          seen[id] = 1;
+          out.push(id);
+        };
+        const s = String(text || "");
+        let m, re = /models\/([a-z0-9][a-z0-9._-]{2,80})/gi;
+        while ((m = re.exec(s))) add(m[1]);
+        re = /[`'"]((?:gemini|gpt|o[1-9]|chatgpt)[-a-z0-9._]{2,80})[`'"]/gi;
+        while ((m = re.exec(s))) add(m[1]);
+        re = /use\s+(?:models\/)?((?:gemini|gpt)[-a-z0-9._]{2,80})/gi;
+        while ((m = re.exec(s))) add(m[1]);
+        return out;
+      }
+      function isModelUnavailableError(text, status) {
+        const s = String(text || "");
+        if (status === 404) return true;
+        return /no longer available|not available to new users|is not found|not found|NOT_FOUND|unsupported model|model .* unavailable|does not exist|is deprecated/i.test(s);
+      }
+      function showAzModelHint(message, status) {
+        const el = $("azModelHint");
+        if (!el) return;
+        el.innerHTML = "";
+        if (!isModelUnavailableError(message, status)) {
+          el.className = "hidden";
+          return;
+        }
+        const current = azModel();
+        const suggested = suggestedModelsFromError(message).filter(function (id) { return id !== current; });
+        const p = document.createElement("span");
+        p.textContent = "이 모델은 더 이상 쓸 수 없거나 새 사용자에게 열려 있지 않아. 목록에서 다른 모델을 골라 봐.";
+        el.appendChild(p);
+        if (suggested.length) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.id = "azSwitchModel";
+          btn.textContent = suggested[0] + "로 바꾸고 다시 분석";
+          btn.addEventListener("click", function () {
+            azApplyModel(suggested[0]);
+            clearAzModelHint();
+            runAnalysis();
+          });
+          el.appendChild(btn);
+        }
+        el.className = "err";
       }
       function azKey() { return ($("azKey").value || "").trim(); }
 
       function azLoadSettings() {
         const p = azLsGet(AZ_LS.provider) === "openai" ? "openai" : "gemini";
         $("azProvider").value = p;
-        $("azModel").value = azLsGet(AZ_LS.model[p]) || AZ_DEFAULT_MODEL[p];
+        let model = azLsGet(AZ_LS.model[p]) || AZ_DEFAULT_MODEL[p];
+        const migrated = azMigrateModel(p, model);
+        if (migrated !== model) {
+          model = migrated;
+          azLsSet(AZ_LS.model[p], model);
+        }
+        fillAzModelSelect(p, model);
         $("azKey").value = azLsGet(AZ_LS.key[p]);
       }
       function azSaveProviderFields() {
@@ -2873,7 +3017,7 @@
           res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents: [{ role: "user", parts: parts }], generationConfig: { temperature: 0.4 } })
+            body: JSON.stringify({ contents: [{ role: "user", parts: parts }] })
           });
         } catch (e) {
           const err = new Error("네트워크 오류거나 CORS로 요청이 막혔어. 브라우저 콘솔을 확인하고, 키가 맞는지·네트워크를 봐 줘.");
@@ -2881,7 +3025,12 @@
           throw err;
         }
         const raw = await res.text();
-        if (!res.ok) throw new Error(mapHttpError(res.status, raw, "Gemini 요청"));
+        if (!res.ok) {
+          const err = new Error(mapHttpError(res.status, raw, "Gemini 요청"));
+          err.status = res.status;
+          err.body = raw;
+          throw err;
+        }
         let j;
         try { j = JSON.parse(raw); } catch (e) { throw new Error("Gemini 응답을 해석하지 못했어."); }
         const partsOut = (((j.candidates || [])[0] || {}).content || {}).parts || [];
@@ -2910,7 +3059,12 @@
           throw err;
         }
         const raw = await res.text();
-        if (!res.ok) throw new Error(mapHttpError(res.status, raw, "OpenAI 요청"));
+        if (!res.ok) {
+          const err = new Error(mapHttpError(res.status, raw, "OpenAI 요청"));
+          err.status = res.status;
+          err.body = raw;
+          throw err;
+        }
         let j;
         try { j = JSON.parse(raw); } catch (e) { throw new Error("OpenAI 응답을 해석하지 못했어."); }
         const text = ((((j.choices || [])[0] || {}).message || {}).content || "").trim();
@@ -2936,6 +3090,7 @@
         azSaveProviderFields();
         azBusy = true;
         $("azRunBtn").disabled = true;
+        clearAzModelHint();
         azSetStatus("프레임을 준비하고 분석하는 중… (" + frames.length + "장)", "loading");
         $("azOut").innerHTML = "";
         $("azPalette").innerHTML = "";
@@ -2958,7 +3113,9 @@
           azSetStatus("분석 완료 · " + frames.length + "장 · " + provider + " / " + model, "ok");
         } catch (e) {
           renderPalette(azLastPalette);
-          azSetStatus((e && e.message) ? e.message : "분석에 실패했어.", "err");
+          const msg = (e && e.message) ? e.message : "분석에 실패했어.";
+          azSetStatus(msg, "err");
+          showAzModelHint(msg, e && e.status);
         } finally {
           azBusy = false;
           $("azRunBtn").disabled = false;
@@ -4092,12 +4249,25 @@
       $("azProvider").addEventListener("change", function () {
         const p = azProvider();
         azLsSet(AZ_LS.provider, p);
-        $("azModel").value = azLsGet(AZ_LS.model[p]) || AZ_DEFAULT_MODEL[p];
+        let model = azLsGet(AZ_LS.model[p]) || AZ_DEFAULT_MODEL[p];
+        model = azMigrateModel(p, model);
+        fillAzModelSelect(p, model);
         $("azKey").value = azLsGet(AZ_LS.key[p]);
         syncAzGuide();
+        clearAzModelHint();
       });
-      $("azModel").addEventListener("change", azSaveProviderFields);
-      $("azModel").addEventListener("blur", azSaveProviderFields);
+      $("azModel").addEventListener("change", function () {
+        const custom = $("azModelCustom");
+        if ($("azModel").value === "custom") {
+          custom.classList.remove("hidden");
+          try { custom.focus(); } catch (e) {}
+        } else {
+          custom.classList.add("hidden");
+        }
+        azSaveProviderFields();
+      });
+      $("azModelCustom").addEventListener("change", azSaveProviderFields);
+      $("azModelCustom").addEventListener("blur", azSaveProviderFields);
       $("azKey").addEventListener("change", azSaveProviderFields);
       $("azKey").addEventListener("blur", azSaveProviderFields);
       $("azKeyClear").addEventListener("click", function () {
