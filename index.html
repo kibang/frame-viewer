@@ -1,0 +1,3464 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>프레임 뷰어</title>
+  <style>
+    :root {
+      --bg: #0d0d10;
+      --panel: #17171c;
+      --panel-2: #1f1f26;
+      --border: #2c2c36;
+      --text: #ecece8;
+      --muted: #9a9aa6;
+      --accent: #e8c14a;
+      --accent-dim: #8a7020;
+      --red: #ff4d4d;
+      --green: #3dcc7a;
+      --focus: #e8c14a;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+      font-size: 13px;
+      height: 100%;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+    }
+    header h1 span {
+      color: var(--muted);
+      font-weight: 400;
+      margin-left: 8px;
+      font-size: 12px;
+    }
+    .icon-btn, button, select, input[type="number"], input[type="text"], textarea {
+      font: inherit;
+      color: var(--text);
+    }
+    button, .icon-btn {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      cursor: pointer;
+      color: var(--text);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    button:hover, .icon-btn:hover { border-color: var(--accent-dim); background: #26262e; }
+    button:active { transform: translateY(1px); }
+    button.primary {
+      background: var(--accent);
+      color: #1a1404;
+      border-color: var(--accent);
+      font-weight: 650;
+    }
+    button.primary:hover { filter: brightness(1.08); }
+    button.active, .icon-btn.active {
+      background: #3a3014;
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    button:disabled { opacity: 0.4; cursor: default; }
+    .icon-btn { padding: 5px 9px; }
+    header { gap: 10px; flex-wrap: wrap; }
+    .header-left { min-width: 0; flex: 1; }
+    .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    #onionBtn.active {
+      background: var(--accent);
+      color: #1a1404;
+      border-color: var(--accent);
+      font-weight: 650;
+    }
+    #viewCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+      z-index: 3;
+      background: #000;
+    }
+    #dropMask {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 8;
+      background: rgba(14,14,18,0.82);
+      border: 2px dashed var(--accent);
+      color: var(--accent);
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 650;
+      pointer-events: none;
+    }
+    body.dragover #dropMask { display: flex; }
+    #extractBar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 14px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #extractBar.show { display: flex; }
+    #extractTrack {
+      flex: 1;
+      height: 8px;
+      background: #2a2a33;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    #extractFill {
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+    }
+    #extractLabel { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    #onionHint { color: var(--muted); font-size: 12px; }
+    #volSlider { width: 90px; accent-color: var(--accent); cursor: pointer; }
+    #srcAudio, #videoPlay, #videoSeek, #fileInput { display: none; }
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .viewport-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+      padding: 10px 12px 0;
+      background: #08080a;
+    }
+    .viewport {
+      position: relative;
+      width: 100%;
+      max-width: min(1280px, 100%);
+      max-height: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px #000, 0 8px 32px rgba(0,0,0,0.5);
+    }
+    /* Keep 16:9 from overflowing the available height */
+    @media (min-aspect-ratio: 16/11) {
+      .viewport {
+        width: auto;
+        height: 100%;
+        max-width: 100%;
+      }
+    }
+    .stack {
+      position: absolute;
+      inset: 0;
+    }
+    .stack img, .onion-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    #currentFrame {
+      object-fit: contain;
+      z-index: 1;
+      background: #000;
+    }
+    .onion-layer {
+      z-index: 2;
+      pointer-events: none;
+      isolation: isolate;
+      opacity: var(--k, 0.35);
+    }
+    .onion-layer img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .onion-layer::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      mix-blend-mode: color;
+      pointer-events: none;
+    }
+    .onion-layer.is-prev::after { background: #ff2020; }
+    .onion-layer.is-next::after { background: #1ee060; }
+    .meta-overlay {
+      position: absolute;
+      left: 8px;
+      bottom: 8px;
+      z-index: 5;
+      background: rgba(0,0,0,0.62);
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+      pointer-events: none;
+      font-size: 12px;
+    }
+    .meta-overlay .tc { color: var(--accent); margin-left: 10px; }
+    #controls {
+      flex-shrink: 0;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      padding: 8px 14px 10px;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .row:first-child { margin-top: 0; }
+    .scrub-row { gap: 10px; }
+    #scrub {
+      flex: 1;
+      min-width: 160px;
+      accent-color: var(--accent);
+      height: 18px;
+      cursor: pointer;
+    }
+    .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: none;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 0;
+      flex-wrap: wrap;
+    }
+    .seg {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .seg button {
+      border: 0;
+      border-radius: 0;
+      border-right: 1px solid var(--border);
+      padding: 5px 8px;
+      background: var(--panel-2);
+    }
+    .seg button:last-child { border-right: 0; }
+    .seg button.active {
+      background: var(--accent);
+      color: #1a1404;
+      font-weight: 650;
+    }
+    input[type="number"], input[type="text"] {
+      background: #111116;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 8px;
+    }
+    input[type="number"] { width: 78px; }
+    #selInput {
+      flex: 1 1 240px;
+      width: auto;
+      min-width: 180px;
+      max-width: 520px;
+      background: #111116;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 8px;
+    }
+    #selInput.invalid { border-color: var(--red); }
+    .sel-input-group { flex: 1 1 280px; min-width: 240px; }
+    .sel-count {
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      flex-shrink: 0;
+      color: var(--muted);
+    }
+    .sel-count.has { color: var(--accent); }
+    #selAdd {
+      font-weight: 650;
+      padding: 7px 14px;
+      font-size: 13px;
+    }
+    #selAdd.on {
+      background: var(--accent);
+      color: #1a1404;
+      border-color: var(--accent);
+    }
+    #selFrom.active {
+      background: var(--accent);
+      color: #1a1404;
+      border-color: var(--accent);
+      font-weight: 650;
+    }
+    #selErr, .sel-err {
+      color: var(--red);
+      font-size: 12px;
+      min-height: 16px;
+    }
+    .thumb { user-select: none; }
+    .thumb .thumb-x {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 20px;
+      height: 20px;
+      border: 0;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.72);
+      color: #fff;
+      padding: 0;
+      font-size: 13px;
+      line-height: 20px;
+      cursor: pointer;
+      z-index: 2;
+    }
+    .thumb .thumb-x:hover { background: var(--red); border-color: var(--red); color: #fff; }
+    .thumb.dragging { opacity: 0.45; }
+    .thumb.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+    input[type="range"].slim {
+      width: 100px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .sel-status {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .sel-status.on { color: var(--accent); }
+    #err {
+      color: var(--red);
+      font-size: 12px;
+      min-height: 0;
+    }
+    #thumbsWrap {
+      display: none;
+      margin-top: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+    }
+    #thumbsWrap.show { display: block; }
+    #thumbs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 6px;
+      scrollbar-color: #444 var(--panel);
+    }
+    .thumb {
+      flex: 0 0 auto;
+      width: 128px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      background: #000;
+      position: relative;
+    }
+    .thumb img {
+      display: block;
+      width: 128px;
+      height: 72px;
+      object-fit: cover;
+      background: #000;
+    }
+    .thumb span {
+      display: block;
+      text-align: center;
+      font-size: 10px;
+      padding: 2px 0;
+      background: #141418;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+    }
+    .thumb.current {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .thumb.current span { color: var(--accent); }
+    #help {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.72);
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #help.show { display: flex; }
+    #help .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    }
+    #help h2 { margin: 0 0 12px; font-size: 16px; }
+    #help dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 6px 12px;
+      font-size: 13px;
+    }
+    #help dt {
+      color: var(--accent);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+    #help dd { margin: 0; color: var(--text); }
+    #help .hint { margin-top: 14px; color: var(--muted); font-size: 12px; }
+    kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #2a2a33;
+      border: 1px solid #444;
+      border-radius: 3px;
+      padding: 0 5px;
+      font-size: 11px;
+    }
+
+    /* ===== Export (print / collage) ===== */
+    label.chk {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      color: var(--text);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    label.chk input { accent-color: var(--accent); }
+    select {
+      font: inherit;
+      color: var(--text);
+      background: #111116;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 8px;
+    }
+    #printBtn, #collageBtn { font-weight: 650; }
+    #exportModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(0,0,0,0.78);
+      flex-direction: column;
+    }
+    #exportModal.show { display: flex; }
+    #exportChrome {
+      flex: 0 0 auto;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px 12px;
+    }
+    #exportChrome h2 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      font-weight: 650;
+    }
+    #exStart, #exEnd, #exInterval { width: 72px; }
+    #exFrameCount { color: var(--accent); font-weight: 650; font-variant-numeric: tabular-nums; }
+    #exRangeGroup.hidden { display: none; }
+    #exIntervalSeg button { min-width: 28px; }
+    #exportMsg {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      min-height: 1em;
+    }
+    #exportMsg.warn { color: #f0c040; }
+    #exportMsg.err { color: var(--red); }
+    #exportPreview {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      background: #0a0a0d;
+      padding: 16px;
+    }
+    #exportSizer {
+      margin: 0 auto;
+      width: calc(var(--pw) * var(--pscale, 1));
+      height: calc((var(--ph) * var(--npage, 1) + 12mm * max(var(--npage, 1) - 1, 0)) * var(--pscale, 1));
+    }
+    #exportRoot {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12mm;
+      transform: scale(var(--pscale, 1));
+      transform-origin: top left;
+    }
+    .sheet {
+      width: var(--pw);
+      height: var(--ph);
+      background: var(--sheet-bg, #fff);
+      color: var(--sheet-fg, #111);
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+      padding: var(--sheet-pad, 8mm);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .sheet-grid {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(var(--cols), 1fr);
+      grid-template-rows: repeat(var(--rows), 1fr);
+      gap: var(--grid-gap, 4mm);
+    }
+    .sheet-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .cell-inner {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-height: 100%;
+      min-height: 0;
+    }
+    .sheet-cell .ibox {
+      flex: 0 1 auto;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      position: relative;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .sheet-cell .ibox img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .sheet-cell.cover {
+      display: block;
+      position: relative;
+    }
+    .sheet-cell.cover .ibox {
+      position: absolute;
+      inset: 0;
+      width: auto;
+      height: auto;
+      aspect-ratio: auto;
+    }
+    .sheet-cell.cover .ibox img { object-fit: cover; }
+    .sheet-cell figcaption {
+      flex: 0 0 auto;
+      text-align: center;
+      font-size: 8.5pt;
+      line-height: 1.2;
+      padding-top: 1.2mm;
+      font-variant-numeric: tabular-nums;
+    }
+    .collage-abs {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    .collage-abs .sheet-cell {
+      position: absolute;
+    }
+    .collage-abs .sheet-cell.cover figcaption,
+    .sheet-cell.cap-overlay figcaption {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 3px 6px 4px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.62));
+      color: #fff;
+      font-size: 8pt;
+    }
+    .sheet-cell.empty { visibility: hidden; }
+
+    @media print {
+      header, #main, #help, #exportChrome {
+        display: none !important;
+      }
+      html, body {
+        background: transparent !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
+        color: #000;
+      }
+      #exportModal {
+        display: block !important;
+        position: static !important;
+        inset: auto !important;
+        background: transparent !important;
+        height: auto !important;
+      }
+      #exportPreview {
+        overflow: visible !important;
+        background: transparent !important;
+        padding: 0 !important;
+        flex: none !important;
+        height: auto !important;
+      }
+      #exportSizer {
+        width: auto !important;
+        height: auto !important;
+        margin: 0 !important;
+      }
+      #exportRoot {
+        transform: none !important;
+        gap: 0 !important;
+        width: auto !important;
+        height: auto !important;
+      }
+      .sheet {
+        box-shadow: none !important;
+        width: var(--pw) !important;
+        height: var(--ph) !important;
+        max-width: 100%;
+        break-after: page;
+        page-break-after: always;
+        break-inside: avoid;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .sheet:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>프레임 뷰어 <span id="projectSub">BBBB(기본) ·  · 4129장 · 23.976fps</span></h1>
+    </div>
+    <div class="header-right">
+      <span class="label">프로젝트</span>
+      <select id="projectSel" title="프로젝트">
+        <option value="bbbb">BBBB(기본)</option>
+      </select>
+      <button type="button" id="loadBtn" title="로컬 영상 열기 (mp4, webm, mov)">영상 불러오기</button>
+      <div class="group" id="fpsGroup" style="display:none">
+        <span class="label">FPS</span>
+        <select id="fpsSel" title="프레임레이트">
+          <option value="23.976023976023978">23.976</option>
+          <option value="24">24</option>
+          <option value="25">25</option>
+          <option value="29.97002997002997">29.97</option>
+          <option value="30">30</option>
+          <option value="50">50</option>
+          <option value="60">60</option>
+        </select>
+      </div>
+      <button type="button" id="extractBtn" style="display:none" title="모든 프레임을 미리 뽑아 스크럽을 빠르게">전체 프레임 미리 추출</button>
+      <button type="button" class="icon-btn" id="helpBtn" title="단축키 (?)">단축키 ?</button>
+    </div>
+  </header>
+  <div id="extractBar">
+    <div id="extractTrack"><div id="extractFill"></div></div>
+    <span id="extractLabel">추출 중…</span>
+    <button type="button" id="extractCancel">취소</button>
+  </div>
+  <input type="file" id="fileInput" accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mp4,.webm,.mov,.m4v,.mkv">
+  <audio id="srcAudio" src="audio.m4a" preload="auto" playsinline></audio>
+  <video id="videoPlay" playsinline preload="auto"></video>
+  <video id="videoSeek" playsinline preload="auto" muted></video>
+
+  <div id="main">
+    <div class="viewport-wrap">
+      <div class="viewport" id="viewport" tabindex="0">
+        <div class="stack" id="stack">
+          <img id="currentFrame" alt="현재 프레임" draggable="false">
+          <canvas id="viewCanvas"></canvas>
+          <div id="onionPrev"></div>
+          <div id="onionNext"></div>
+        </div>
+        <div class="meta-overlay" id="meta">—</div>
+        <div id="dropMask">영상을 여기에 놓으면 불러와</div>
+      </div>
+    </div>
+
+    <div id="controls">
+      <div class="row scrub-row">
+        <button type="button" id="playBtn" class="primary" title="재생/일시정지 (Space)">재생</button>
+        <div class="group">
+          <span class="label">배속</span>
+          <div class="seg" id="speedSeg">
+            <button type="button" data-speed="0.25">0.25×</button>
+            <button type="button" data-speed="0.5">0.5×</button>
+            <button type="button" data-speed="1" class="active">1×</button>
+            <button type="button" data-speed="2">2×</button>
+          </div>
+        </div>
+        <input type="range" id="scrub" min="1" max="4129" value="1" step="1">
+        <div class="group">
+          <span class="label">이동</span>
+          <input type="number" id="jumpInput" min="1" max="4129" value="1" title="프레임 번호">
+          <button type="button" id="jumpBtn">이동</button>
+        </div>
+        <div class="group">
+          <button type="button" id="muteBtn" title="음소거 (V)">음소거</button>
+          <input type="range" id="volSlider" min="0" max="100" value="80" step="1" title="볼륨">
+          <span id="volVal">80%</span>
+          <label class="chk"><input type="checkbox" id="pitchChk" checked> 음정 유지</label>
+          <label class="chk"><input type="checkbox" id="scrubSoundChk" checked> 스크럽 소리</label>
+        </div>
+      </div>
+
+      <div class="row sel-row">
+        <div class="group sel-input-group">
+          <span class="label">선택 프레임</span>
+          <input type="text" id="selInput" placeholder="예: 550  또는  1~10, 20  또는  120-140" spellcheck="false" autocomplete="off">
+          <button type="button" id="selApply">적용</button>
+        </div>
+        <span class="sel-count" id="selCount">선택 0장</span>
+        <div class="seg" id="selViewSeg" title="재생·이동 범위를 고른 프레임만으로 제한">
+          <button type="button" data-selview="all" class="active">모두 보기</button>
+          <button type="button" data-selview="sel">선택만 보기</button>
+        </div>
+      </div>
+      <div class="row sel-actions">
+        <button type="button" id="selAdd" title="현재 프레임 선택/해제 (M)">현재 프레임 선택/해제</button>
+        <button type="button" id="selFrom" title="여기부터 ([)">여기부터</button>
+        <button type="button" id="selTo" title="여기까지 (])">여기까지</button>
+        <button type="button" id="selClear">전체 비우기</button>
+        <button type="button" id="printBtn" title="선택한 프레임 인쇄">인쇄</button>
+        <button type="button" id="collageBtn" title="선택한 프레임 콜라주">콜라주</button>
+        <span class="sel-status" id="selRangeHint"></span>
+      </div>
+      <div class="row sel-err-row">
+        <span id="selErr" class="sel-err"></span>
+        <span id="err"></span>
+      </div>
+
+      <div class="row">
+        <div class="group">
+          <button type="button" id="onionBtn" title="어니언 스킨 켜기/끄기 (O)">어니언 스킨 OFF</button>
+          <span class="label">앞뒤 장수</span>
+          <input type="range" class="slim" id="onionN" min="1" max="5" value="2" step="1">
+          <span id="onionNVal">2</span>
+          <span class="label">간격</span>
+          <div class="seg" id="stepSeg">
+            <button type="button" data-step="1" class="active">1</button>
+            <button type="button" data-step="2">2</button>
+            <button type="button" data-step="3">3</button>
+          </div>
+          <span class="label">투명도</span>
+          <input type="range" class="slim" id="onionOp" min="5" max="80" value="50" step="1">
+          <span id="onionOpVal">50%</span>
+          <span class="label">모드</span>
+          <div class="seg" id="onionModeSeg">
+            <button type="button" data-omode="ghost">고스트</button>
+            <button type="button" data-omode="color">컬러</button>
+            <button type="button" data-omode="outline" class="active">외곽선</button>
+            <button type="button" data-omode="diff">차이</button>
+          </div>
+          <span id="onionHint"></span>
+        </div>
+      </div>
+
+      <div id="thumbsWrap">
+        <div class="label">선택 썸네일 · 클릭해서 이동 · Shift+클릭으로 범위 추가 · 드래그해서 순서 변경 · ×로 제거</div>
+        <div id="thumbs"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="help">
+    <div class="card">
+      <h2>단축키</h2>
+      <dl>
+        <dt>← / →</dt><dd>이전 / 다음 프레임</dd>
+        <dt>Shift + ← / →</dt><dd>10프레임씩 이동</dd>
+        <dt>Home / End</dt><dd>첫 프레임 / 마지막 프레임</dd>
+        <dt>Space</dt><dd>재생 / 일시정지</dd>
+        <dt>마우스 휠</dt><dd>프레임 넘기기 (Shift = 10프레임)</dd>
+        <dt>M</dt><dd>현재 프레임 선택/해제</dd>
+        <dt>[ / ]</dt><dd>여기부터 / 여기까지 (범위 추가)</dd>
+        <dt>O</dt><dd>어니언 스킨 켜기/끄기</dd>
+        <dt>V</dt><dd>음소거 / 해제</dd>
+        <dt>? 또는 /</dt><dd>이 도움말 열기/닫기</dd>
+        <dt>Esc</dt><dd>입력 중이면 포커스 해제, 아니면 도움말 닫기</dd>
+      </dl>
+      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 「영상 불러오기」로 로컬 영상도 같은 기능으로 볼 수 있어.</p>
+    </div>
+  </div>
+
+
+  <div id="exportModal">
+    <div id="exportChrome">
+      <h2 id="exportTitle">선택 프레임 인쇄</h2>
+      <div class="row" id="exportOptsSource">
+        <div class="group">
+          <span class="label">소스</span>
+          <div class="seg" id="exSrcSeg">
+            <button type="button" data-exsrc="sel" class="active">선택한 프레임</button>
+            <button type="button" data-exsrc="range">범위</button>
+          </div>
+        </div>
+        <div class="group" id="exRangeGroup">
+          <span class="label">시작</span>
+          <input type="number" id="exStart" min="1" value="1" title="시작 프레임">
+          <span class="label">끝</span>
+          <input type="number" id="exEnd" min="1" value="1" title="끝 프레임">
+        </div>
+        <div class="group">
+          <span class="label">프레임 간격</span>
+          <input type="number" id="exInterval" min="1" max="9999" value="1" title="N프레임마다 한 장">
+          <div class="seg" id="exIntervalSeg">
+            <button type="button" data-iv="1" class="active">1</button>
+            <button type="button" data-iv="2">2</button>
+            <button type="button" data-iv="3">3</button>
+            <button type="button" data-iv="4">4</button>
+            <button type="button" data-iv="6">6</button>
+            <button type="button" data-iv="8">8</button>
+            <button type="button" data-iv="12">12</button>
+            <button type="button" data-iv="24">24</button>
+          </div>
+        </div>
+        <span id="exFrameCount">결과 0장</span>
+      </div>
+      <div class="row" id="exportOptsPrint">
+        <div class="group">
+          <span class="label">페이지당 장수</span>
+          <div class="seg" id="ppSeg">
+            <button type="button" data-pp="1">1</button>
+            <button type="button" data-pp="2">2</button>
+            <button type="button" data-pp="4" class="active">4</button>
+            <button type="button" data-pp="6">6</button>
+            <button type="button" data-pp="9">9</button>
+            <button type="button" data-pp="12">12</button>
+          </div>
+        </div>
+        <div class="group">
+          <span class="label">용지</span>
+          <div class="seg" id="printPaperSeg">
+            <button type="button" data-paper="A4" class="active">A4</button>
+            <button type="button" data-paper="Letter">Letter</button>
+          </div>
+        </div>
+        <div class="group">
+          <span class="label">방향</span>
+          <div class="seg" id="printOrientSeg">
+            <button type="button" data-orient="portrait" class="active">세로</button>
+            <button type="button" data-orient="landscape">가로</button>
+          </div>
+        </div>
+        <label class="chk"><input type="checkbox" id="printCaption" checked> 프레임 번호 + 타임코드</label>
+      </div>
+      <div class="row" id="exportOptsCollage" style="display:none">
+        <div class="group">
+          <span class="label">배치</span>
+          <div class="seg" id="collageModeSeg">
+            <button type="button" data-cmode="order" class="active">지정 순서</button>
+            <button type="button" data-cmode="fill">1페이지 가득 채우기</button>
+          </div>
+        </div>
+        <div class="group">
+          <span class="label">용지</span>
+          <div class="seg" id="collagePaperSeg">
+            <button type="button" data-paper="A4" class="active">A4</button>
+            <button type="button" data-paper="Letter">Letter</button>
+            <button type="button" data-paper="Screen">16:9</button>
+          </div>
+        </div>
+        <div class="group">
+          <span class="label">방향</span>
+          <div class="seg" id="collageOrientSeg">
+            <button type="button" data-orient="portrait" class="active">세로</button>
+            <button type="button" data-orient="landscape">가로</button>
+          </div>
+        </div>
+        <div class="group">
+          <span class="label">간격</span>
+          <input type="range" class="slim" id="collageGap" min="0" max="20" value="6" step="1">
+          <span id="collageGapVal">6px</span>
+        </div>
+        <label class="chk"><input type="checkbox" id="collageCaption" checked> 프레임 번호 + 타임코드</label>
+        <div class="group">
+          <span class="label">배경</span>
+          <div class="seg" id="collageBgSeg">
+            <button type="button" data-bg="white" class="active">흰색</button>
+            <button type="button" data-bg="black">검정</button>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <button type="button" class="primary" id="exportPrintBtn">인쇄</button>
+        <button type="button" id="exportPngBtn" style="display:none">PNG 저장</button>
+        <button type="button" id="exportCloseBtn">닫기</button>
+        <span class="sel-status" id="exportInfo"></span>
+      </div>
+      <div id="exportMsg"></div>
+    </div>
+    <div id="exportPreview">
+      <div id="exportSizer">
+        <div id="exportRoot"></div>
+      </div>
+    </div>
+  </div>
+  <style id="pageRule">@page { size: A4 portrait; margin: 0; }</style>
+
+  <script>
+    (function () {
+      let TOTAL = 4129;
+      let FPS = 24000 / 1001; // 23.976...
+      const AUDIO_OFFSET = 0; // ffprobe: video + audio both start_time=0
+      const AUDIO_FILE = "audio.m4a";
+      const SEEK_BIAS = 0.5; // currentTime = (n - SEEK_BIAS) / fps
+
+      const $ = function (id) { return document.getElementById(id); };
+      const currentImg = $("currentFrame");
+      const viewCanvas = $("viewCanvas");
+      const viewCtx = viewCanvas.getContext("2d");
+      const scrub = $("scrub");
+      const meta = $("meta");
+      const playBtn = $("playBtn");
+      const jumpInput = $("jumpInput");
+      const selInput = $("selInput");
+      const selCount = $("selCount");
+      const selErrEl = $("selErr");
+      const selRangeHint = $("selRangeHint");
+      const errEl = $("err");
+      const thumbs = $("thumbs");
+      const thumbsWrap = $("thumbsWrap");
+      const onionPrev = $("onionPrev");
+      const onionNext = $("onionNext");
+      const viewport = $("viewport");
+      const srcAudio = $("srcAudio");
+      const videoPlay = $("videoPlay");
+      const videoSeek = $("videoSeek");
+      const offCanvas = document.createElement("canvas");
+      const offCtx = offCanvas.getContext("2d");
+      const sobelCanvas = document.createElement("canvas");
+      const sobelCtx = sobelCanvas.getContext("2d", { willReadFrequently: true });
+
+      let frame = 1;
+      let playing = false;
+      let speed = 1;
+      let lastTick = 0;
+      let acc = 0;
+      let playRaf = 0;
+      let useAudioClock = true;
+
+      let selection = null;
+      let selViewOnly = false;
+      let rangeFrom = null;
+      let lastSelAnchor = null;
+      let selApplyTimer = 0;
+      let thumbDragging = false;
+      let onionOn = false;
+      let onionN = 2;
+      let onionStep = 1;
+      let onionOpacity = 0.50;
+      let onionMode = "outline";
+      let onionHint = "";
+
+      let volume = 0.8;
+      let userMuted = false;
+      let pitchHold = true;
+      let scrubSoundOn = true;
+      let scrubTimer = 0;
+      let displaySeq = 0;
+
+      const builtinProject = {
+        id: "bbbb",
+        type: "builtin",
+        name: "BBBB(기본)",
+        title: "",
+        total: 4129,
+        fps: 24000 / 1001,
+        audioOffset: AUDIO_OFFSET,
+        duration: 172.213708,
+        selection: null,
+        selText: "",
+        selViewOnly: false
+      };
+      let project = builtinProject;
+      let loadedProject = null;
+      let extractAbort = false;
+      let extracting = false;
+
+      const imgCache = new Map();
+      const IMG_CACHE_MAX = 180;
+      const bmpCache = new Map();
+      let bmpBytes = 0;
+      const BMP_MAX = 160 * 1024 * 1024;
+      const jpegStore = new Map();
+      const urlCache = new Map();
+      const edgeCache = new Map();
+
+      function pad(n) {
+        return String(n).padStart(5, "0");
+      }
+      function src(n) {
+        if (project.type === "builtin") return "frames/f" + pad(n) + ".jpg";
+        return urlCache.get(n) || "";
+      }
+      function edgeFile(n) {
+        return "frames_edge/e" + pad(n) + ".jpg";
+      }
+      function formatTime(t) {
+        if (!isFinite(t) || t < 0) t = 0;
+        const h = Math.floor(t / 3600);
+        const m = Math.floor((t - h * 3600) / 60);
+        const s = t - h * 3600 - m * 60;
+        let sStr = s.toFixed(3);
+        if (s < 10) sStr = "0" + sStr;
+        if (h > 0) return h + ":" + String(m).padStart(2, "0") + ":" + sStr;
+        return m + ":" + sStr;
+      }
+      function timecode(n) {
+        return formatTime((n - 1) / FPS);
+      }
+      function durationTime() {
+        if (project.duration && isFinite(project.duration) && project.duration > 0) return project.duration;
+        return TOTAL / FPS;
+      }
+      function frameToTime(n) {
+        return (n - 1) / FPS + (project.audioOffset || 0);
+      }
+      function timeToFrame(t) {
+        const f = Math.floor((t - (project.audioOffset || 0)) * FPS + 1e-4) + 1;
+        return Math.max(1, Math.min(TOTAL, f));
+      }
+      function seekTimeForFrame(n) {
+        return Math.max(0, (n - SEEK_BIAS) / FPS);
+      }
+      function mediaEl() {
+        return project.type === "video" ? videoPlay : srcAudio;
+      }
+      function mediaClock() {
+        const el = mediaEl();
+        return el && (el.src || el.currentSrc) ? el : null;
+      }
+
+      function getImage(n) {
+        if (n < 1 || n > TOTAL) return null;
+        if (project.type !== "builtin") return null;
+        let img = imgCache.get(n);
+        if (img) {
+          imgCache.delete(n);
+          imgCache.set(n, img);
+          return img;
+        }
+        img = new Image();
+        img.decoding = "async";
+        img.src = src(n);
+        imgCache.set(n, img);
+        if (imgCache.size > IMG_CACHE_MAX) {
+          const first = imgCache.keys().next().value;
+          if (first !== n) imgCache.delete(first);
+        }
+        return img;
+      }
+
+      function whenImg(img) {
+        if (!img) return Promise.resolve(null);
+        if (img.complete && img.naturalWidth) return Promise.resolve(img);
+        return new Promise(function (res) {
+          img.onload = function () { res(img.naturalWidth ? img : null); };
+          img.onerror = function () { res(null); };
+        });
+      }
+
+      function bmpSize(b) {
+        return (b.width || 0) * (b.height || 0) * 4;
+      }
+      function putBmp(n, bmp) {
+        if (!bmp) return;
+        if (bmpCache.has(n)) {
+          const old = bmpCache.get(n);
+          bmpBytes -= bmpSize(old);
+          if (old.close) try { old.close(); } catch (e) {}
+          bmpCache.delete(n);
+        }
+        const sz = bmpSize(bmp);
+        while (bmpBytes + sz > BMP_MAX && bmpCache.size) {
+          const k = bmpCache.keys().next().value;
+          const old = bmpCache.get(k);
+          bmpBytes -= bmpSize(old);
+          if (old.close) try { old.close(); } catch (e) {}
+          bmpCache.delete(k);
+        }
+        bmpCache.set(n, bmp);
+        bmpBytes += sz;
+      }
+
+      function waitSeek(video, t) {
+        return new Promise(function (resolve) {
+          const dur = video.duration;
+          if (isFinite(dur) && dur > 0) t = Math.max(0, Math.min(t, Math.max(0, dur - 1e-4)));
+          t = Math.max(0, t);
+          const done = function () {
+            video.removeEventListener("seeked", done);
+            resolve();
+          };
+          if (!video.seeking && Math.abs((video.currentTime || 0) - t) < 1e-4) {
+            resolve();
+            return;
+          }
+          video.addEventListener("seeked", done);
+          try { video.currentTime = t; } catch (e) { done(); }
+        });
+      }
+
+      async function captureVideoFrame(n) {
+        if (jpegStore.has(n)) {
+          try {
+            const bmp = await createImageBitmap(jpegStore.get(n));
+            putBmp(n, bmp);
+            return bmp;
+          } catch (e) {}
+        }
+        if (bmpCache.has(n)) {
+          const b = bmpCache.get(n);
+          bmpCache.delete(n);
+          bmpCache.set(n, b);
+          return b;
+        }
+        const t = seekTimeForFrame(n);
+        await waitSeek(videoSeek, t);
+        try {
+          const bmp = await createImageBitmap(videoSeek);
+          putBmp(n, bmp);
+          return bmp;
+        } catch (e) {
+          const w = videoSeek.videoWidth || 1280, h = videoSeek.videoHeight || 720;
+          const c = document.createElement("canvas");
+          c.width = w; c.height = h;
+          c.getContext("2d").drawImage(videoSeek, 0, 0, w, h);
+          putBmp(n, c);
+          return c;
+        }
+      }
+
+      async function getDrawable(n) {
+        if (n < 1 || n > TOTAL) return null;
+        if (project.type === "builtin") return whenImg(getImage(n));
+        return captureVideoFrame(n);
+      }
+
+      function drawableSize(d) {
+        return {
+          w: d.naturalWidth || d.width || d.videoWidth || 1280,
+          h: d.naturalHeight || d.height || d.videoHeight || 720
+        };
+      }
+
+      function preloadAround(n, radius) {
+        radius = radius == null ? 24 : radius;
+        const lo = Math.max(1, n - radius);
+        const hi = Math.min(TOTAL, n + radius);
+        if (project.type === "builtin") {
+          for (let i = lo; i <= hi; i++) getImage(i);
+        } else {
+          for (let i = lo; i <= hi; i++) {
+            if (!bmpCache.has(i) && !jpegStore.has(i)) captureVideoFrame(i);
+          }
+        }
+        if (onionOn) {
+          for (let k = 1; k <= onionN; k++) {
+            const a = n - k * onionStep, b = n + k * onionStep;
+            if (a >= 1) getDrawable(a);
+            if (b <= TOTAL) getDrawable(b);
+          }
+        }
+        if (selection) {
+          const idx = selection.indexOf(n);
+          if (idx >= 0) {
+            for (let i = Math.max(0, idx - 8); i <= Math.min(selection.length - 1, idx + 8); i++) {
+              getDrawable(selection[i]);
+            }
+          }
+        }
+      }
+
+      function inSelView() { return !!(selViewOnly && selection && selection.length); }
+      function minFrame() { return inSelView() ? selection[0] : 1; }
+      function maxFrame() { return inSelView() ? selection[selection.length - 1] : TOTAL; }
+      function frameCount() { return inSelView() ? selection.length : TOTAL; }
+      function indexOfFrame(n) { return inSelView() ? selection.indexOf(n) : n - 1; }
+      function frameAtIndex(i) { return inSelView() ? selection[i] : i + 1; }
+
+      function clampToMode(n) {
+        n = Math.max(1, Math.min(TOTAL, n));
+        if (!inSelView()) return n;
+        if (selection.indexOf(n) >= 0) return n;
+        let best = selection[0], bestD = Math.abs(n - best);
+        for (let i = 1; i < selection.length; i++) {
+          const d = Math.abs(n - selection[i]);
+          if (d < bestD) { best = selection[i]; bestD = d; }
+        }
+        return best;
+      }
+
+      function stepBy(delta) {
+        if (!inSelView()) { setFrame(frame + delta); return; }
+        const idx = selection.indexOf(frame);
+        const base = idx < 0 ? 0 : idx;
+        const next = Math.max(0, Math.min(selection.length - 1, base + delta));
+        setFrame(selection[next]);
+      }
+
+      function setFrame(n, opts) {
+        opts = opts || {};
+        n = clampToMode(n | 0);
+        frame = n;
+        if (!opts.skipPreload) preloadAround(n);
+        updateChrome();
+        const seq = ++displaySeq;
+        renderView(n, opts, seq);
+        if (playing && !opts.fromAudio) seekMediaToFrame(n);
+        if (!playing && !opts.fromAudio && !opts.silent) playScrubSnippet();
+      }
+
+      function updateChrome() {
+        const total = frameCount();
+        const idx = indexOfFrame(frame);
+        const pos = (idx >= 0 ? idx + 1 : 1);
+        scrub.min = "1";
+        scrub.max = String(total);
+        scrub.value = String(pos);
+        jumpInput.max = String(TOTAL);
+        if (document.activeElement !== jumpInput) jumpInput.value = String(frame);
+        const modeTag = inSelView()
+          ? " · 선택만 보기 " + pos + "/" + total
+          : (selection && selection.length ? " · 선택 " + selection.length + "장" : "");
+        meta.innerHTML = "프레임 " + frame + " / " + TOTAL +
+          '<span class="tc"> · ' + timecode(frame) + " / " + formatTime(durationTime()) + "</span>" +
+          " · " + fpsLabel(FPS) + "fps" + modeTag;
+        highlightThumb();
+        updateSelChrome();
+      }
+
+      function sizeCanvas(w, h) {
+        if (viewCanvas.width !== w || viewCanvas.height !== h) {
+          viewCanvas.width = w;
+          viewCanvas.height = h;
+        }
+      }
+      function sizeOff(w, h) {
+        if (offCanvas.width !== w || offCanvas.height !== h) {
+          offCanvas.width = w;
+          offCanvas.height = h;
+        }
+      }
+
+      function alphaFor(k) {
+        const raw = 1 - (k - 1) * (0.55 / Math.max(1, onionN));
+        if (onionMode === "outline" || onionMode === "diff") {
+          return onionOpacity * raw;
+        }
+        // color/ghost: keep the current frame visible even with many layers
+        let sum = 0;
+        for (let i = 1; i <= onionN; i++) sum += 1 - (i - 1) * (0.55 / Math.max(1, onionN));
+        return onionOpacity * raw / Math.max(1, sum);
+      }
+
+      async function getEdgeDrawable(n) {
+        if (edgeCache.has(n)) return edgeCache.get(n);
+        if (project.type === "builtin") {
+          const img = new Image();
+          img.src = edgeFile(n);
+          const ok = await whenImg(img);
+          if (ok) { edgeCache.set(n, ok); return ok; }
+        }
+        const srcImg = await getDrawable(n);
+        if (!srcImg) return null;
+        const edge = sobelEdges(srcImg);
+        if (edge) { edgeCache.set(n, edge); if (edgeCache.size > 80) edgeCache.delete(edgeCache.keys().next().value); }
+        return edge;
+      }
+
+      function sobelEdges(img) {
+        const sz = drawableSize(img);
+        const w = Math.max(2, Math.round(sz.w > 960 ? sz.w / 2 : sz.w));
+        const h = Math.max(2, Math.round(sz.h > 540 ? sz.h / 2 : sz.h));
+        sobelCanvas.width = w;
+        sobelCanvas.height = h;
+        sobelCtx.drawImage(img, 0, 0, w, h);
+        let src;
+        try { src = sobelCtx.getImageData(0, 0, w, h); }
+        catch (e) { return null; }
+        const px = src.data;
+        const out = sobelCtx.createImageData(w, h);
+        const od = out.data;
+        for (let y = 1; y < h - 1; y++) {
+          for (let x = 1; x < w - 1; x++) {
+            let gx = 0, gy = 0;
+            for (let ky = -1; ky <= 1; ky++) {
+              for (let kx = -1; kx <= 1; kx++) {
+                const i = ((y + ky) * w + (x + kx)) * 4;
+                const g = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+                const sx = (kx === 0) ? 0 : (kx * (ky === 0 ? 2 : 1));
+                const sy = (ky === 0) ? 0 : (ky * (kx === 0 ? 2 : 1));
+                gx += g * sx;
+                gy += g * sy;
+              }
+            }
+            const mag = Math.min(255, Math.sqrt(gx * gx + gy * gy) * 1.2);
+            const o = (y * w + x) * 4;
+            od[o] = od[o + 1] = od[o + 2] = mag;
+            od[o + 3] = 255;
+          }
+        }
+        sobelCtx.putImageData(out, 0, 0);
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(sobelCanvas, 0, 0);
+        return c;
+      }
+
+      function drawTinted(ctx, img, alpha, rgb, w, h) {
+        sizeOff(w, h);
+        offCtx.globalCompositeOperation = "source-over";
+        offCtx.globalAlpha = 1;
+        offCtx.clearRect(0, 0, w, h);
+        offCtx.drawImage(img, 0, 0, w, h);
+        offCtx.globalCompositeOperation = "color";
+        offCtx.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+        offCtx.fillRect(0, 0, w, h);
+        offCtx.globalCompositeOperation = "source-over";
+        // cap stacked opacity so the current frame stays visible
+        ctx.globalAlpha = Math.min(0.38, alpha * 0.55);
+        ctx.globalCompositeOperation = "source-over";
+        ctx.drawImage(offCanvas, 0, 0, w, h);
+        ctx.globalAlpha = 1;
+      }
+
+      function drawColorizedEdges(ctx, edge, alpha, rgb, w, h) {
+        sizeOff(w, h);
+        offCtx.globalCompositeOperation = "source-over";
+        offCtx.globalAlpha = 1;
+        offCtx.clearRect(0, 0, w, h);
+        offCtx.drawImage(edge, 0, 0, w, h);
+        offCtx.globalCompositeOperation = "multiply";
+        offCtx.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+        offCtx.fillRect(0, 0, w, h);
+        ctx.globalAlpha = Math.min(1, alpha * 1.35);
+        ctx.globalCompositeOperation = "screen";
+        ctx.drawImage(offCanvas, 0, 0, w, h);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "source-over";
+      }
+
+      function drawDiff(ctx, cur, nei, alpha, rgb, w, h) {
+        sizeOff(w, h);
+        offCtx.globalCompositeOperation = "source-over";
+        offCtx.globalAlpha = 1;
+        offCtx.clearRect(0, 0, w, h);
+        offCtx.drawImage(cur, 0, 0, w, h);
+        offCtx.globalCompositeOperation = "difference";
+        offCtx.drawImage(nei, 0, 0, w, h);
+        offCtx.globalCompositeOperation = "color";
+        offCtx.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+        offCtx.fillRect(0, 0, w, h);
+        offCtx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = Math.min(1, alpha * 1.2);
+        ctx.globalCompositeOperation = "screen";
+        ctx.drawImage(offCanvas, 0, 0, w, h);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "source-over";
+      }
+
+      async function drawNeighbor(ctx, curImg, n, k, side, w, h) {
+        if (n < 1 || n > TOTAL) return;
+        const a = alphaFor(k);
+        if (a <= 0.02) return;
+        const rgb = side === "prev" ? [255, 40, 40] : [40, 255, 90];
+        if (onionMode === "outline") {
+          const edge = await getEdgeDrawable(n);
+          if (!edge) return false;
+          drawColorizedEdges(ctx, edge, a, rgb, w, h);
+          return true;
+        }
+        const img = await getDrawable(n);
+        if (!img) return;
+        if (onionMode === "ghost") {
+          ctx.globalAlpha = Math.min(0.55, a * 0.7);
+          ctx.globalCompositeOperation = "lighter";
+          ctx.drawImage(img, 0, 0, w, h);
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = "source-over";
+        } else if (onionMode === "diff") {
+          drawDiff(ctx, curImg, img, a, rgb, w, h);
+        } else {
+          drawTinted(ctx, img, a, rgb, w, h);
+        }
+        return true;
+      }
+
+      async function renderView(n, opts, seq) {
+        const needCanvas = onionOn || project.type === "video";
+        if (!needCanvas) {
+          viewCanvas.style.display = "none";
+          currentImg.style.display = "block";
+          currentImg.src = src(n);
+          onionPrev.innerHTML = "";
+          onionNext.innerHTML = "";
+          return;
+        }
+        currentImg.style.display = "none";
+        viewCanvas.style.display = "block";
+        let cur = null;
+        if (project.type === "video" && playing && useAudioClock && !videoPlay.paused) {
+          cur = videoPlay;
+        } else {
+          cur = await getDrawable(n);
+        }
+        if (seq !== displaySeq) return;
+        if (!cur) return;
+        const sz = drawableSize(cur);
+        const w = sz.w, h = sz.h;
+        if (!w || !h) return;
+        sizeCanvas(w, h);
+        viewCtx.globalAlpha = 1;
+        viewCtx.globalCompositeOperation = "source-over";
+        viewCtx.clearRect(0, 0, w, h);
+        viewCtx.drawImage(cur, 0, 0, w, h);
+        if (!onionOn) { setOnionHint(""); return; }
+        let outlineOk = true;
+        if (onionMode === "outline") {
+          const test = await getEdgeDrawable(n);
+          if (!test) outlineOk = false;
+        }
+        if (onionMode === "outline" && !outlineOk) {
+          setOnionHint("외곽선은 이 환경에서 픽셀을 읽을 수 없어. 영상을 불러오면 쓸 수 있고, BBBB는 외곽선 파일이 있으면 동작해. 지금은 컬러로 표시해.");
+          const saved = onionMode;
+          onionMode = "color";
+          for (let k = onionN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n - k * onionStep, k, "prev", w, h);
+          for (let k = onionN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n + k * onionStep, k, "next", w, h);
+          onionMode = saved;
+        } else {
+          setOnionHint("");
+          for (let k = onionN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n - k * onionStep, k, "prev", w, h);
+          for (let k = onionN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n + k * onionStep, k, "next", w, h);
+        }
+      }
+
+      function renderOnion() {
+        renderView(frame, {}, displaySeq);
+      }
+
+      function setOnionHint(msg) {
+        onionHint = msg || "";
+        const el = $("onionHint");
+        if (el) el.textContent = onionHint;
+      }
+
+      function setOnionOn(on) {
+        onionOn = !!on;
+        $("onionBtn").classList.toggle("active", onionOn);
+        $("onionBtn").textContent = onionOn ? "어니언 스킨 ON" : "어니언 스킨 OFF";
+        if (onionOn) preloadAround(frame);
+        renderOnion();
+      }
+      function toggleOnion() { setOnionOn(!onionOn); }
+      function ensureOnionOn() { if (!onionOn) setOnionOn(true); else renderOnion(); }
+
+      function applyMediaVol() {
+        srcAudio.volume = volume;
+        videoPlay.volume = volume;
+        srcAudio.muted = userMuted;
+        videoPlay.muted = userMuted;
+        $("muteBtn").textContent = userMuted ? "음소거 해제" : "음소거";
+        $("muteBtn").classList.toggle("active", userMuted);
+      }
+      function setVolume(v) {
+        volume = Math.max(0, Math.min(1, v));
+        $("volSlider").value = String(Math.round(volume * 100));
+        $("volVal").textContent = Math.round(volume * 100) + "%";
+        if (volume > 0 && userMuted) userMuted = false;
+        applyMediaVol();
+      }
+      function toggleMute() {
+        userMuted = !userMuted;
+        applyMediaVol();
+      }
+
+      function seekMediaToFrame(n) {
+        const el = mediaClock();
+        if (!el) return;
+        const t = frameToTime(n);
+        try {
+          const d = el.duration;
+          el.currentTime = isFinite(d) && d > 0 ? Math.max(0, Math.min(t, Math.max(0, d - 0.0005))) : Math.max(0, t);
+        } catch (e) {}
+      }
+
+      function playScrubSnippet() {
+        if (playing || !scrubSoundOn || userMuted) return;
+        const el = mediaClock();
+        if (!el) return;
+        const dur = Math.max(1 / FPS, 0.08);
+        try {
+          el.preservesPitch = pitchHold;
+          el.playbackRate = 1;
+        } catch (e) {}
+        seekMediaToFrame(frame);
+        const p = el.play();
+        if (p && p.catch) p.catch(function () {});
+        if (scrubTimer) clearTimeout(scrubTimer);
+        scrubTimer = setTimeout(function () {
+          scrubTimer = 0;
+          if (!playing) try { el.pause(); } catch (e) {}
+        }, dur * 1000);
+      }
+
+      function applyRate(el, rate) {
+        try {
+          el.preservesPitch = pitchHold;
+          if (el.mozPreservesPitch !== undefined) el.mozPreservesPitch = pitchHold;
+          if (el.webkitPreservesPitch !== undefined) el.webkitPreservesPitch = pitchHold;
+          el.playbackRate = rate;
+          return Math.abs(el.playbackRate - rate) < 0.03;
+        } catch (e) { return false; }
+      }
+
+      function play() {
+        if (playing) return;
+        if (frame >= maxFrame() && indexOfFrame(frame) === frameCount() - 1) {
+          setFrame(minFrame(), { silent: true });
+        }
+        if (scrubTimer) { clearTimeout(scrubTimer); scrubTimer = 0; }
+        playing = true;
+        playBtn.textContent = "일시정지";
+        const el = mediaClock();
+        let audioOk = false;
+        if (el) {
+          audioOk = applyRate(el, speed);
+          if (!audioOk && speed < 0.5) {
+            useAudioClock = false;
+            el.muted = true;
+          } else {
+            useAudioClock = true;
+            applyMediaVol();
+          }
+          seekMediaToFrame(frame);
+          if (useAudioClock) {
+            const p = el.play();
+            if (p && p.catch) {
+              p.catch(function () { useAudioClock = false; });
+            }
+          }
+        } else {
+          useAudioClock = false;
+        }
+        lastTick = 0;
+        acc = 0;
+        playRaf = requestAnimationFrame(tick);
+      }
+      function pause() {
+        playing = false;
+        playBtn.textContent = "재생";
+        if (playRaf) cancelAnimationFrame(playRaf);
+        playRaf = 0;
+        try { srcAudio.pause(); } catch (e) {}
+        try { videoPlay.pause(); } catch (e) {}
+        applyMediaVol();
+      }
+      function togglePlay() {
+        if (playing) pause();
+        else play();
+      }
+
+      function runEndIndex(idx) {
+        if (!selection) return TOTAL - 1;
+        let end = idx;
+        while (end + 1 < selection.length && selection[end + 1] === selection[end] + 1) end++;
+        return end;
+      }
+
+      function selectionPlayTick(t) {
+        const idx = indexOfFrame(frame);
+        if (idx < 0) { setFrame(minFrame(), { fromAudio: true }); seekMediaToFrame(minFrame()); return; }
+        const end = runEndIndex(idx);
+        const endFrame = selection[end];
+        const n = timeToFrame(t);
+        if (n >= selection[idx] && n <= endFrame) {
+          if (n !== frame) setFrame(n, { fromAudio: true });
+          return;
+        }
+        if (n > endFrame) {
+          if (end + 1 < selection.length) {
+            const next = selection[end + 1];
+            setFrame(next, { fromAudio: true });
+            seekMediaToFrame(next);
+          } else {
+            setFrame(endFrame, { fromAudio: true });
+            pause();
+          }
+        }
+      }
+
+      function tick(now) {
+        if (!playing) return;
+        const el = mediaClock();
+        if (useAudioClock && el && !el.paused && !el.ended) {
+          const t = el.currentTime;
+          if (inSelView()) selectionPlayTick(t);
+          else {
+            const n = timeToFrame(t);
+            if (el.ended || t >= frameToTime(TOTAL) + 0.6 / FPS) {
+              setFrame(TOTAL, { fromAudio: true });
+              pause();
+            } else if (n !== frame) {
+              setFrame(n, { fromAudio: true });
+            }
+          }
+        } else {
+          if (!lastTick) lastTick = now;
+          const dt = now - lastTick;
+          lastTick = now;
+          acc += dt;
+          const frameMs = 1000 / (FPS * speed);
+          while (acc >= frameMs) {
+            acc -= frameMs;
+            const idx = indexOfFrame(frame);
+            if (idx >= frameCount() - 1) {
+              pause();
+              acc = 0;
+              break;
+            }
+            const prev = frame;
+            stepBy(1);
+            if (useAudioClock === false && mediaClock() && frame !== prev + 1) {
+              seekMediaToFrame(frame);
+            }
+          }
+        }
+        if (playing) playRaf = requestAnimationFrame(tick);
+      }
+
+      function syncStepSeg() {
+        const btns = $("stepSeg").querySelectorAll("button");
+        for (let i = 0; i < btns.length; i++) {
+          btns[i].classList.toggle("active", parseInt(btns[i].getAttribute("data-step"), 10) === onionStep);
+        }
+      }
+      function syncOnionModeSeg() {
+        const btns = $("onionModeSeg").querySelectorAll("button");
+        for (let i = 0; i < btns.length; i++) {
+          btns[i].classList.toggle("active", btns[i].getAttribute("data-omode") === onionMode);
+        }
+      }
+
+      function normalizeSelText(text) {
+        let s = String(text == null ? "" : text);
+        s = s.replace(/[０-９]/g, function (ch) {
+          return String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 0x30);
+        });
+        s = s.replace(/[，、､]/g, ",");
+        s = s.replace(/[～∼]/g, "~");
+        s = s.replace(/\s*([-~–—])\s*/g, "$1");
+        return s;
+      }
+
+      function isIncompleteSelection(text) {
+        const s = normalizeSelText(text).trim();
+        if (!s) return false;
+        if (/[,;.\-~–—]\s*$/.test(s)) return true;
+        const tokens = s.split(/[,;\s]+/).filter(Boolean);
+        if (!tokens.length) return true;
+        const last = tokens[tokens.length - 1];
+        if (/^\d+[-~–—]$/.test(last)) return true;
+        return false;
+      }
+
+      function parseSelection(text, total) {
+        total = total == null ? TOTAL : total;
+        const s = normalizeSelText(text).trim();
+        const tokens = s.split(/[,;\s]+/).filter(Boolean);
+        if (!tokens.length) throw new Error("프레임 번호를 입력해 줘.");
+        const seen = {};
+        const arr = [];
+        for (let i = 0; i < tokens.length; i++) {
+          const tok = tokens[i];
+          const m = tok.match(/^(\d+)[-~–—](\d+)$/);
+          if (m) {
+            const a = parseInt(m[1], 10);
+            const b = parseInt(m[2], 10);
+            const step = a <= b ? 1 : -1;
+            for (let n = a; ; n += step) {
+              if (n >= 1 && n <= total && !seen[n]) { seen[n] = 1; arr.push(n); }
+              if (n === b) break;
+            }
+          } else if (/^\d+$/.test(tok)) {
+            const n = parseInt(tok, 10);
+            if (n >= 1 && n <= total) {
+              if (!seen[n]) { seen[n] = 1; arr.push(n); }
+            } else {
+              throw new Error("범위를 벗어난 프레임: " + n);
+            }
+          } else {
+            throw new Error("잘못된 형식: " + tok);
+          }
+        }
+        if (!arr.length) throw new Error("유효한 프레임이 없어.");
+        return arr;
+      }
+
+      function setError(msg) { errEl.textContent = msg || ""; }
+      function setSelError(msg) {
+        selErrEl.textContent = msg || "";
+        selInput.classList.toggle("invalid", !!msg);
+      }
+
+      function updateSelChrome() {
+        const n = selection ? selection.length : 0;
+        selCount.textContent = "선택 " + n + "장";
+        selCount.classList.toggle("has", n > 0);
+        $("selAdd").classList.toggle("on", !!(selection && selection.indexOf(frame) >= 0));
+        $("selFrom").classList.toggle("active", rangeFrom != null);
+        selRangeHint.textContent = rangeFrom != null
+          ? ("여기부터 " + rangeFrom + " · 여기까지를 눌러 범위를 넣어")
+          : "";
+        const btns = $("selViewSeg").querySelectorAll("button");
+        for (let i = 0; i < btns.length; i++) {
+          const v = btns[i].getAttribute("data-selview");
+          btns[i].classList.toggle("active", selViewOnly ? v === "sel" : v === "all");
+        }
+        $("selViewSeg").querySelector('[data-selview="sel"]').disabled = n === 0;
+      }
+
+      function setSelViewOnly(on) {
+        if (on && !(selection && selection.length)) {
+          setSelError("먼저 프레임을 선택해 줘.");
+          selViewOnly = false;
+        } else {
+          selViewOnly = !!on;
+          if (selViewOnly) setSelError("");
+        }
+        project.selViewOnly = selViewOnly;
+        if (selViewOnly) setFrame(clampToMode(frame), { silent: true });
+        else updateChrome();
+      }
+
+      function commitSelection(arr, opts) {
+        opts = opts || {};
+        if (!arr || !arr.length) {
+          if (document.activeElement !== selInput) selInput.value = "";
+          clearSelection();
+          return [];
+        }
+        selection = arr.slice();
+        project.selection = arr.slice();
+        const compact = compactList(arr);
+        project.selText = compact;
+        if (opts.rewrite !== false && document.activeElement !== selInput) {
+          selInput.value = compact;
+        } else if (opts.rewrite === true) {
+          selInput.value = compact;
+        }
+        thumbsWrap.classList.add("show");
+        renderThumbs();
+        setSelError("");
+        setError("");
+        if (inSelView()) setFrame(clampToMode(frame), { silent: true });
+        else updateChrome();
+        return selection.slice();
+      }
+
+      function applySelection(text, opts) {
+        opts = opts || {};
+        const raw = text == null ? selInput.value : text;
+        if (!String(raw).trim()) {
+          selInput.value = "";
+          clearSelection();
+          return [];
+        }
+        const arr = parseSelection(raw, TOTAL);
+        return commitSelection(arr, opts);
+      }
+
+      function tryApplySelInput(opts) {
+        opts = opts || {};
+        const raw = selInput.value;
+        if (!String(raw).trim()) {
+          setSelError("");
+          if (selection) clearSelection();
+          else if (opts.rewrite) selInput.value = "";
+          return true;
+        }
+        if (!opts.force && isIncompleteSelection(raw)) {
+          setSelError("");
+          return false;
+        }
+        try {
+          applySelection(raw, opts);
+          return true;
+        } catch (err) {
+          setSelError(err.message);
+          return false;
+        }
+      }
+
+      function scheduleSelApply() {
+        if (selApplyTimer) clearTimeout(selApplyTimer);
+        selApplyTimer = setTimeout(function () {
+          selApplyTimer = 0;
+          tryApplySelInput({ rewrite: false });
+        }, 600);
+      }
+
+      function clearSelection() {
+        if (selApplyTimer) { clearTimeout(selApplyTimer); selApplyTimer = 0; }
+        selection = null;
+        selViewOnly = false;
+        rangeFrom = null;
+        lastSelAnchor = null;
+        project.selection = null;
+        project.selText = "";
+        project.selViewOnly = false;
+        if (document.activeElement !== selInput) selInput.value = "";
+        thumbsWrap.classList.remove("show");
+        thumbs.innerHTML = "";
+        setSelError("");
+        setError("");
+        updateChrome();
+      }
+
+      function toggleSelectCurrent() {
+        const cur = frame;
+        let arr = selection ? selection.slice() : [];
+        const i = arr.indexOf(cur);
+        if (i >= 0) arr.splice(i, 1);
+        else arr.push(cur);
+        lastSelAnchor = cur;
+        if (!arr.length) {
+          if (document.activeElement !== selInput) selInput.value = "";
+          clearSelection();
+          return;
+        }
+        commitSelection(arr, { rewrite: document.activeElement !== selInput });
+      }
+
+      function addRange(a, b) {
+        a = a | 0; b = b | 0;
+        if (!a || !b) return;
+        a = Math.max(1, Math.min(TOTAL, a));
+        b = Math.max(1, Math.min(TOTAL, b));
+        const step = a <= b ? 1 : -1;
+        const arr = selection ? selection.slice() : [];
+        const seen = {};
+        for (let i = 0; i < arr.length; i++) seen[arr[i]] = 1;
+        for (let n = a; ; n += step) {
+          if (!seen[n]) { arr.push(n); seen[n] = 1; }
+          if (n === b) break;
+        }
+        lastSelAnchor = b;
+        commitSelection(arr, { rewrite: document.activeElement !== selInput });
+      }
+
+      function markRangeFrom() {
+        rangeFrom = frame;
+        lastSelAnchor = frame;
+        setSelError("");
+        updateSelChrome();
+      }
+
+      function markRangeTo() {
+        if (rangeFrom == null) {
+          setSelError("먼저 「여기부터」를 눌러 줘.");
+          return;
+        }
+        addRange(rangeFrom, frame);
+        rangeFrom = null;
+        updateSelChrome();
+      }
+
+      function removeSelectedFrame(n) {
+        if (!selection) return;
+        const arr = selection.filter(function (x) { return x !== n; });
+        if (!arr.length) {
+          if (document.activeElement !== selInput) selInput.value = "";
+          clearSelection();
+          return;
+        }
+        commitSelection(arr, { rewrite: document.activeElement !== selInput });
+      }
+
+      function compactList(arr) {
+        const parts = [];
+        let i = 0;
+        while (i < arr.length) {
+          let j = i;
+          const dir = (j + 1 < arr.length && Math.abs(arr[j + 1] - arr[j]) === 1) ? (arr[j + 1] - arr[j]) : 0;
+          if (dir) {
+            while (j + 1 < arr.length && arr[j + 1] === arr[j] + dir) j++;
+          }
+          if (j > i) parts.push(arr[i] + "-" + arr[j]);
+          else parts.push(String(arr[i]));
+          i = j + 1;
+        }
+        return parts.join(", ");
+      }
+
+      function renderThumbs() {
+        thumbs.innerHTML = "";
+        if (!selection) return;
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < selection.length; i++) {
+          (function (n, idx) {
+            const el = document.createElement("div");
+            el.className = "thumb" + (n === frame ? " current" : "");
+            el.dataset.frame = String(n);
+            el.dataset.index = String(idx);
+            el.draggable = true;
+            el.title = "프레임 " + n + " · 클릭 이동 · Shift+클릭 범위 · 드래그 순서 · × 제거";
+            const img = document.createElement("img");
+            img.alt = "프레임 " + n;
+            img.draggable = false;
+            if (project.type === "builtin") {
+              if (selection.length > 400 && Math.abs(n - frame) > 80) img.dataset.src = src(n);
+              else img.src = src(n);
+            } else {
+              img.dataset.waiting = String(n);
+              getDrawable(n).then(function (d) {
+                if (!d) return;
+                try {
+                  const c = document.createElement("canvas");
+                  const sz = drawableSize(d);
+                  c.width = 128; c.height = 72;
+                  c.getContext("2d").drawImage(d, 0, 0, 128, 72);
+                  img.src = c.toDataURL("image/jpeg", 0.7);
+                } catch (e) {}
+              });
+            }
+            const cap = document.createElement("span");
+            cap.textContent = String(n);
+            const xbtn = document.createElement("button");
+            xbtn.type = "button";
+            xbtn.className = "thumb-x";
+            xbtn.setAttribute("aria-label", "프레임 " + n + " 제거");
+            xbtn.textContent = "×";
+            xbtn.addEventListener("click", function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              removeSelectedFrame(n);
+            });
+            el.appendChild(xbtn);
+            el.appendChild(img);
+            el.appendChild(cap);
+            el.addEventListener("click", function (e) {
+              if (thumbDragging) return;
+              if (e.shiftKey) {
+                e.preventDefault();
+                const from = lastSelAnchor != null ? lastSelAnchor : frame;
+                addRange(from, n);
+                return;
+              }
+              lastSelAnchor = n;
+              setFrame(n);
+            });
+            el.addEventListener("dragstart", function (e) {
+              thumbDragging = true;
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", String(idx));
+              el.classList.add("dragging");
+            });
+            el.addEventListener("dragend", function () {
+              el.classList.remove("dragging");
+              setTimeout(function () { thumbDragging = false; }, 0);
+            });
+            el.addEventListener("dragover", function (e) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              el.classList.add("drag-over");
+            });
+            el.addEventListener("dragleave", function () { el.classList.remove("drag-over"); });
+            el.addEventListener("drop", function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              el.classList.remove("drag-over");
+              const from = parseInt(e.dataTransfer.getData("text/plain"), 10);
+              const to = parseInt(el.dataset.index, 10);
+              if (!selection || isNaN(from) || isNaN(to) || from === to) return;
+              const arr = selection.slice();
+              const item = arr.splice(from, 1)[0];
+              arr.splice(to, 0, item);
+              commitSelection(arr, { rewrite: document.activeElement !== selInput });
+            });
+            frag.appendChild(el);
+          })(selection[i], i);
+        }
+        thumbs.appendChild(frag);
+        lazyThumbs();
+        highlightThumb();
+      }
+
+      function lazyThumbs() {
+        const nodes = thumbs.querySelectorAll("img[data-src]");
+        if (!nodes.length) return;
+        function loadVisible() {
+          const r = thumbs.getBoundingClientRect();
+          for (let i = 0; i < nodes.length; i++) {
+            const img = nodes[i];
+            if (!img.dataset.src) continue;
+            const b = img.parentElement.getBoundingClientRect();
+            if (b.right >= r.left - 200 && b.left <= r.right + 200) {
+              img.src = img.dataset.src;
+              img.removeAttribute("data-src");
+            }
+          }
+        }
+        thumbs.addEventListener("scroll", loadVisible);
+        loadVisible();
+      }
+
+      function highlightThumb() {
+        const nodes = thumbs.querySelectorAll(".thumb");
+        let currentEl = null;
+        for (let i = 0; i < nodes.length; i++) {
+          const n = parseInt(nodes[i].dataset.frame, 10);
+          const on = n === frame;
+          nodes[i].classList.toggle("current", on);
+          if (on) currentEl = nodes[i];
+        }
+        if (currentEl) {
+          const r = currentEl.getBoundingClientRect();
+          const pr = thumbs.getBoundingClientRect();
+          if (r.left < pr.left || r.right > pr.right) {
+            currentEl.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+          }
+        }
+      }
+
+      function fpsLabel(fps) {
+        if (Math.abs(fps - 24000 / 1001) < 0.002) return "23.976";
+        if (Math.abs(fps - 30000 / 1001) < 0.002) return "29.97";
+        return (Math.round(fps * 1000) / 1000).toString();
+      }
+
+      function updateProjectChrome() {
+        const sub = project.type === "builtin"
+          ? (project.name + " · " + project.title + " · " + TOTAL + "장 · " + fpsLabel(FPS) + "fps")
+          : (project.name + " · " + TOTAL + "장 · " + fpsLabel(FPS) + "fps");
+        $("projectSub").textContent = sub;
+        $("fpsGroup").style.display = project.type === "video" ? "flex" : "none";
+        $("extractBtn").style.display = project.type === "video" ? "" : "none";
+        const sel = $("projectSel");
+        const hasLoaded = !!loadedProject;
+        let opt = sel.querySelector('option[value="loaded"]');
+        if (hasLoaded) {
+          if (!opt) {
+            opt = document.createElement("option");
+            opt.value = "loaded";
+            sel.appendChild(opt);
+          }
+          opt.textContent = loadedProject.name;
+        } else if (opt) opt.remove();
+        sel.value = project.id === "bbbb" ? "bbbb" : "loaded";
+        const opts = $("fpsSel").options;
+        let matched = false;
+        for (let i = 0; i < opts.length; i++) {
+          if (Math.abs(parseFloat(opts[i].value) - FPS) < 0.002) {
+            $("fpsSel").value = opts[i].value;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          $("fpsSel").value = "24";
+        }
+        updateSelChrome();
+      }
+
+      function saveProjectState() {
+        project.selection = selection ? selection.slice() : null;
+        project.selText = selInput.value;
+        project.selViewOnly = selViewOnly;
+        project.frame = frame;
+      }
+
+      function activateProject(p) {
+        pause();
+        saveProjectState();
+        project = p;
+        TOTAL = p.total;
+        FPS = p.fps;
+        selection = p.selection ? p.selection.slice() : null;
+        selViewOnly = !!(p.selViewOnly && selection && selection.length);
+        rangeFrom = null;
+        lastSelAnchor = null;
+        selInput.value = p.selText || (selection ? compactList(selection) : "");
+        if (selection && selection.length) {
+          thumbsWrap.classList.add("show");
+          renderThumbs();
+        } else {
+          selection = null;
+          selViewOnly = false;
+          thumbsWrap.classList.remove("show");
+          thumbs.innerHTML = "";
+        }
+        if (p.type === "builtin") {
+          try { videoPlay.removeAttribute("src"); videoPlay.load(); } catch (e) {}
+          try { videoSeek.removeAttribute("src"); videoSeek.load(); } catch (e) {}
+        }
+        updateProjectChrome();
+        setFrame(p.frame && p.frame <= TOTAL ? p.frame : 1, { silent: true });
+      }
+
+      function waitMedia(el) {
+        return new Promise(function (resolve, reject) {
+          if (el.readyState >= 1 && isFinite(el.duration) && el.duration > 0) { resolve(); return; }
+          const ok = function () { el.removeEventListener("loadedmetadata", ok); el.removeEventListener("error", bad); resolve(); };
+          const bad = function () { el.removeEventListener("loadedmetadata", ok); el.removeEventListener("error", bad); reject(new Error("영상을 열 수 없어.")); };
+          el.addEventListener("loadedmetadata", ok);
+          el.addEventListener("error", bad);
+        });
+      }
+
+      function inferFps(duration) {
+        const presets = [24000 / 1001, 24, 25, 30000 / 1001, 30, 50, 60, 48, 120];
+        let best = 24, bestErr = 1e9;
+        for (let i = 0; i < presets.length; i++) {
+          const p = presets[i];
+          const frames = duration * p;
+          const err = Math.abs(frames - Math.round(frames));
+          if (err < bestErr) { bestErr = err; best = p; }
+        }
+        if (bestErr < 0.05) return best;
+        return null;
+      }
+
+      async function measureFps(video) {
+        const inferred = isFinite(video.duration) ? inferFps(video.duration) : null;
+        if (inferred) return inferred;
+        if (!video.requestVideoFrameCallback) return 24;
+        const wasMute = video.muted;
+        video.muted = true;
+        const times = [];
+        try { await video.play(); } catch (e) { video.muted = wasMute; return 24; }
+        return new Promise(function (resolve) {
+          const stop = function (val) {
+            try { video.pause(); } catch (e) {}
+            video.muted = wasMute;
+            resolve(val);
+          };
+          const cb = function (now, meta) {
+            times.push(meta.mediaTime);
+            if (times.length >= 24) {
+              const iv = [];
+              for (let i = 1; i < times.length; i++) {
+                const d = times[i] - times[i - 1];
+                if (d > 0.002 && d < 0.1) iv.push(d);
+              }
+              iv.sort(function (a, b) { return a - b; });
+              const med = iv.length ? iv[Math.floor(iv.length / 2)] : 1 / 24;
+              const raw = 1 / med;
+              const snapped = inferFps(1) ? raw : raw;
+              const presets = [24000 / 1001, 24, 25, 30000 / 1001, 30, 50, 60];
+              let best = raw, be = 1e9;
+              for (let i = 0; i < presets.length; i++) {
+                const e = Math.abs(raw - presets[i]) / presets[i];
+                if (e < be) { be = e; best = presets[i]; }
+              }
+              stop(be < 0.02 ? best : Math.round(raw * 1000) / 1000);
+            } else video.requestVideoFrameCallback(cb);
+          };
+          video.requestVideoFrameCallback(cb);
+          setTimeout(function () { if (times.length < 24) stop(24); }, 2500);
+        });
+      }
+
+      async function loadVideoFile(file) {
+        if (!file) return;
+        setError("");
+        pause();
+        const url = URL.createObjectURL(file);
+        videoPlay.src = url;
+        videoSeek.src = url;
+        try {
+          await Promise.all([waitMedia(videoPlay), waitMedia(videoSeek)]);
+        } catch (e) {
+          URL.revokeObjectURL(url);
+          setError(e.message || "영상을 열 수 없어.");
+          return;
+        }
+        const duration = videoPlay.duration;
+        const fps = await measureFps(videoPlay);
+        try { videoPlay.pause(); videoPlay.currentTime = 0; } catch (e) {}
+        const total = Math.max(1, Math.round(duration * fps));
+        if (loadedProject && loadedProject.url) {
+          try { URL.revokeObjectURL(loadedProject.url); } catch (e) {}
+        }
+        jpegStore.forEach(function () {});
+        jpegStore.clear();
+        bmpCache.forEach(function (b) { if (b && b.close) try { b.close(); } catch (e) {} });
+        bmpCache.clear();
+        bmpBytes = 0;
+        urlCache.forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) {} });
+        urlCache.clear();
+        edgeCache.clear();
+        loadedProject = {
+          id: "loaded",
+          type: "video",
+          name: file.name,
+          total: total,
+          fps: fps,
+          audioOffset: 0,
+          duration: duration,
+          url: url,
+          selection: null,
+          selText: "",
+          selViewOnly: false,
+          frame: 1
+        };
+        activateProject(loadedProject);
+        setError("");
+      }
+
+      function setProjectFps(fps) {
+        if (project.type !== "video") return;
+        FPS = fps;
+        project.fps = fps;
+        project.total = Math.max(1, Math.round((project.duration || 0) * fps));
+        TOTAL = project.total;
+        if (frame > TOTAL) frame = TOTAL;
+        updateProjectChrome();
+        setFrame(frame, { silent: true });
+      }
+
+      async function storeJpeg(n, drawable) {
+        if (jpegStore.has(n)) return;
+        const sz = drawableSize(drawable);
+        const c = document.createElement("canvas");
+        c.width = sz.w; c.height = sz.h;
+        c.getContext("2d").drawImage(drawable, 0, 0, sz.w, sz.h);
+        const blob = await new Promise(function (res) { c.toBlob(res, "image/jpeg", 0.72); });
+        if (blob) jpegStore.set(n, blob);
+      }
+
+      async function extractAllFrames() {
+        if (project.type !== "video" || extracting) return;
+        extracting = true;
+        extractAbort = false;
+        $("extractBar").classList.add("show");
+        $("extractBtn").disabled = true;
+        for (let n = 1; n <= TOTAL; n++) {
+          if (extractAbort) break;
+          const d = await captureVideoFrame(n);
+          if (d) await storeJpeg(n, d);
+          if (n % 5 === 0 || n === TOTAL) {
+            const pct = Math.round(n / TOTAL * 100);
+            $("extractFill").style.width = pct + "%";
+            $("extractLabel").textContent = "추출 중… " + n + " / " + TOTAL + " (" + pct + "%)";
+          }
+        }
+        $("extractLabel").textContent = extractAbort ? "추출을 취소했어. " + jpegStore.size + "장 저장됨." : "추출 완료 · " + jpegStore.size + "장";
+        if (!extractAbort) $("extractFill").style.width = "100%";
+        extracting = false;
+        $("extractBtn").disabled = false;
+        if (!extractAbort) setTimeout(function () { $("extractBar").classList.remove("show"); }, 1600);
+      }
+
+      async function prepareExportFrames(frames) {
+        urlCache.forEach(function (u, k) {
+          if (frames.indexOf(k) < 0) { try { URL.revokeObjectURL(u); } catch (e) {} urlCache.delete(k); }
+        });
+        if (project.type === "builtin") return;
+        for (let i = 0; i < frames.length; i++) {
+          const n = frames[i];
+          if (urlCache.has(n)) continue;
+          const d = await getDrawable(n);
+          if (!d) continue;
+          const sz = drawableSize(d);
+          const c = document.createElement("canvas");
+          c.width = sz.w; c.height = sz.h;
+          c.getContext("2d").drawImage(d, 0, 0, sz.w, sz.h);
+          const blob = await new Promise(function (res) { c.toBlob(res, "image/jpeg", 0.92); });
+          if (blob) urlCache.set(n, URL.createObjectURL(blob));
+        }
+      }
+
+      function isEditable(el) {
+        if (!el) return false;
+        const tag = el.tagName;
+        return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
+      }
+      function showHelp(on) {
+        $("help").classList.toggle("show", !!on);
+      }
+
+      window.__flipbook = {
+        get frame() { return frame; },
+        get total() { return TOTAL; },
+        get fps() { return FPS; },
+        get selection() { return selection ? selection.slice() : null; },
+        get selViewOnly() { return selViewOnly; },
+        get rangeFrom() { return rangeFrom; },
+        get selError() { return selErrEl.textContent; },
+        setSelViewOnly: setSelViewOnly,
+        toggleSelectCurrent: toggleSelectCurrent,
+        markRangeFrom: markRangeFrom,
+        markRangeTo: markRangeTo,
+        addRange: addRange,
+        removeSelectedFrame: removeSelectedFrame,
+        get onionOn() { return onionOn; },
+        get onionMode() { return onionMode; },
+        get playing() { return playing; },
+        get speed() { return speed; },
+        get volume() { return volume; },
+        get muted() { return userMuted; },
+        get scrubSound() { return scrubSoundOn; },
+        get preservesPitch() { return pitchHold; },
+        get audioOffset() { return AUDIO_OFFSET; },
+        get project() { return { id: project.id, type: project.type, name: project.name, total: TOTAL, fps: FPS }; },
+        setFrame: function (n, opts) { setFrame(n, opts); },
+        stepBy: stepBy,
+        parseSelection: parseSelection,
+        applySelection: applySelection,
+        clearSelection: clearSelection,
+        toggleOnion: toggleOnion,
+        setOnionOn: setOnionOn,
+        setOnionMode: function (m) { onionMode = m; syncOnionModeSeg(); ensureOnionOn(); },
+        setOnionN: function (n) { onionN = n; $("onionN").value = String(n); $("onionNVal").textContent = String(n); ensureOnionOn(); },
+        setOnionOpacity: function (o) { onionOpacity = o; $("onionOp").value = String(Math.round(o * 100)); $("onionOpVal").textContent = Math.round(o * 100) + "%"; ensureOnionOn(); },
+        setOnionStep: function (s) { onionStep = s; syncStepSeg(); ensureOnionOn(); },
+        play: play,
+        pause: pause,
+        timecode: timecode,
+        src: src,
+        frameToTime: frameToTime,
+        timeToFrame: timeToFrame,
+        seekTimeForFrame: seekTimeForFrame,
+        setVolume: setVolume,
+        toggleMute: toggleMute,
+        setScrubSound: function (on) { scrubSoundOn = !!on; $("scrubSoundChk").checked = scrubSoundOn; },
+        setPitchHold: function (on) { pitchHold = !!on; $("pitchChk").checked = pitchHold; },
+        loadVideoFile: loadVideoFile,
+        setProjectFps: setProjectFps,
+        activateBuiltin: function () { activateProject(builtinProject); },
+        getDrawable: getDrawable,
+        captureCanvas: function () { return viewCanvas; },
+        media: function () { return mediaClock(); }
+      };
+
+      // Events
+      playBtn.addEventListener("click", togglePlay);
+      $("speedSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        speed = parseFloat(b.getAttribute("data-speed"));
+        const btns = $("speedSeg").querySelectorAll("button");
+        for (let i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i] === b);
+        if (playing) {
+          const el = mediaClock();
+          if (el) {
+            const ok = applyRate(el, speed);
+            if (!ok && speed < 0.5) { useAudioClock = false; el.muted = true; }
+            else { useAudioClock = true; applyMediaVol(); if (el.paused) el.play().catch(function () {}); }
+          }
+        }
+      });
+      $("stepSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        onionStep = parseInt(b.getAttribute("data-step"), 10);
+        syncStepSeg();
+        ensureOnionOn();
+      });
+      $("onionModeSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        onionMode = b.getAttribute("data-omode");
+        syncOnionModeSeg();
+        ensureOnionOn();
+      });
+
+      scrub.addEventListener("input", function () {
+        const pos = parseInt(scrub.value, 10);
+        const n = frameAtIndex(pos - 1);
+        setFrame(n, { skipPreload: true });
+        preloadAround(n, 24);
+      });
+      scrub.addEventListener("change", function () {
+        preloadAround(frame, 48);
+      });
+
+      function applyJump() {
+        const raw = normalizeSelText(jumpInput.value).trim();
+        if (!raw) {
+          jumpInput.value = String(frame);
+          setError("");
+          return;
+        }
+        const n = parseInt(raw, 10);
+        if (!n || n < 1 || n > TOTAL) {
+          setError("1~" + TOTAL + " 사이 번호를 입력해 줘.");
+          return;
+        }
+        setError("");
+        setFrame(n);
+        jumpInput.value = String(frame);
+      }
+      $("jumpBtn").addEventListener("click", applyJump);
+      jumpInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); applyJump(); }
+        if (e.key === "Escape") { e.preventDefault(); jumpInput.blur(); }
+      });
+      jumpInput.addEventListener("blur", applyJump);
+
+      $("selApply").addEventListener("click", function () {
+        if (selApplyTimer) { clearTimeout(selApplyTimer); selApplyTimer = 0; }
+        tryApplySelInput({ rewrite: true, force: true });
+      });
+      selInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (selApplyTimer) { clearTimeout(selApplyTimer); selApplyTimer = 0; }
+          tryApplySelInput({ rewrite: true, force: true });
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          selInput.blur();
+        }
+      });
+      selInput.addEventListener("input", function () { scheduleSelApply(); });
+      selInput.addEventListener("blur", function () {
+        if (selApplyTimer) { clearTimeout(selApplyTimer); selApplyTimer = 0; }
+        tryApplySelInput({ rewrite: true, force: true });
+      });
+      $("selAdd").addEventListener("click", toggleSelectCurrent);
+      $("selFrom").addEventListener("click", markRangeFrom);
+      $("selTo").addEventListener("click", markRangeTo);
+      $("selClear").addEventListener("click", function () {
+        selInput.value = "";
+        clearSelection();
+      });
+      $("selViewSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        setSelViewOnly(b.getAttribute("data-selview") === "sel");
+      });
+
+      $("onionBtn").addEventListener("click", toggleOnion);
+      $("onionN").addEventListener("input", function () {
+        onionN = parseInt($("onionN").value, 10);
+        $("onionNVal").textContent = String(onionN);
+        ensureOnionOn();
+      });
+      $("onionOp").addEventListener("input", function () {
+        onionOpacity = parseInt($("onionOp").value, 10) / 100;
+        $("onionOpVal").textContent = $("onionOp").value + "%";
+        ensureOnionOn();
+      });
+      $("muteBtn").addEventListener("click", toggleMute);
+      $("volSlider").addEventListener("input", function () {
+        setVolume(parseInt($("volSlider").value, 10) / 100);
+      });
+      $("pitchChk").addEventListener("change", function () { pitchHold = $("pitchChk").checked; });
+      $("scrubSoundChk").addEventListener("change", function () { scrubSoundOn = $("scrubSoundChk").checked; });
+
+      $("loadBtn").addEventListener("click", function () { $("fileInput").click(); });
+      $("fileInput").addEventListener("change", function () {
+        const f = $("fileInput").files && $("fileInput").files[0];
+        if (f) loadVideoFile(f);
+        $("fileInput").value = "";
+      });
+      $("projectSel").addEventListener("change", function () {
+        if ($("projectSel").value === "bbbb") activateProject(builtinProject);
+        else if (loadedProject) activateProject(loadedProject);
+      });
+      $("fpsSel").addEventListener("change", function () {
+        setProjectFps(parseFloat($("fpsSel").value));
+      });
+      $("extractBtn").addEventListener("click", function () { extractAllFrames(); });
+      $("extractCancel").addEventListener("click", function () { extractAbort = true; });
+
+      viewport.addEventListener("wheel", function (e) {
+        e.preventDefault();
+        const dir = e.deltaY > 0 || e.deltaX > 0 ? 1 : -1;
+        const step = e.shiftKey ? 10 : 1;
+        stepBy(dir * step);
+      }, { passive: false });
+
+      document.addEventListener("keydown", function (e) {
+        if ($("exportModal").classList.contains("show")) {
+          if (e.key === "Escape") closeExport();
+          return;
+        }
+        if (isEditable(e.target)) {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            e.target.blur();
+          }
+          return;
+        }
+        if (e.key === "Escape") {
+          showHelp(false);
+          return;
+        }
+        if (e.key === "?" || e.key === "/") {
+          e.preventDefault();
+          showHelp(!$("help").classList.contains("show"));
+          return;
+        }
+        if (e.key === " " || e.code === "Space") {
+          e.preventDefault();
+          togglePlay();
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          stepBy(e.shiftKey ? -10 : -1);
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          stepBy(e.shiftKey ? 10 : 1);
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          setFrame(minFrame());
+        } else if (e.key === "End") {
+          e.preventDefault();
+          setFrame(maxFrame());
+        } else if (e.key === "m" || e.key === "M") {
+          e.preventDefault();
+          toggleSelectCurrent();
+        } else if (e.key === "o" || e.key === "O") {
+          e.preventDefault();
+          toggleOnion();
+        } else if (e.key === "v" || e.key === "V") {
+          e.preventDefault();
+          toggleMute();
+        } else if (e.key === "[") {
+          e.preventDefault();
+          markRangeFrom();
+        } else if (e.key === "]") {
+          e.preventDefault();
+          markRangeTo();
+        }
+      });
+
+      $("helpBtn").addEventListener("click", function () { showHelp(true); });
+      $("help").addEventListener("click", function (e) {
+        if (e.target.id === "help") showHelp(false);
+      });
+
+      ["dragenter", "dragover"].forEach(function (ev) {
+        document.addEventListener(ev, function (e) {
+          if (![...e.dataTransfer.items].some(function (i) { return i.kind === "file"; })) return;
+          e.preventDefault();
+          document.body.classList.add("dragover");
+        });
+      });
+      ["dragleave", "drop"].forEach(function (ev) {
+        document.addEventListener(ev, function (e) {
+          if (ev === "drop") e.preventDefault();
+          if (ev === "dragleave" && e.target !== document.documentElement && e.target !== document.body) return;
+          document.body.classList.remove("dragover");
+        });
+      });
+      document.addEventListener("drop", function (e) {
+        e.preventDefault();
+        document.body.classList.remove("dragover");
+        const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f && /video|mp4|webm|quicktime|matroska/i.test(f.type || f.name)) loadVideoFile(f);
+        else if (f && /\.(mp4|webm|mov|m4v|mkv)$/i.test(f.name)) loadVideoFile(f);
+      });
+
+      applyMediaVol();
+
+
+      // ===== Print / Collage export =====
+      const MM_PER_PX = 25.4 / 96;
+      const ex = {
+        kind: "print",
+        pp: 4,
+        printPaper: "A4",
+        printOrient: "portrait",
+        printCaption: true,
+        cmode: "order",
+        cPaper: "A4",
+        cOrient: "portrait",
+        cGap: 6,
+        cCaption: true,
+        cBg: "white",
+        layout: null,
+        pages: 0,
+        lastPng: null,
+        source: "sel",
+        interval: 1,
+        start: 1,
+        end: 1
+      };
+      const MAX_EXPORT_FRAMES = 600;
+      let exRefreshTimer = 0;
+      let exRefreshSeq = 0;
+
+      function setExportMsg(text, kind) {
+        const el = $("exportMsg");
+        el.textContent = text || "";
+        el.className = kind === "warn" ? "warn" : (kind === "err" ? "err" : "");
+      }
+
+      function currentSelection() {
+        return (selection && selection.length) ? selection.slice() : null;
+      }
+
+      function exportFrameList() {
+        const iv = Math.max(1, parseInt(ex.interval, 10) || 1);
+        if (ex.source === "range") {
+          let a = Math.max(1, Math.min(TOTAL, parseInt(ex.start, 10) || 1));
+          let b = Math.max(1, Math.min(TOTAL, parseInt(ex.end, 10) || 1));
+          if (a > b) { const tmp = a; a = b; b = tmp; }
+          const arr = [];
+          for (let n = a; n <= b; n += iv) arr.push(n);
+          return arr;
+        }
+        const sel = currentSelection() || [];
+        const arr = [];
+        for (let i = 0; i < sel.length; i += iv) arr.push(sel[i]);
+        return arr;
+      }
+
+      function syncExportSourceUI() {
+        activateSeg("exSrcSeg", "data-exsrc", ex.source);
+        $("exRangeGroup").classList.toggle("hidden", ex.source !== "range");
+        const hasSel = !!(selection && selection.length);
+        const selBtn = $("exSrcSeg").querySelector('[data-exsrc="sel"]');
+        if (selBtn) selBtn.disabled = !hasSel;
+        if (document.activeElement !== $("exStart")) $("exStart").value = String(ex.start);
+        if (document.activeElement !== $("exEnd")) $("exEnd").value = String(ex.end);
+        if (document.activeElement !== $("exInterval")) $("exInterval").value = String(ex.interval);
+        $("exStart").max = String(TOTAL);
+        $("exEnd").max = String(TOTAL);
+        activateSeg("exIntervalSeg", "data-iv", String(ex.interval));
+        const frames = exportFrameList();
+        let label = "결과 " + frames.length + "장";
+        if (ex.source === "range") label += " · " + ex.start + "–" + ex.end + ", " + ex.interval + "프레임 간격";
+        else if (ex.interval > 1) label += " · 선택 " + (selection ? selection.length : 0) + "장 중 " + ex.interval + "프레임 간격";
+        $("exFrameCount").textContent = label;
+        return frames;
+      }
+
+      function initExportSource() {
+        ex.interval = Math.max(1, ex.interval | 0);
+        if (selection && selection.length) {
+          ex.source = "sel";
+          let mn = selection[0], mx = selection[0];
+          for (let i = 1; i < selection.length; i++) {
+            if (selection[i] < mn) mn = selection[i];
+            if (selection[i] > mx) mx = selection[i];
+          }
+          ex.start = mn;
+          ex.end = mx;
+        } else {
+          ex.source = "range";
+          ex.start = frame;
+          ex.end = Math.min(TOTAL, frame + Math.max(23, (ex.interval || 1) * 23));
+        }
+        syncExportSourceUI();
+      }
+
+      async function refreshExport() {
+        const seq = ++exRefreshSeq;
+        const frames = syncExportSourceUI();
+        if (!$("exportModal").classList.contains("show")) return frames;
+        if (!frames.length) {
+          $("exportRoot").innerHTML = "";
+          $("exportInfo").textContent = "";
+          ex.layout = null;
+          ex.pages = 0;
+          setExportMsg("내보낼 프레임이 없어. 선택 또는 범위를 확인해 줘.", "err");
+          return frames;
+        }
+        if (frames.length > MAX_EXPORT_FRAMES) {
+          $("exportRoot").innerHTML = "";
+          $("exportInfo").textContent = "";
+          ex.layout = null;
+          ex.pages = 0;
+          setExportMsg("결과 " + frames.length + "장은 너무 많아. 간격이나 범위를 줄여 줘. (최대 " + MAX_EXPORT_FRAMES + "장)", "err");
+          return frames;
+        }
+        setExportMsg(frames.length > 200 ? ("결과 " + frames.length + "장이야. 미리보기가 조금 느릴 수 있어.") : (ex.kind === "print" ? "인쇄 창에서 ‘PDF로 저장’을 고르면 PDF로 저장할 수 있어." : ""), frames.length > 200 ? "warn" : "");
+        try { await prepareExportFrames(frames); } catch (e) {
+          if (seq !== exRefreshSeq) return frames;
+          setExportMsg("프레임을 준비하지 못했어.", "err");
+          return frames;
+        }
+        if (seq !== exRefreshSeq) return frames;
+        if (!$("exportModal").classList.contains("show")) return frames;
+        rebuildExport();
+        return frames;
+      }
+
+      function scheduleExportRefresh() {
+        if (exRefreshTimer) clearTimeout(exRefreshTimer);
+        syncExportSourceUI();
+        exRefreshTimer = setTimeout(function () {
+          exRefreshTimer = 0;
+          refreshExport();
+        }, 250);
+      }
+
+      function paperSizeMm(paper, orient) {
+        const portrait = { A4: [210, 297], Letter: [215.9, 279.4], Screen: [180, 320] };
+        let wh = portrait[paper] || portrait.A4;
+        let w = wh[0], h = wh[1];
+        if (orient === "landscape") { const tmp = w; w = h; h = tmp; }
+        return { w: w, h: h };
+      }
+
+      function setPageRule(pw, ph, paper, orient) {
+        let size;
+        if (paper === "A4") size = "A4 " + orient;
+        else if (paper === "Letter") size = "letter " + orient;
+        else size = pw + "mm " + ph + "mm";
+        $("pageRule").textContent = "@page { size: " + size + "; margin: 0; }";
+      }
+
+      function activateSeg(id, attr, value) {
+        const btns = $(id).querySelectorAll("button");
+        for (let i = 0; i < btns.length; i++) {
+          btns[i].classList.toggle("active", btns[i].getAttribute(attr) === String(value));
+        }
+      }
+
+      function containScore(cols, rows, contentW, contentH, gap, capH) {
+        const cellW = (contentW - gap * (cols - 1)) / cols;
+        const cellH = (contentH - gap * (rows - 1)) / rows;
+        const imgH = cellH - capH;
+        if (cellW <= 0.5 || imgH <= 0.5) return null;
+        const s = Math.min(cellW / 16, imgH / 9);
+        return { area: s * 16 * s * 9, fw: s * 16, fh: s * 9, cellW: cellW, cellH: cellH };
+      }
+
+      function conventionalGrid(p, contentW, contentH, gap, capH) {
+        const candidates = {
+          1: [[1, 1]],
+          2: [[1, 2], [2, 1]],
+          4: [[2, 2]],
+          6: [[2, 3], [3, 2]],
+          9: [[3, 3]],
+          12: [[3, 4], [4, 3]]
+        };
+        const list = candidates[p] || factorsGrid(p);
+        let best = null;
+        for (let i = 0; i < list.length; i++) {
+          const cols = list[i][0], rows = list[i][1];
+          const score = containScore(cols, rows, contentW, contentH, gap, capH);
+          if (score && (!best || score.area > best.area)) {
+            best = { cols: cols, rows: rows, area: score.area, fw: score.fw, fh: score.fh, cellW: score.cellW, cellH: score.cellH };
+          }
+        }
+        return best;
+      }
+
+      function factorsGrid(p) {
+        const out = [];
+        for (let cols = 1; cols <= p; cols++) {
+          if (p % cols === 0) out.push([cols, p / cols]);
+        }
+        return out;
+      }
+
+      function bestGridAny(n, contentW, contentH, gap, capH) {
+        let best = null;
+        for (let cols = 1; cols <= n; cols++) {
+          const rows = Math.ceil(n / cols);
+          const score = containScore(cols, rows, contentW, contentH, gap, capH);
+          if (!score) continue;
+          const empty = cols * rows - n;
+          if (!best || score.area > best.area + 0.05 || (Math.abs(score.area - best.area) <= 0.05 && empty < best.empty)) {
+            best = { cols: cols, rows: rows, empty: empty, area: score.area, fw: score.fw, fh: score.fh, cellW: score.cellW, cellH: score.cellH };
+          }
+        }
+        return best;
+      }
+
+      function evenPartition(n, rows) {
+        const base = Math.floor(n / rows);
+        let rem = n % rows;
+        const parts = [];
+        for (let r = 0; r < rows; r++) {
+          const k = base + (rem > 0 ? 1 : 0);
+          if (rem > 0) rem--;
+          if (k < 1) return null;
+          parts.push(k);
+        }
+        return parts;
+      }
+
+      function fillLayout(n, contentW, contentH, gap) {
+        let best = null;
+        for (let rows = 1; rows <= n; rows++) {
+          const parts = evenPartition(n, rows);
+          if (!parts) continue;
+          const rowH = (contentH - gap * (rows - 1)) / rows;
+          if (rowH <= 0.5) continue;
+          let crop = 0;
+          let ok = true;
+          const rowsInfo = [];
+          let y = 0;
+          for (let r = 0; r < rows; r++) {
+            const k = parts[r];
+            const colW = (contentW - gap * (k - 1)) / k;
+            if (colW <= 0.5) { ok = false; break; }
+            const aspect = colW / rowH;
+            const target = 16 / 9;
+            const ratio = aspect / target;
+            const c = ratio >= 1 ? ratio : 1 / ratio;
+            crop += (c - 1) * k;
+            rowsInfo.push({ k: k, y: y, h: rowH, colW: colW });
+            y += rowH + gap;
+          }
+          if (!ok) continue;
+          if (!best || crop < best.crop - 1e-9) {
+            best = { rows: rows, parts: parts, crop: crop, rowsInfo: rowsInfo };
+          }
+        }
+        const items = [];
+        let idx = 0;
+        for (let r = 0; r < best.rowsInfo.length; r++) {
+          const row = best.rowsInfo[r];
+          let x = 0;
+          for (let c = 0; c < row.k; c++) {
+            items.push({ i: idx, x: x, y: row.y, w: row.colW, h: row.h, fit: "cover" });
+            x += row.colW + gap;
+            idx++;
+          }
+        }
+        return { items: items, rows: best.rows, parts: best.parts, crop: best.crop };
+      }
+
+      function orderLayout(n, contentW, contentH, gap, capH) {
+        const g = bestGridAny(n, contentW, contentH, gap, capH);
+        const items = [];
+        for (let i = 0; i < n; i++) {
+          const r = Math.floor(i / g.cols);
+          const c = i % g.cols;
+          items.push({
+            i: i,
+            x: c * (g.cellW + gap),
+            y: r * (g.cellH + gap),
+            w: g.cellW,
+            h: g.cellH,
+            fit: "contain",
+            capH: capH
+          });
+        }
+        return { items: items, cols: g.cols, rows: g.rows, empty: g.empty, frameW: g.fw, frameH: g.fh };
+      }
+
+      function printSheetLayout(frames, pp, contentW, contentH, gap, capH) {
+        const g = conventionalGrid(pp, contentW, contentH, gap, capH);
+        const pages = [];
+        for (let i = 0; i < frames.length; i += pp) {
+          const slice = frames.slice(i, i + pp);
+          const cells = [];
+          const total = g.cols * g.rows;
+          for (let k = 0; k < total; k++) cells.push(k < slice.length ? slice[k] : null);
+          pages.push({ cols: g.cols, rows: g.rows, cells: cells, count: slice.length });
+        }
+        return { pages: pages, cols: g.cols, rows: g.rows };
+      }
+
+      function captionText(n) {
+        return "프레임 " + n + "  ·  " + timecode(n);
+      }
+
+      function makeCell(n, fit, caption, overlay) {
+        const cell = document.createElement("div");
+        cell.className = "sheet-cell" + (fit === "cover" ? " cover" : "") + (overlay ? " cap-overlay" : "");
+        if (n == null) {
+          cell.className += " empty";
+          return cell;
+        }
+        const ibox = document.createElement("div");
+        ibox.className = "ibox";
+        const img = document.createElement("img");
+        img.alt = "프레임 " + n;
+        img.src = src(n);
+        img.draggable = false;
+        ibox.appendChild(img);
+        const capEl = caption ? document.createElement("figcaption") : null;
+        if (capEl) capEl.textContent = captionText(n);
+        if (fit === "cover") {
+          cell.appendChild(ibox);
+          if (capEl) cell.appendChild(capEl);
+        } else {
+          const inner = document.createElement("div");
+          inner.className = "cell-inner";
+          inner.appendChild(ibox);
+          if (capEl) inner.appendChild(capEl);
+          cell.appendChild(inner);
+        }
+        cell.dataset.frame = String(n);
+        return cell;
+      }
+
+      function waitForImages(root) {
+        const imgs = Array.prototype.slice.call(root.querySelectorAll("img"));
+        return Promise.all(imgs.map(function (img) {
+          if (img.complete && img.naturalWidth) return Promise.resolve();
+          return new Promise(function (res) {
+            img.onload = img.onerror = function () { res(); };
+          });
+        }));
+      }
+
+      function updatePreviewScale() {
+        const box = $("exportPreview");
+        const sizer = $("exportSizer");
+        if (!box || !sizer || !ex.layout) return;
+        const size = paperSizeMm(
+          ex.kind === "print" ? ex.printPaper : ex.cPaper,
+          ex.kind === "print" ? ex.printOrient : ex.cOrient
+        );
+        const mmPx = 96 / 25.4;
+        const pw = size.w * mmPx;
+        const ph = size.h * mmPx;
+        const availW = Math.max(80, box.clientWidth - 32);
+        const availH = Math.max(80, box.clientHeight - 32);
+        const scale = Math.max(0.12, Math.min(1, Math.min(availW / pw, availH / ph) * 0.98));
+        sizer.style.setProperty("--pscale", String(scale));
+        $("exportRoot").style.setProperty("--pscale", String(scale));
+      }
+
+      function rebuildExport() {
+        const frames = exportFrameList();
+        if (!frames.length) return;
+        const root = $("exportRoot");
+        const sizer = $("exportSizer");
+        const kind = ex.kind;
+        const paper = kind === "print" ? ex.printPaper : ex.cPaper;
+        const orient = kind === "print" ? ex.printOrient : ex.cOrient;
+        const size = paperSizeMm(paper, orient);
+        const pad = paper === "Screen" ? 4 : 8;
+        const contentW = size.w - pad * 2;
+        const contentH = size.h - pad * 2;
+        const bg = (kind === "collage" && ex.cBg === "black") ? "#000" : "#fff";
+        const fg = (bg === "#000") ? "#eee" : "#111";
+
+        setPageRule(size.w, size.h, paper, orient);
+        const pw = size.w + "mm";
+        const ph = size.h + "mm";
+        ["exportModal", "exportSizer", "exportRoot"].forEach(function (id) {
+          $(id).style.setProperty("--pw", pw);
+          $(id).style.setProperty("--ph", ph);
+        });
+
+        root.innerHTML = "";
+        let npage = 1;
+        let layoutMeta = {};
+
+        if (kind === "print") {
+          const gap = 4;
+          const capH = ex.printCaption ? 5.5 : 0;
+          const lay = printSheetLayout(frames, ex.pp, contentW, contentH, gap, capH);
+          npage = lay.pages.length;
+          for (let p = 0; p < lay.pages.length; p++) {
+            const pg = lay.pages[p];
+            const sheet = document.createElement("div");
+            sheet.className = "sheet";
+            sheet.dataset.page = String(p + 1);
+            sheet.style.background = "#fff";
+            sheet.style.color = "#111";
+            sheet.style.setProperty("--sheet-pad", pad + "mm");
+            sheet.style.setProperty("--grid-gap", gap + "mm");
+            sheet.style.setProperty("--cols", String(pg.cols));
+            sheet.style.setProperty("--rows", String(pg.rows));
+            const grid = document.createElement("div");
+            grid.className = "sheet-grid";
+            for (let k = 0; k < pg.cells.length; k++) {
+              const n = pg.cells[k];
+              grid.appendChild(makeCell(n, "contain", !!(ex.printCaption && n), false));
+            }
+            sheet.appendChild(grid);
+            root.appendChild(sheet);
+          }
+          layoutMeta = {
+            kind: "print",
+            pages: npage,
+            cols: lay.cols,
+            rows: lay.rows,
+            frames: frames.slice(),
+            perPage: ex.pp,
+            pageMm: size,
+            pad: pad
+          };
+          $("exportInfo").textContent = frames.length + "장 · " + npage + "페이지 · " + lay.cols + "×" + lay.rows;
+        } else {
+          const gap = ex.cGap * MM_PER_PX;
+          const fill = ex.cmode === "fill";
+          const capH = (!fill && ex.cCaption) ? 5.5 : 0;
+          const lay = fill
+            ? fillLayout(frames.length, contentW, contentH, gap)
+            : orderLayout(frames.length, contentW, contentH, gap, capH);
+          const sheet = document.createElement("div");
+          sheet.className = "sheet";
+          sheet.dataset.page = "1";
+          sheet.style.background = bg;
+          sheet.style.color = fg;
+          sheet.style.setProperty("--sheet-pad", pad + "mm");
+          const abs = document.createElement("div");
+          abs.className = "collage-abs";
+          const itemsOut = [];
+          for (let i = 0; i < lay.items.length; i++) {
+            const it = lay.items[i];
+            const n = frames[it.i];
+            const overlay = fill && ex.cCaption;
+            const cell = makeCell(n, it.fit, ex.cCaption, overlay);
+            cell.style.left = (it.x / contentW * 100) + "%";
+            cell.style.top = (it.y / contentH * 100) + "%";
+            cell.style.width = (it.w / contentW * 100) + "%";
+            cell.style.height = (it.h / contentH * 100) + "%";
+            abs.appendChild(cell);
+            itemsOut.push({ i: it.i, n: n, x: it.x, y: it.y, w: it.w, h: it.h, fit: it.fit, capH: capH });
+          }
+          sheet.appendChild(abs);
+          root.appendChild(sheet);
+          npage = 1;
+          layoutMeta = {
+            kind: "collage",
+            pages: 1,
+            mode: ex.cmode,
+            frames: frames.slice(),
+            cols: lay.cols,
+            rows: lay.rows,
+            parts: lay.parts || null,
+            empty: lay.empty || 0,
+            items: itemsOut,
+            pageMm: size,
+            pad: pad,
+            gap: gap,
+            contentW: contentW,
+            contentH: contentH,
+            bg: bg
+          };
+          const modeName = fill ? "가득 채우기" : "지정 순서";
+          const gridInfo = fill ? ("행 " + lay.parts.join("+")) : (lay.cols + "×" + lay.rows);
+          $("exportInfo").textContent = frames.length + "장 · " + modeName + " · " + gridInfo;
+        }
+
+        sizer.style.setProperty("--npage", String(npage));
+        ex.pages = npage;
+        ex.layout = layoutMeta;
+        requestAnimationFrame(function () { updatePreviewScale(); });
+      }
+
+      async function openExport(kind) {
+        setError("");
+        showHelp(false);
+        if (playing) pause();
+        ex.kind = kind;
+        initExportSource();
+        const frames = exportFrameList();
+        if (!frames.length) {
+          setError("먼저 프레임을 선택하거나, 출력에서 범위를 지정해 줘.");
+          return false;
+        }
+        if (frames.length > MAX_EXPORT_FRAMES) {
+          setError("결과 " + frames.length + "장은 너무 많아. 간격이나 범위를 줄여 줘. (최대 " + MAX_EXPORT_FRAMES + "장)");
+          // still open so they can adjust
+        }
+        $("exportModal").classList.add("show");
+        $("exportTitle").textContent = kind === "print" ? "선택 프레임 인쇄" : "선택 프레임 콜라주";
+        $("exportOptsPrint").style.display = kind === "print" ? "" : "none";
+        $("exportOptsCollage").style.display = kind === "collage" ? "" : "none";
+        $("exportPngBtn").style.display = kind === "collage" ? "" : "none";
+        syncExportSourceUI();
+        await refreshExport();
+        return true;
+      }
+
+      function closeExport() {
+        $("exportModal").classList.remove("show");
+        $("exportRoot").innerHTML = "";
+        setExportMsg("");
+        ex.layout = null;
+        ex.pages = 0;
+      }
+
+      function waitForExportImages() {
+        return waitForImages($("exportRoot"));
+      }
+
+      async function doExportPrint() {
+        if (!ex.layout) return;
+        setExportMsg("이미지 불러오는 중…");
+        await waitForImages($("exportRoot"));
+        setExportMsg(ex.kind === "print"
+          ? "인쇄 창에서 ‘PDF로 저장’을 고르면 PDF로 저장할 수 있어."
+          : "인쇄 창에서 ‘PDF로 저장’을 고르면 이 한 장을 PDF로 저장할 수 있어.");
+        window.print();
+      }
+
+      function drawCover(ctx, img, x, y, w, h) {
+        const ir = img.naturalWidth / img.naturalHeight;
+        const cr = w / h;
+        let sx, sy, sw, sh;
+        if (ir > cr) {
+          sh = img.naturalHeight;
+          sw = sh * cr;
+          sx = (img.naturalWidth - sw) / 2;
+          sy = 0;
+        } else {
+          sw = img.naturalWidth;
+          sh = sw / cr;
+          sx = 0;
+          sy = (img.naturalHeight - sh) / 2;
+        }
+        ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+      }
+
+      function drawContain(ctx, img, x, y, w, h) {
+        const s = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+        const dw = img.naturalWidth * s;
+        const dh = img.naturalHeight * s;
+        const dx = x + (w - dw) / 2;
+        const dy = y + (h - dh) / 2;
+        ctx.drawImage(img, dx, dy, dw, dh);
+      }
+
+      function loadFrameImage(n) {
+        return new Promise(function (resolve) {
+          const im = new Image();
+          im.onload = function () { resolve(im); };
+          im.onerror = function () { resolve(null); };
+          im.src = src(n);
+        });
+      }
+
+      function collagePixelSize() {
+        const size = paperSizeMm(ex.cPaper, ex.cOrient);
+        const longMm = Math.max(size.w, size.h);
+        const targetLong = (ex.cPaper === "Screen") ? 3840 : 3508;
+        const pxPerMm = targetLong / longMm;
+        return {
+          w: Math.round(size.w * pxPerMm),
+          h: Math.round(size.h * pxPerMm),
+          pxPerMm: pxPerMm,
+          pageMm: size
+        };
+      }
+
+      async function encodeCanvas(canvas) {
+        try {
+          const blob = await new Promise(function (resolve, reject) {
+            try {
+              canvas.toBlob(function (b) {
+                if (!b) reject(new Error("tainted"));
+                else resolve(b);
+              }, "image/png");
+            } catch (err) {
+              reject(err);
+            }
+          });
+          return { ok: true, blob: blob };
+        } catch (e1) {
+          try {
+            const dataURL = canvas.toDataURL("image/png");
+            if (!dataURL || dataURL.length < 32) throw new Error("tainted");
+            return { ok: true, dataURL: dataURL };
+          } catch (e2) {
+            return { ok: false, error: "tainted", message: String(e2 && e2.message ? e2.message : e2) };
+          }
+        }
+      }
+
+      async function renderCollageCanvas() {
+        if (ex.kind !== "collage" || !ex.layout || !ex.layout.items) {
+          return { ok: false, error: "no-layout" };
+        }
+        const meta = ex.layout;
+        const pix = collagePixelSize();
+        const canvas = document.createElement("canvas");
+        canvas.width = pix.w;
+        canvas.height = pix.h;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = meta.bg || "#fff";
+        ctx.fillRect(0, 0, pix.w, pix.h);
+        const ppm = pix.pxPerMm;
+        const originX = meta.pad * ppm;
+        const originY = meta.pad * ppm;
+
+        const imgs = [];
+        for (let i = 0; i < meta.items.length; i++) {
+          imgs.push(await loadFrameImage(meta.items[i].n));
+        }
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        for (let i = 0; i < meta.items.length; i++) {
+          const it = meta.items[i];
+          const im = imgs[i];
+          if (!im || !im.naturalWidth) continue;
+          const x = originX + it.x * ppm;
+          const y = originY + it.y * ppm;
+          const w = it.w * ppm;
+          const h = it.h * ppm;
+          const capHpx = (it.fit === "contain" && ex.cCaption) ? (it.capH || 5.5) * ppm : 0;
+          const imgBoxH = Math.max(1, h - capHpx);
+          if (it.fit === "cover") drawCover(ctx, im, x, y, w, h);
+          else drawContain(ctx, im, x, y, w, imgBoxH);
+          if (ex.cCaption) {
+            const text = captionText(it.n);
+            if (it.fit === "cover") {
+              const barH = Math.max(18, 6 * ppm);
+              ctx.fillStyle = "rgba(0,0,0,0.55)";
+              ctx.fillRect(x, y + h - barH, w, barH);
+              ctx.fillStyle = "#fff";
+              ctx.font = Math.max(11, Math.round(3.2 * ppm)) + "px system-ui, sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(text, x + w / 2, y + h - barH / 2, w - 8);
+            } else {
+              ctx.fillStyle = (meta.bg === "#000") ? "#eee" : "#111";
+              ctx.font = Math.max(11, Math.round(3.0 * ppm)) + "px system-ui, sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(text, x + w / 2, y + imgBoxH + capHpx / 2, w - 8);
+            }
+          }
+        }
+        const enc = await encodeCanvas(canvas);
+        if (!enc.ok) {
+          return { ok: false, error: "tainted", message: enc.message, width: pix.w, height: pix.h };
+        }
+        return {
+          ok: true,
+          canvas: canvas,
+          blob: enc.blob || null,
+          dataURL: enc.dataURL || null,
+          width: pix.w,
+          height: pix.h
+        };
+      }
+
+      async function downloadCollagePng() {
+        setExportMsg("PNG 만드는 중…");
+        $("exportPngBtn").disabled = true;
+        try {
+          await waitForImages($("exportRoot"));
+          const r = await renderCollageCanvas();
+          ex.lastPng = { ok: r.ok, error: r.error || null, width: r.width, height: r.height };
+          if (!r.ok) {
+            if (r.error === "tainted") {
+              setExportMsg("이 브라우저는 로컬 파일(file://)로 바로 연 상태에서는 보안 제한 때문에 PNG로 저장할 수 없어. 대신 [인쇄]를 누른 다음 대상에서 ‘PDF로 저장’을 골라 줘. 폴더를 로컬 서버로 열면 PNG 저장이 돼.", "warn");
+            } else {
+              setExportMsg("PNG를 만들지 못했어. 인쇄 → PDF로 저장을 써 줘.", "err");
+            }
+            return r;
+          }
+          const a = document.createElement("a");
+          a.download = "-collage.png";
+          if (r.blob) {
+            const url = URL.createObjectURL(r.blob);
+            a.href = url;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+          } else {
+            a.href = r.dataURL;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+          }
+          setExportMsg("PNG 저장 완료 (" + r.width + "×" + r.height + "px).");
+          return r;
+        } finally {
+          $("exportPngBtn").disabled = false;
+        }
+      }
+
+      function applyExportSourceOpts(opts) {
+        if (!opts) return false;
+        let changed = false;
+        if (opts.source) { ex.source = opts.source === "range" ? "range" : "sel"; changed = true; }
+        if (opts.interval != null) { ex.interval = Math.max(1, parseInt(opts.interval, 10) || 1); changed = true; }
+        if (opts.start != null) { ex.start = parseInt(opts.start, 10) || ex.start; changed = true; }
+        if (opts.end != null) { ex.end = parseInt(opts.end, 10) || ex.end; changed = true; }
+        if (changed) syncExportSourceUI();
+        return changed;
+      }
+
+      function setPrintOptions(opts) {
+        if (!opts) return;
+        if (opts.pp != null) { ex.pp = parseInt(opts.pp, 10); activateSeg("ppSeg", "data-pp", ex.pp); }
+        if (opts.paper) { ex.printPaper = opts.paper; activateSeg("printPaperSeg", "data-paper", ex.printPaper); }
+        if (opts.orient) { ex.printOrient = opts.orient; activateSeg("printOrientSeg", "data-orient", ex.printOrient); }
+        if (opts.caption != null) { ex.printCaption = !!opts.caption; $("printCaption").checked = ex.printCaption; }
+        applyExportSourceOpts(opts);
+        if ($("exportModal").classList.contains("show") && ex.kind === "print") refreshExport();
+      }
+
+      function setCollageOptions(opts) {
+        if (!opts) return;
+        if (opts.mode) { ex.cmode = opts.mode; activateSeg("collageModeSeg", "data-cmode", ex.cmode); }
+        if (opts.paper) { ex.cPaper = opts.paper; activateSeg("collagePaperSeg", "data-paper", ex.cPaper); }
+        if (opts.orient) { ex.cOrient = opts.orient; activateSeg("collageOrientSeg", "data-orient", ex.cOrient); }
+        if (opts.gap != null) { ex.cGap = parseInt(opts.gap, 10); $("collageGap").value = String(ex.cGap); $("collageGapVal").textContent = ex.cGap + "px"; }
+        if (opts.caption != null) { ex.cCaption = !!opts.caption; $("collageCaption").checked = ex.cCaption; }
+        if (opts.bg) { ex.cBg = opts.bg; activateSeg("collageBgSeg", "data-bg", ex.cBg); }
+        applyExportSourceOpts(opts);
+        if ($("exportModal").classList.contains("show") && ex.kind === "collage") refreshExport();
+      }
+
+      function bindSeg(id, attr, fn) {
+        $(id).addEventListener("click", function (e) {
+          const b = e.target.closest("button");
+          if (!b) return;
+          activateSeg(id, attr, b.getAttribute(attr));
+          fn(b.getAttribute(attr));
+        });
+      }
+
+      $("printBtn").addEventListener("click", function () { openExport("print"); });
+      $("collageBtn").addEventListener("click", function () { openExport("collage"); });
+      $("exportCloseBtn").addEventListener("click", closeExport);
+      $("exportPrintBtn").addEventListener("click", function () { doExportPrint(); });
+      $("exportPngBtn").addEventListener("click", function () { downloadCollagePng(); });
+      bindSeg("ppSeg", "data-pp", function (v) { ex.pp = parseInt(v, 10); rebuildExport(); });
+      bindSeg("printPaperSeg", "data-paper", function (v) { ex.printPaper = v; rebuildExport(); });
+      bindSeg("printOrientSeg", "data-orient", function (v) { ex.printOrient = v; rebuildExport(); });
+      $("printCaption").addEventListener("change", function () { ex.printCaption = $("printCaption").checked; rebuildExport(); });
+      bindSeg("collageModeSeg", "data-cmode", function (v) { ex.cmode = v; rebuildExport(); });
+      bindSeg("collagePaperSeg", "data-paper", function (v) { ex.cPaper = v; rebuildExport(); });
+      bindSeg("collageOrientSeg", "data-orient", function (v) { ex.cOrient = v; rebuildExport(); });
+      bindSeg("collageBgSeg", "data-bg", function (v) { ex.cBg = v; rebuildExport(); });
+      $("collageGap").addEventListener("input", function () {
+        ex.cGap = parseInt($("collageGap").value, 10);
+        $("collageGapVal").textContent = ex.cGap + "px";
+        rebuildExport();
+      });
+      $("collageCaption").addEventListener("change", function () { ex.cCaption = $("collageCaption").checked; rebuildExport(); });
+      bindSeg("exSrcSeg", "data-exsrc", function (v) {
+        if (v === "sel" && !(selection && selection.length)) {
+          ex.source = "range";
+          syncExportSourceUI();
+          setExportMsg("먼저 프레임을 선택해 줘.", "err");
+          return;
+        }
+        ex.source = v;
+        refreshExport();
+      });
+      bindSeg("exIntervalSeg", "data-iv", function (v) {
+        ex.interval = Math.max(1, parseInt(v, 10) || 1);
+        $("exInterval").value = String(ex.interval);
+        refreshExport();
+      });
+      $("exInterval").addEventListener("input", function () {
+        ex.interval = Math.max(1, parseInt($("exInterval").value, 10) || 1);
+        scheduleExportRefresh();
+      });
+      $("exInterval").addEventListener("change", function () {
+        ex.interval = Math.max(1, parseInt($("exInterval").value, 10) || 1);
+        $("exInterval").value = String(ex.interval);
+        refreshExport();
+      });
+      ["exStart", "exEnd"].forEach(function (id) {
+        $(id).addEventListener("input", function () {
+          ex.start = parseInt($("exStart").value, 10) || ex.start;
+          ex.end = parseInt($("exEnd").value, 10) || ex.end;
+          if (ex.source !== "range") return;
+          scheduleExportRefresh();
+        });
+        $(id).addEventListener("change", function () {
+          ex.start = parseInt($("exStart").value, 10) || 1;
+          ex.end = parseInt($("exEnd").value, 10) || 1;
+          refreshExport();
+        });
+      });
+      window.addEventListener("resize", function () {
+        if ($("exportModal").classList.contains("show")) updatePreviewScale();
+      });
+
+      Object.assign(window.__flipbook, {
+        openPrint: function () { return openExport("print"); },
+        openCollage: function () { return openExport("collage"); },
+        closeExport: closeExport,
+        rebuildExport: rebuildExport,
+        getExportLayout: function () { return ex.layout; },
+        getExportFrames: exportFrameList,
+        getExportSource: function () { return { source: ex.source, start: ex.start, end: ex.end, interval: ex.interval, count: exportFrameList().length }; },
+        setExportSource: function (s) { ex.source = s === "range" ? "range" : "sel"; syncExportSourceUI(); return refreshExport(); },
+        setExportInterval: function (n) { ex.interval = Math.max(1, parseInt(n, 10) || 1); syncExportSourceUI(); return refreshExport(); },
+        setExportRange: function (a, b) { ex.source = "range"; ex.start = a; ex.end = b; syncExportSourceUI(); return refreshExport(); },
+        getChromeText: function () { return meta.textContent; },
+        formatTime: formatTime,
+        timecode: timecode,
+        durationTime: durationTime,
+        fpsLabel: fpsLabel,
+        getPrintPageCount: function () { return ex.pages; },
+        setPrintOptions: setPrintOptions,
+        setCollageOptions: setCollageOptions,
+        waitForExportImages: waitForExportImages,
+        renderCollageCanvas: renderCollageCanvas,
+        downloadCollagePng: downloadCollagePng,
+        paperSizeMm: paperSizeMm,
+        getExportState: function () {
+          return {
+            kind: ex.kind,
+            pages: ex.pages,
+            pp: ex.pp,
+            cmode: ex.cmode,
+            lastPng: ex.lastPng,
+            source: ex.source,
+            interval: ex.interval,
+            start: ex.start,
+            end: ex.end,
+            frames: exportFrameList()
+          };
+        }
+      });
+
+      // Start
+      scrub.max = String(TOTAL);
+      setFrame(1, { silent: true });
+    })();
+  </script>
+</body>
+</html>
