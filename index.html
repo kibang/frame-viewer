@@ -684,12 +684,12 @@
 <body>
   <header>
     <div class="header-left">
-      <h1>프레임 뷰어 <span id="projectSub">BBBB(기본) ·  · 4129장 · 23.976fps</span></h1>
+      <h1>프레임 뷰어 <span id="projectSub">로컬 프레임 ·  · 2700장 · 29.97fps</span></h1>
     </div>
     <div class="header-right">
       <span class="label">프로젝트</span>
       <select id="projectSel" title="프로젝트">
-        <option value="bbbb">BBBB(기본)</option>
+        <option value="builtin">로컬 프레임</option>
       </select>
       <button type="button" id="loadBtn" title="로컬 영상 열기 (mp4, webm, mov)">영상 불러오기</button>
       <div class="group" id="fpsGroup" style="display:none">
@@ -744,10 +744,10 @@
             <button type="button" data-speed="2">2×</button>
           </div>
         </div>
-        <input type="range" id="scrub" min="1" max="4129" value="1" step="1">
+        <input type="range" id="scrub" min="1" max="2700" value="1" step="1">
         <div class="group">
           <span class="label">이동</span>
-          <input type="number" id="jumpInput" min="1" max="4129" value="1" title="프레임 번호">
+          <input type="number" id="jumpInput" min="1" max="2700" value="1" title="프레임 번호">
           <button type="button" id="jumpBtn">이동</button>
         </div>
         <div class="group">
@@ -955,8 +955,8 @@
 
   <script>
     (function () {
-      let TOTAL = 4129;
-      let FPS = 24000 / 1001; // 23.976...
+      let TOTAL = 2700;
+      let FPS = 30000 / 1001; // 29.970...
       const AUDIO_OFFSET = 0; // ffprobe: video + audio both start_time=0
       const AUDIO_FILE = "audio.m4a";
       const SEEK_BIAS = 0.5; // currentTime = (n - SEEK_BIAS) / fps
@@ -1016,14 +1016,14 @@
       let displaySeq = 0;
 
       const builtinProject = {
-        id: "bbbb",
+        id: "builtin",
         type: "builtin",
-        name: "BBBB(기본)",
+        name: "로컬 프레임",
         title: "",
-        total: 4129,
-        fps: 24000 / 1001,
+        total: 2700,
+        fps: 30000 / 1001,
         audioOffset: AUDIO_OFFSET,
-        duration: 172.213708,
+        duration: 90.090,
         selection: null,
         selText: "",
         selViewOnly: false
@@ -1478,7 +1478,7 @@
           if (!test) outlineOk = false;
         }
         if (onionMode === "outline" && !outlineOk) {
-          setOnionHint("외곽선은 이 환경에서 픽셀을 읽을 수 없어. 영상을 불러오면 쓸 수 있고, BBBB는 외곽선 파일이 있으면 동작해. 지금은 컬러로 표시해.");
+          setOnionHint("외곽선은 이 환경에서 픽셀을 읽을 수 없어. 영상을 불러오면 쓸 수 있고, 내장 영상은 외곽선 파일이 있으면 동작해. 지금은 컬러로 표시해.");
           const saved = onionMode;
           onionMode = "color";
           for (let k = onionN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n - k * onionStep, k, "prev", w, h);
@@ -2103,7 +2103,7 @@
           }
           opt.textContent = loadedProject.name;
         } else if (opt) opt.remove();
-        sel.value = project.id === "bbbb" ? "bbbb" : "loaded";
+        sel.value = project.type === "builtin" ? "builtin" : "loaded";
         const opts = $("fpsSel").options;
         let matched = false;
         for (let i = 0; i < opts.length; i++) {
@@ -2512,7 +2512,7 @@
         $("fileInput").value = "";
       });
       $("projectSel").addEventListener("change", function () {
-        if ($("projectSel").value === "bbbb") activateProject(builtinProject);
+        if ($("projectSel").value === "builtin") activateProject(builtinProject);
         else if (loadedProject) activateProject(loadedProject);
       });
       $("fpsSel").addEventListener("change", function () {
@@ -3300,7 +3300,7 @@
             return r;
           }
           const a = document.createElement("a");
-          a.download = "-collage.png";
+          a.download = "collage.png";
           if (r.blob) {
             const url = URL.createObjectURL(r.blob);
             a.href = url;
