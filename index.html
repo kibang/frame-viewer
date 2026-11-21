@@ -233,6 +233,73 @@
       border-top: 1px solid var(--border);
       padding: 8px 14px 10px;
     }
+    #analyzePanel {
+      display: none;
+      flex-shrink: 0;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      padding: 10px 14px 12px;
+      max-height: 42vh;
+      overflow: auto;
+    }
+    #analyzePanel.show { display: block; }
+    #analyzeBtn.active, #azRunBtn.primary { font-weight: 650; }
+    #azKey { width: 220px; }
+    #azModel { width: 180px; min-width: 140px; }
+    #azStart, #azEnd, #azInterval { width: 72px; }
+    .az-note { color: var(--muted); font-size: 11px; line-height: 1.45; max-width: 62em; }
+    .az-note a { color: var(--accent); }
+    #azStatus { font-size: 12px; min-height: 1.2em; }
+    #azStatus.err { color: var(--red); }
+    #azStatus.warn { color: #f0c040; }
+    #azStatus.ok { color: var(--green); }
+    #azStatus.loading { color: var(--accent); }
+    #azPalette { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    #azPalette:empty { display: none; }
+    .az-swatch {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      min-width: 54px;
+    }
+    .az-swatch i {
+      display: block;
+      width: 36px;
+      height: 36px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+    }
+    .az-swatch span {
+      font-size: 10px;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+    }
+    #azOut {
+      margin-top: 6px;
+      padding: 10px 12px;
+      background: #111116;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      line-height: 1.55;
+      font-size: 13px;
+      min-height: 3em;
+    }
+    #azOut:empty { display: none; }
+    #azOut h3 {
+      margin: 0.9em 0 0.35em;
+      font-size: 13px;
+      font-weight: 650;
+      color: var(--accent);
+    }
+    #azOut h3:first-child { margin-top: 0; }
+    #azOut p { margin: 0 0 0.5em; }
+    #azOut ul { margin: 0 0 0.5em; padding-left: 1.2em; }
+    #azRangeGroup.hidden { display: none; }
+    @media print {
+      #analyzePanel { display: none !important; }
+    }
     .row {
       display: flex;
       align-items: center;
@@ -778,6 +845,7 @@
         <button type="button" id="selClear">전체 비우기</button>
         <button type="button" id="printBtn" title="선택한 프레임 인쇄">인쇄</button>
         <button type="button" id="collageBtn" title="선택한 프레임 콜라주">콜라주</button>
+        <button type="button" id="analyzeBtn" title="프레임 분석 (A)">분석</button>
         <span class="sel-status" id="selRangeHint"></span>
       </div>
       <div class="row sel-err-row">
@@ -816,6 +884,52 @@
         <div id="thumbs"></div>
       </div>
     </div>
+    <div id="analyzePanel">
+      <div class="row">
+        <strong style="font-size:13px">분석</strong>
+        <div class="group">
+          <span class="label">대상</span>
+          <div class="seg" id="azModeSeg">
+            <button type="button" data-azmode="current" class="active">현재 프레임</button>
+            <button type="button" data-azmode="sel">선택 프레임</button>
+            <button type="button" data-azmode="range">범위+간격</button>
+          </div>
+        </div>
+        <div class="group hidden" id="azRangeGroup">
+          <span class="label">시작</span>
+          <input type="number" id="azStart" min="1" value="1">
+          <span class="label">끝</span>
+          <input type="number" id="azEnd" min="1" value="1">
+          <span class="label">프레임 간격</span>
+          <input type="number" id="azInterval" min="1" step="1" value="1">
+        </div>
+        <span class="sel-status" id="azCount">보낼 1장</span>
+        <button type="button" class="primary" id="azRunBtn">분석 실행</button>
+        <button type="button" id="azCopyBtn">복사</button>
+      </div>
+      <div class="row">
+        <div class="group">
+          <span class="label">제공</span>
+          <select id="azProvider" title="분석 모델 제공 업체">
+            <option value="gemini">Gemini</option>
+            <option value="openai">OpenAI</option>
+          </select>
+        </div>
+        <div class="group">
+          <span class="label">모델</span>
+          <input type="text" id="azModel" value="gemini-2.5-flash" spellcheck="false" autocomplete="off">
+        </div>
+        <div class="group">
+          <span class="label">API 키</span>
+          <input type="password" id="azKey" spellcheck="false" autocomplete="off" placeholder="이 브라우저에만 저장">
+          <button type="button" id="azKeyClear">키 지우기</button>
+        </div>
+      </div>
+      <p class="az-note">API 키는 이 브라우저(localStorage)에만 저장되고, 요청은 해당 제공 업체로 바로 보내. 이 앱 저장소나 서버에는 올라가지 않아. 키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a> · <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI API keys</a></p>
+      <div id="azStatus"></div>
+      <div id="azPalette"></div>
+      <div id="azOut"></div>
+    </div>
   </div>
 
   <div id="help">
@@ -831,10 +945,11 @@
         <dt>[ / ]</dt><dd>여기부터 / 여기까지 (범위 추가)</dd>
         <dt>O</dt><dd>어니언 스킨 켜기/끄기</dd>
         <dt>V</dt><dd>음소거 / 해제</dd>
+        <dt>A</dt><dd>하단 분석 패널 열고 현재 설정으로 분석</dd>
         <dt>? 또는 /</dt><dd>이 도움말 열기/닫기</dd>
         <dt>Esc</dt><dd>입력 중이면 포커스 해제, 아니면 도움말 닫기</dd>
       </dl>
-      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 「영상 불러오기」로 로컬 영상도 같은 기능으로 볼 수 있어.</p>
+      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 「영상 불러오기」로 로컬 영상도 같은 기능으로 볼 수 있어. 「분석」은 고른 제공 업체의 비전 모델로 카메라 각도·기법·색·(연속이면) 무빙을 설명해 줘. API 키는 이 브라우저에만 저장돼.</p>
     </div>
   </div>
 
@@ -2336,6 +2451,469 @@
         $("help").classList.toggle("show", !!on);
       }
 
+      // ===== AI analysis panel =====
+      const AZ_MAX_FRAMES = 16;
+      const AZ_MAX_EDGE = 512;
+      const AZ_LS = {
+        provider: "fv-az-provider",
+        model: { gemini: "fv-az-model-gemini", openai: "fv-az-model-openai" },
+        key: { gemini: "fv-az-key-gemini", openai: "fv-az-key-openai" }
+      };
+      const AZ_DEFAULT_MODEL = { gemini: "gemini-2.5-flash", openai: "gpt-4o-mini" };
+      const AZ_TAINTED_MSG = "이 환경에서는 내장 프레임 픽셀을 읽을 수 없어. 분석은 GitHub Pages 같은 웹 버전에서 쓰거나, 「영상 불러오기」로 연 영상에서 할 수 있어.";
+      let azMode = "current";
+      let azBusy = false;
+      let azLastText = "";
+      let azLastPalette = [];
+      let azStart = 1, azEnd = 1, azInterval = 1;
+
+      function azLsGet(k) {
+        try { return localStorage.getItem(k) || ""; } catch (e) { return ""; }
+      }
+      function azLsSet(k, v) {
+        try {
+          if (v) localStorage.setItem(k, v);
+          else localStorage.removeItem(k);
+        } catch (e) {}
+      }
+      function azProvider() { return $("azProvider").value === "openai" ? "openai" : "gemini"; }
+      function azModel() {
+        const m = ($("azModel").value || "").trim();
+        return m || AZ_DEFAULT_MODEL[azProvider()];
+      }
+      function azKey() { return ($("azKey").value || "").trim(); }
+
+      function azLoadSettings() {
+        const p = azLsGet(AZ_LS.provider) === "openai" ? "openai" : "gemini";
+        $("azProvider").value = p;
+        $("azModel").value = azLsGet(AZ_LS.model[p]) || AZ_DEFAULT_MODEL[p];
+        $("azKey").value = azLsGet(AZ_LS.key[p]);
+      }
+      function azSaveProviderFields() {
+        const p = azProvider();
+        azLsSet(AZ_LS.provider, p);
+        azLsSet(AZ_LS.model[p], azModel());
+        azLsSet(AZ_LS.key[p], azKey());
+      }
+
+      function azSetStatus(msg, kind) {
+        const el = $("azStatus");
+        el.textContent = msg || "";
+        el.className = kind || "";
+      }
+
+      function showAnalyzePanel() {
+        $("analyzePanel").classList.add("show");
+        $("analyzeBtn").classList.add("active");
+        try { $("analyzePanel").scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {}
+        syncAzUI();
+      }
+
+      function sampleIndices(arr, cap) {
+        if (!arr || !arr.length) return [];
+        if (arr.length <= cap) return arr.slice();
+        const out = [];
+        for (let i = 0; i < cap; i++) {
+          const idx = Math.round(i * (arr.length - 1) / (cap - 1));
+          const n = arr[idx];
+          if (!out.length || out[out.length - 1] !== n) out.push(n);
+        }
+        return out;
+      }
+
+      function azCandidateFrames() {
+        if (azMode === "current") return [frame];
+        if (azMode === "sel") return (selection && selection.length) ? selection.slice() : [];
+        let a = Math.max(1, Math.min(TOTAL, parseInt(azStart, 10) || 1));
+        let b = Math.max(1, Math.min(TOTAL, parseInt(azEnd, 10) || 1));
+        if (a > b) { const t = a; a = b; b = t; }
+        const iv = parseInterval(azInterval);
+        const arr = [];
+        for (let n = a; n <= b; n += iv) arr.push(n);
+        return arr;
+      }
+
+      function azFramesToSend() { return sampleIndices(azCandidateFrames(), AZ_MAX_FRAMES); }
+
+      function syncAzUI() {
+        activateSeg("azModeSeg", "data-azmode", azMode);
+        $("azRangeGroup").classList.toggle("hidden", azMode !== "range");
+        if (document.activeElement !== $("azStart")) $("azStart").value = String(azStart);
+        if (document.activeElement !== $("azEnd")) $("azEnd").value = String(azEnd);
+        if (document.activeElement !== $("azInterval")) $("azInterval").value = String(azInterval);
+        $("azStart").max = String(TOTAL);
+        $("azEnd").max = String(TOTAL);
+        const all = azCandidateFrames();
+        const send = sampleIndices(all, AZ_MAX_FRAMES);
+        let label = "보낼 " + send.length + "장";
+        if (all.length > send.length) label += " · " + all.length + "장 중 " + send.length + "장으로 추림";
+        $("azCount").textContent = label;
+      }
+
+      function initAzRangeDefaults() {
+        if (selection && selection.length) {
+          let mn = selection[0], mx = selection[0];
+          for (let i = 1; i < selection.length; i++) {
+            if (selection[i] < mn) mn = selection[i];
+            if (selection[i] > mx) mx = selection[i];
+          }
+          azStart = mn; azEnd = mx;
+        } else {
+          azStart = frame;
+          azEnd = Math.min(TOTAL, frame + 23);
+        }
+        azInterval = Math.max(1, azInterval || 1);
+      }
+
+      function dataURLToBase64(dataURL) {
+        const i = String(dataURL).indexOf(",");
+        return i >= 0 ? dataURL.slice(i + 1) : dataURL;
+      }
+
+      function drawScaled(drawable, maxEdge) {
+        const sz = drawableSize(drawable);
+        let w = sz.w, h = sz.h;
+        const scale = Math.min(1, maxEdge / Math.max(w, h, 1));
+        w = Math.max(1, Math.round(w * scale));
+        h = Math.max(1, Math.round(h * scale));
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(drawable, 0, 0, w, h);
+        return c;
+      }
+
+      async function captureFromBlobOrUrl(url) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("fetch " + res.status);
+        const blob = await res.blob();
+        const bmp = await createImageBitmap(blob);
+        const c = drawScaled(bmp, AZ_MAX_EDGE);
+        if (bmp.close) try { bmp.close(); } catch (e) {}
+        const dataURL = c.toDataURL("image/jpeg", 0.85);
+        return { canvas: c, dataURL: dataURL };
+      }
+
+      async function captureFrameForAnalysis(n) {
+        const urls = [];
+        if (project.type === "builtin") urls.push(src(n));
+        if (urlCache.has(n)) urls.push(urlCache.get(n));
+        for (let i = 0; i < urls.length; i++) {
+          if (!urls[i]) continue;
+          try { return Object.assign({ n: n }, await captureFromBlobOrUrl(urls[i])); }
+          catch (e) {}
+        }
+        const d = await getDrawable(n);
+        if (d) {
+          try {
+            const c = drawScaled(d, AZ_MAX_EDGE);
+            const dataURL = c.toDataURL("image/jpeg", 0.85);
+            return { n: n, canvas: c, dataURL: dataURL };
+          } catch (e) {}
+        }
+        const err = new Error(AZ_TAINTED_MSG);
+        err.code = "TAINTED";
+        throw err;
+      }
+
+      function rgbToHex(r, g, b) {
+        const h = (n) => ("0" + Math.max(0, Math.min(255, n | 0)).toString(16)).slice(-2);
+        return "#" + h(r) + h(g) + h(b);
+      }
+
+      function kmeansPalette(canvases, k) {
+        const pts = [];
+        for (let c = 0; c < canvases.length; c++) {
+          const canvas = canvases[c];
+          let data;
+          try { data = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data; }
+          catch (e) { continue; }
+          const pixels = data.length / 4;
+          const step = Math.max(1, Math.floor(pixels / 2800));
+          for (let i = 0; i < data.length; i += 4 * step) {
+            if (data[i + 3] < 200) continue;
+            pts.push([data[i], data[i + 1], data[i + 2]]);
+          }
+        }
+        if (!pts.length) return [];
+        k = Math.max(1, Math.min(k, pts.length));
+        const centers = [];
+        const used = {};
+        const stride = Math.max(1, Math.floor(pts.length / k));
+        for (let i = 0; i < k; i++) {
+          let idx = Math.min(pts.length - 1, i * stride + (stride >> 1));
+          while (used[idx] && idx < pts.length - 1) idx++;
+          used[idx] = 1;
+          centers.push(pts[idx].slice());
+        }
+        const assign = new Array(pts.length);
+        for (let iter = 0; iter < 10; iter++) {
+          for (let i = 0; i < pts.length; i++) {
+            let best = 0, bestD = 1e15;
+            for (let j = 0; j < centers.length; j++) {
+              const dr = pts[i][0] - centers[j][0], dg = pts[i][1] - centers[j][1], db = pts[i][2] - centers[j][2];
+              const d = dr * dr + dg * dg + db * db;
+              if (d < bestD) { bestD = d; best = j; }
+            }
+            assign[i] = best;
+          }
+          const sum = [], cnt = [];
+          for (let j = 0; j < centers.length; j++) { sum.push([0, 0, 0]); cnt.push(0); }
+          for (let i = 0; i < pts.length; i++) {
+            const a = assign[i];
+            sum[a][0] += pts[i][0]; sum[a][1] += pts[i][1]; sum[a][2] += pts[i][2];
+            cnt[a]++;
+          }
+          for (let j = 0; j < centers.length; j++) {
+            if (cnt[j]) {
+              centers[j][0] = Math.round(sum[j][0] / cnt[j]);
+              centers[j][1] = Math.round(sum[j][1] / cnt[j]);
+              centers[j][2] = Math.round(sum[j][2] / cnt[j]);
+            }
+          }
+        }
+        const freq = new Array(centers.length).fill(0);
+        for (let i = 0; i < assign.length; i++) freq[assign[i]]++;
+        const out = centers.map(function (c, i) {
+          return { hex: rgbToHex(c[0], c[1], c[2]), r: c[0], g: c[1], b: c[2], n: freq[i] };
+        });
+        out.sort(function (a, b) { return b.n - a.n; });
+        return out;
+      }
+
+      function renderPalette(items) {
+        const box = $("azPalette");
+        box.innerHTML = "";
+        azLastPalette = items || [];
+        for (let i = 0; i < azLastPalette.length; i++) {
+          const it = azLastPalette[i];
+          const el = document.createElement("div");
+          el.className = "az-swatch";
+          el.title = it.hex;
+          const sw = document.createElement("i");
+          sw.style.background = it.hex;
+          const cap = document.createElement("span");
+          cap.textContent = it.hex;
+          el.appendChild(sw);
+          el.appendChild(cap);
+          box.appendChild(el);
+        }
+      }
+
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (ch) {
+          return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch];
+        });
+      }
+
+      function renderAnalysisText(text) {
+        azLastText = text || "";
+        const el = $("azOut");
+        if (!text) { el.innerHTML = ""; return; }
+        const lines = String(text).replace(/\r\n/g, "\n").split("\n");
+        let html = "";
+        let para = [];
+        let list = [];
+        function flushPara() {
+          if (para.length) {
+            html += "<p>" + para.join("<br>") + "</p>";
+            para = [];
+          }
+        }
+        function flushList() {
+          if (list.length) {
+            html += "<ul>" + list.map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ul>";
+            list = [];
+          }
+        }
+        function inlineFmt(s) {
+          s = escapeHtml(s);
+          s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+          s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+          return s;
+        }
+        for (let i = 0; i < lines.length; i++) {
+          const raw = lines[i];
+          const h = raw.match(/^#{1,3}\s+(.+)/);
+          const li = raw.match(/^\s*[-*•]\s+(.+)/);
+          if (h) {
+            flushPara(); flushList();
+            html += "<h3>" + inlineFmt(h[1]) + "</h3>";
+          } else if (li) {
+            flushPara();
+            list.push(inlineFmt(li[1]));
+          } else if (!raw.trim()) {
+            flushPara(); flushList();
+          } else {
+            flushList();
+            para.push(inlineFmt(raw));
+          }
+        }
+        flushPara(); flushList();
+        el.innerHTML = html;
+      }
+
+      function azPrompt(frames, sequence) {
+        let head = "너는 영상·애니메이션 화면 분석가다. 답은 반드시 한국어로, 간결하고 구체적으로 써. 이미지에 없는 내용은 지어내지 말고, 추측이면 추측이라고 밝혀.\n";
+        if (sequence) {
+          head += "아래는 시간 순으로 나열한 " + frames.length + "장의 연속 프레임이야. 각 이미지 앞에 프레임 번호와 타임코드가 있어.\n";
+          head += "다음 제목(마크다운 ##)으로 나눠 분석해:\n\n";
+          head += "## 카메라 각도\n(아이 레벨, 로우, 하이, 더치, 버드아이 등. 변화가 있으면 프레임을 들어 설명해)\n\n";
+          head += "## 샷 사이즈\n(익스트림 클로즈업, 클로즈업, 미디엄, 풀, 롱, 와이드 등)\n\n";
+          head += "## 렌즈감과 심도\n(광각/망원 느낌, 심도, 보케, 원근)\n\n";
+          head += "## 구도와 기법\n(구도, 조명, 애니메이션·연출 기법)\n\n";
+          head += "## 색 조합\n(주요 색, 대비, 톤)\n\n";
+          head += "## 카메라 무빙\n(팬, 틸트, 줌/돌리, 트럭/트랙, 크레인, 핸드헬드 흔들림, 컷 등. 프레임 번호를 들어 설명해)\n\n";
+          head += "## 동작 설명\n(피사체와 화면의 움직임)\n";
+        } else {
+          const n = frames[0];
+          head += "아래는 프레임 " + n + " (타임코드 " + timecode(n) + ") 한 장이야.\n";
+          head += "다음 제목(마크다운 ##)으로 나눠 분석해:\n\n";
+          head += "## 카메라 각도\n(아이 레벨, 로우, 하이, 더치, 버드아이 등)\n\n";
+          head += "## 샷 사이즈\n(익스트림 클로즈업, 클로즈업, 미디엄, 풀, 롱, 와이드 등)\n\n";
+          head += "## 렌즈감과 심도\n(광각/망원 느낌, 심도, 보케, 원근)\n\n";
+          head += "## 구도와 기법\n(구도, 조명, 애니메이션·연출 기법)\n\n";
+          head += "## 색 조합\n(주요 색, 대비, 톤)\n";
+        }
+        return head;
+      }
+
+      function mapHttpError(status, bodyText, kind) {
+        if (status === 401 || status === 403) return "API 키가 잘못됐거나 권한이 없어. 키를 확인하고 다시 시도해 줘.";
+        if (status === 429) return "할당량이나 속도 제한에 걸렸어. 잠시 후 다시 시도해 줘.";
+        let extra = "";
+        try {
+          const j = JSON.parse(bodyText);
+          extra = (j.error && (j.error.message || j.error.status)) || j.message || "";
+        } catch (e) {}
+        if (status === 404) return "모델을 찾을 수 없어. 모델 이름을 확인해 줘." + (extra ? " (" + extra + ")" : "");
+        if (status) return (kind || "요청") + "이 실패했어 (" + status + ")." + (extra ? " " + extra : "");
+        return extra || "요청이 실패했어.";
+      }
+
+      async function callGemini(model, key, prompt, captures) {
+        const parts = [{ text: prompt }];
+        for (let i = 0; i < captures.length; i++) {
+          const cap = captures[i];
+          parts.push({ text: "\n[프레임 " + cap.n + " · " + timecode(cap.n) + "]\n" });
+          parts.push({ inline_data: { mime_type: "image/jpeg", data: dataURLToBase64(cap.dataURL) } });
+        }
+        const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(key);
+        let res;
+        try {
+          res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ role: "user", parts: parts }], generationConfig: { temperature: 0.4 } })
+          });
+        } catch (e) {
+          const err = new Error("네트워크 오류거나 CORS로 요청이 막혔어. 브라우저 콘솔을 확인하고, 키가 맞는지·네트워크를 봐 줘.");
+          err.code = "CORS";
+          throw err;
+        }
+        const raw = await res.text();
+        if (!res.ok) throw new Error(mapHttpError(res.status, raw, "Gemini 요청"));
+        let j;
+        try { j = JSON.parse(raw); } catch (e) { throw new Error("Gemini 응답을 해석하지 못했어."); }
+        const partsOut = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+        const text = partsOut.map(function (p) { return p.text || ""; }).join("").trim();
+        if (!text) throw new Error("Gemini가 빈 응답을 보냈어.");
+        return text;
+      }
+
+      async function callOpenAI(model, key, prompt, captures) {
+        const content = [{ type: "text", text: prompt }];
+        for (let i = 0; i < captures.length; i++) {
+          const cap = captures[i];
+          content.push({ type: "text", text: "[프레임 " + cap.n + " · " + timecode(cap.n) + "]" });
+          content.push({ type: "image_url", image_url: { url: cap.dataURL } });
+        }
+        let res;
+        try {
+          res = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+            body: JSON.stringify({ model: model, messages: [{ role: "user", content: content }], temperature: 0.4 })
+          });
+        } catch (e) {
+          const err = new Error("네트워크 오류거나 CORS로 요청이 막혔어. 브라우저 콘솔을 확인하고, 키가 맞는지·네트워크를 봐 줘.");
+          err.code = "CORS";
+          throw err;
+        }
+        const raw = await res.text();
+        if (!res.ok) throw new Error(mapHttpError(res.status, raw, "OpenAI 요청"));
+        let j;
+        try { j = JSON.parse(raw); } catch (e) { throw new Error("OpenAI 응답을 해석하지 못했어."); }
+        const text = ((((j.choices || [])[0] || {}).message || {}).content || "").trim();
+        if (!text) throw new Error("OpenAI가 빈 응답을 보냈어.");
+        return text;
+      }
+
+      async function runAnalysis() {
+        showAnalyzePanel();
+        if (azBusy) return;
+        if (playing) pause();
+        const frames = azFramesToSend();
+        if (!frames.length) {
+          azSetStatus(azMode === "sel" ? "먼저 프레임을 선택하거나, 대상을 「현재 프레임」으로 바꿔 줘." : "분석할 프레임이 없어. 범위를 확인해 줘.", "err");
+          return;
+        }
+        const key = azKey();
+        if (!key) {
+          azSetStatus("먼저 API 키를 입력해 줘. 키는 이 브라우저에만 저장돼.", "err");
+          try { $("azKey").focus(); } catch (e) {}
+          return;
+        }
+        azSaveProviderFields();
+        azBusy = true;
+        $("azRunBtn").disabled = true;
+        azSetStatus("프레임을 준비하고 분석하는 중… (" + frames.length + "장)", "loading");
+        $("azOut").innerHTML = "";
+        $("azPalette").innerHTML = "";
+        try {
+          const captures = [];
+          for (let i = 0; i < frames.length; i++) {
+            azSetStatus("프레임 준비 중… " + (i + 1) + "/" + frames.length, "loading");
+            captures.push(await captureFrameForAnalysis(frames[i]));
+          }
+          const palette = kmeansPalette(captures.map(function (c) { return c.canvas; }), 6);
+          renderPalette(palette);
+          const prompt = azPrompt(frames, frames.length > 1);
+          azSetStatus("모델에 요청하는 중…", "loading");
+          const provider = azProvider();
+          const model = azModel();
+          const text = provider === "openai"
+            ? await callOpenAI(model, key, prompt, captures)
+            : await callGemini(model, key, prompt, captures);
+          renderAnalysisText(text);
+          azSetStatus("분석 완료 · " + frames.length + "장 · " + provider + " / " + model, "ok");
+        } catch (e) {
+          renderPalette(azLastPalette);
+          azSetStatus((e && e.message) ? e.message : "분석에 실패했어.", "err");
+        } finally {
+          azBusy = false;
+          $("azRunBtn").disabled = false;
+        }
+      }
+
+      function copyAnalysis() {
+        const parts = [];
+        if (azLastPalette.length) {
+          parts.push("색 팔레트: " + azLastPalette.map(function (x) { return x.hex; }).join(", "));
+        }
+        if (azLastText) parts.push(azLastText);
+        const text = parts.join("\n\n");
+        if (!text) { azSetStatus("복사할 분석 결과가 없어.", "warn"); return; }
+        const done = function () { azSetStatus("분석 결과를 클립보드에 복사했어.", "ok"); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done).catch(function () {
+            azSetStatus("복사에 실패했어.", "err");
+          });
+        } else {
+          azSetStatus("이 브라우저에서는 클립보드 복사를 지원하지 않아.", "err");
+        }
+      }
+
+
       window.__flipbook = {
         get frame() { return frame; },
         get total() { return TOTAL; },
@@ -2579,6 +3157,11 @@
         } else if (e.key === "]") {
           e.preventDefault();
           markRangeTo();
+        } else if (e.key === "a" || e.key === "A") {
+          e.preventDefault();
+          showAnalyzePanel();
+          if (azKey()) runAnalysis();
+          else azSetStatus("API 키를 입력한 뒤 「분석 실행」을 눌러 줘.", "warn");
         }
       });
 
@@ -3425,6 +4008,55 @@
         if ($("exportModal").classList.contains("show")) updatePreviewScale();
       });
 
+      azLoadSettings();
+      initAzRangeDefaults();
+      syncAzUI();
+
+      $("analyzeBtn").addEventListener("click", function () {
+        showAnalyzePanel();
+        if (azKey()) runAnalysis();
+        else azSetStatus("API 키를 입력한 뒤 「분석 실행」을 눌러 줘.", "warn");
+      });
+      $("azRunBtn").addEventListener("click", function () { runAnalysis(); });
+      $("azCopyBtn").addEventListener("click", copyAnalysis);
+      $("azProvider").addEventListener("change", function () {
+        const p = azProvider();
+        azLsSet(AZ_LS.provider, p);
+        $("azModel").value = azLsGet(AZ_LS.model[p]) || AZ_DEFAULT_MODEL[p];
+        $("azKey").value = azLsGet(AZ_LS.key[p]);
+      });
+      $("azModel").addEventListener("change", azSaveProviderFields);
+      $("azModel").addEventListener("blur", azSaveProviderFields);
+      $("azKey").addEventListener("change", azSaveProviderFields);
+      $("azKey").addEventListener("blur", azSaveProviderFields);
+      $("azKeyClear").addEventListener("click", function () {
+        const p = azProvider();
+        $("azKey").value = "";
+        azLsSet(AZ_LS.key[p], "");
+        azSetStatus("이 브라우저에 저장한 " + (p === "openai" ? "OpenAI" : "Gemini") + " 키를 지웠어.", "ok");
+      });
+      bindSeg("azModeSeg", "data-azmode", function (v) {
+        azMode = (v === "sel" || v === "range") ? v : "current";
+        if (azMode === "range") initAzRangeDefaults();
+        syncAzUI();
+      });
+      ["azStart", "azEnd", "azInterval"].forEach(function (id) {
+        $(id).addEventListener("input", function () {
+          azStart = parseInt($("azStart").value, 10) || azStart;
+          azEnd = parseInt($("azEnd").value, 10) || azEnd;
+          azInterval = parseInterval($("azInterval").value);
+          syncAzUI();
+        });
+        $(id).addEventListener("change", function () {
+          azStart = parseInt($("azStart").value, 10) || 1;
+          azEnd = parseInt($("azEnd").value, 10) || 1;
+          azInterval = parseInterval($("azInterval").value);
+          $("azInterval").value = String(azInterval);
+          syncAzUI();
+        });
+      });
+
+
       Object.assign(window.__flipbook, {
         openPrint: function () { return openExport("print"); },
         openCollage: function () { return openExport("collage"); },
@@ -3448,6 +4080,39 @@
         renderCollageCanvas: renderCollageCanvas,
         downloadCollagePng: downloadCollagePng,
         paperSizeMm: paperSizeMm,
+        showAnalyzePanel: showAnalyzePanel,
+        runAnalysis: runAnalysis,
+        captureFrameForAnalysis: captureFrameForAnalysis,
+        computePalette: function (canvases, k) { return kmeansPalette(canvases, k || 6); },
+        getAnalyzeFrames: azFramesToSend,
+        setAnalyzeMode: function (m) {
+          azMode = (m === "sel" || m === "range") ? m : "current";
+          if (azMode === "range") initAzRangeDefaults();
+          showAnalyzePanel();
+          syncAzUI();
+        },
+        setAnalyzeRange: function (a, b, iv) {
+          azMode = "range";
+          if (a != null) azStart = a;
+          if (b != null) azEnd = b;
+          if (iv != null) azInterval = parseInterval(iv);
+          showAnalyzePanel();
+          syncAzUI();
+        },
+        getAnalyzeState: function () {
+          return {
+            mode: azMode,
+            provider: azProvider(),
+            model: azModel(),
+            hasKey: !!azKey(),
+            frames: azFramesToSend(),
+            text: azLastText,
+            palette: azLastPalette.slice(),
+            status: $("azStatus").textContent,
+            statusKind: $("azStatus").className,
+            panelOpen: $("analyzePanel").classList.contains("show")
+          };
+        },
         getExportState: function () {
           return {
             kind: ex.kind,
