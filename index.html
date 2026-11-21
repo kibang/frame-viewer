@@ -498,7 +498,8 @@
       font-size: 15px;
       font-weight: 650;
     }
-    #exStart, #exEnd, #exInterval { width: 72px; }
+    #exStart, #exEnd { width: 72px; }
+    #exInterval { width: 88px; }
     #exFrameCount { color: var(--accent); font-weight: 650; font-variant-numeric: tabular-nums; }
     #exRangeGroup.hidden { display: none; }
     #exIntervalSeg button { min-width: 28px; }
@@ -857,7 +858,7 @@
         </div>
         <div class="group">
           <span class="label">프레임 간격</span>
-          <input type="number" id="exInterval" min="1" max="9999" value="1" title="N프레임마다 한 장">
+          <input type="number" id="exInterval" min="1" step="1" value="1" inputmode="numeric" title="1 이상의 정수. 범위보다 커도 됨(그때는 시작 프레임만).">
           <div class="seg" id="exIntervalSeg">
             <button type="button" data-iv="1" class="active">1</button>
             <button type="button" data-iv="2">2</button>
@@ -2647,8 +2648,14 @@
         return (selection && selection.length) ? selection.slice() : null;
       }
 
+      function parseInterval(raw) {
+        const n = parseInt(String(raw == null ? "" : raw).trim(), 10);
+        if (!isFinite(n) || n < 1) return 1;
+        return Math.floor(n);
+      }
+
       function exportFrameList() {
-        const iv = Math.max(1, parseInt(ex.interval, 10) || 1);
+        const iv = parseInterval(ex.interval);
         if (ex.source === "range") {
           let a = Math.max(1, Math.min(TOTAL, parseInt(ex.start, 10) || 1));
           let b = Math.max(1, Math.min(TOTAL, parseInt(ex.end, 10) || 1));
@@ -2684,7 +2691,7 @@
       }
 
       function initExportSource() {
-        ex.interval = Math.max(1, ex.interval | 0);
+        ex.interval = parseInterval(ex.interval);
         if (selection && selection.length) {
           ex.source = "sel";
           let mn = selection[0], mx = selection[0];
@@ -3318,7 +3325,7 @@
         if (!opts) return false;
         let changed = false;
         if (opts.source) { ex.source = opts.source === "range" ? "range" : "sel"; changed = true; }
-        if (opts.interval != null) { ex.interval = Math.max(1, parseInt(opts.interval, 10) || 1); changed = true; }
+        if (opts.interval != null) { ex.interval = parseInterval(opts.interval); changed = true; }
         if (opts.start != null) { ex.start = parseInt(opts.start, 10) || ex.start; changed = true; }
         if (opts.end != null) { ex.end = parseInt(opts.end, 10) || ex.end; changed = true; }
         if (changed) syncExportSourceUI();
@@ -3386,16 +3393,18 @@
         refreshExport();
       });
       bindSeg("exIntervalSeg", "data-iv", function (v) {
-        ex.interval = Math.max(1, parseInt(v, 10) || 1);
+        ex.interval = parseInterval(v);
         $("exInterval").value = String(ex.interval);
         refreshExport();
       });
       $("exInterval").addEventListener("input", function () {
-        ex.interval = Math.max(1, parseInt($("exInterval").value, 10) || 1);
+        const raw = $("exInterval").value;
+        if (raw === "" || raw === "-" || raw == null) return;
+        ex.interval = parseInterval(raw);
         scheduleExportRefresh();
       });
       $("exInterval").addEventListener("change", function () {
-        ex.interval = Math.max(1, parseInt($("exInterval").value, 10) || 1);
+        ex.interval = parseInterval($("exInterval").value);
         $("exInterval").value = String(ex.interval);
         refreshExport();
       });
@@ -3425,7 +3434,7 @@
         getExportFrames: exportFrameList,
         getExportSource: function () { return { source: ex.source, start: ex.start, end: ex.end, interval: ex.interval, count: exportFrameList().length }; },
         setExportSource: function (s) { ex.source = s === "range" ? "range" : "sel"; syncExportSourceUI(); return refreshExport(); },
-        setExportInterval: function (n) { ex.interval = Math.max(1, parseInt(n, 10) || 1); syncExportSourceUI(); return refreshExport(); },
+        setExportInterval: function (n) { ex.interval = parseInterval(n); syncExportSourceUI(); return refreshExport(); },
         setExportRange: function (a, b) { ex.source = "range"; ex.start = a; ex.end = b; syncExportSourceUI(); return refreshExport(); },
         getChromeText: function () { return meta.textContent; },
         formatTime: formatTime,
