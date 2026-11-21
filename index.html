@@ -618,6 +618,23 @@
     }
     #exStart, #exEnd { width: 72px; }
     #exInterval { width: 88px; }
+    #cPageCount, #cPerPage { width: 68px; }
+    #cPageCount.hidden, #cPerPage.hidden { display: none; }
+    .sheet-wrap {
+      display: flex;
+      flex-direction: column;
+      width: var(--pw);
+      flex-shrink: 0;
+    }
+    .sheet-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      color: #c8c8d0;
+      margin: 0 0 6px;
+      font-variant-numeric: tabular-nums;
+    }
     #exFrameCount { color: var(--accent); font-weight: 650; font-variant-numeric: tabular-nums; }
     #exRangeGroup.hidden { display: none; }
     #exIntervalSeg button { min-width: 28px; }
@@ -795,6 +812,24 @@
       .sheet:last-child {
         break-after: auto;
         page-break-after: auto;
+      }
+      .sheet-label { display: none !important; margin: 0 !important; height: 0 !important; overflow: hidden !important; }
+      .sheet-wrap {
+        display: block;
+        width: auto;
+        break-after: page;
+        page-break-after: always;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .sheet-wrap:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+      .sheet-wrap .sheet,
+      .sheet-wrap .sheet:last-child {
+        break-after: auto !important;
+        page-break-after: auto !important;
       }
     }
   </style>
@@ -1094,8 +1129,17 @@
           <span class="label">배치</span>
           <div class="seg" id="collageModeSeg">
             <button type="button" data-cmode="order" class="active">지정 순서</button>
-            <button type="button" data-cmode="fill">1페이지 가득 채우기</button>
+            <button type="button" data-cmode="fill">가득 채우기</button>
           </div>
+        </div>
+        <div class="group" id="cPagesGroup">
+          <span class="label">나눔</span>
+          <div class="seg" id="cPageModeSeg">
+            <button type="button" data-cpmode="pages" class="active">페이지 수</button>
+            <button type="button" data-cpmode="perpage">페이지당 장수</button>
+          </div>
+          <input type="number" id="cPageCount" min="1" step="1" value="1" inputmode="numeric" title="콜라주를 나눌 페이지 수 (1 이상)">
+          <input type="number" id="cPerPage" min="1" step="1" value="1" inputmode="numeric" class="hidden" title="페이지마다 넣을 프레임 수 (1 이상)">
         </div>
         <div class="group">
           <span class="label">용지</span>
@@ -3436,6 +3480,9 @@
         cGap: 6,
         cCaption: true,
         cBg: "white",
+        cPageMode: "pages",
+        cPageCount: 1,
+        cPerPage: 1,
         layout: null,
         pages: 0,
         lastPng: null,
@@ -3648,6 +3695,58 @@
         return parts;
       }
 
+      function parsePageInt(raw) {
+        const n = parseInt(String(raw == null ? "" : raw).trim(), 10);
+        if (!isFinite(n) || n < 1) return 1;
+        return Math.floor(n);
+      }
+
+      function syncCollagePageUI() {
+        activateSeg("cPageModeSeg", "data-cpmode", ex.cPageMode === "perpage" ? "perpage" : "pages");
+        $("cPageCount").classList.toggle("hidden", ex.cPageMode === "perpage");
+        $("cPerPage").classList.toggle("hidden", ex.cPageMode !== "perpage");
+        if (document.activeElement !== $("cPageCount")) $("cPageCount").value = String(ex.cPageCount);
+        if (document.activeElement !== $("cPerPage")) $("cPerPage").value = String(ex.cPerPage);
+      }
+
+      function splitCollageFrames(frames) {
+        const n = frames.length;
+        const slices = [];
+        let clamped = false;
+        let requested = 1;
+        if (!n) return { slices: slices, pages: 0, maxPer: 0, clamped: false, requested: 1 };
+        if (ex.cPageMode === "perpage") {
+          const k = parsePageInt(ex.cPerPage);
+          requested = k;
+          for (let i = 0; i < n; i += k) slices.push(frames.slice(i, i + k));
+        } else {
+          requested = parsePageInt(ex.cPageCount);
+          let p = requested;
+          if (p > n) { p = n; clamped = true; }
+          const parts = evenPartition(n, p) || [n];
+          let off = 0;
+          for (let i = 0; i < parts.length; i++) {
+            slices.push(frames.slice(off, off + parts[i]));
+            off += parts[i];
+          }
+        }
+        let maxPer = 0;
+        for (let i = 0; i < slices.length; i++) if (slices[i].length > maxPer) maxPer = slices[i].length;
+        return { slices: slices, pages: slices.length, maxPer: maxPer, clamped: clamped, requested: requested };
+      }
+
+      function formatSliceRange(slice) {
+        if (!slice || !slice.length) return "";
+        const a = slice[0], b = slice[slice.length - 1];
+        if (slice.length === 1) return "프레임 " + a;
+        let cont = (b - a + 1) === slice.length;
+        if (cont) {
+          for (let i = 1; i < slice.length; i++) if (slice[i] !== slice[0] + i) { cont = false; break; }
+        }
+        if (cont) return "프레임 " + a + "–" + b;
+        return "프레임 " + a + " … " + b + " (" + slice.length + "장)";
+      }
+
       function fillLayout(n, contentW, contentH, gap) {
         let best = null;
         for (let rows = 1; rows <= n; rows++) {
@@ -3851,43 +3950,79 @@
           const gap = ex.cGap * MM_PER_PX;
           const fill = ex.cmode === "fill";
           const capH = (!fill && ex.cCaption) ? 5.5 : 0;
-          const lay = fill
-            ? fillLayout(frames.length, contentW, contentH, gap)
-            : orderLayout(frames.length, contentW, contentH, gap, capH);
-          const sheet = document.createElement("div");
-          sheet.className = "sheet";
-          sheet.dataset.page = "1";
-          sheet.style.background = bg;
-          sheet.style.color = fg;
-          sheet.style.setProperty("--sheet-pad", pad + "mm");
-          const abs = document.createElement("div");
-          abs.className = "collage-abs";
-          const itemsOut = [];
-          for (let i = 0; i < lay.items.length; i++) {
-            const it = lay.items[i];
-            const n = frames[it.i];
-            const overlay = fill && ex.cCaption;
-            const cell = makeCell(n, it.fit, ex.cCaption, overlay);
-            cell.style.left = (it.x / contentW * 100) + "%";
-            cell.style.top = (it.y / contentH * 100) + "%";
-            cell.style.width = (it.w / contentW * 100) + "%";
-            cell.style.height = (it.h / contentH * 100) + "%";
-            abs.appendChild(cell);
-            itemsOut.push({ i: it.i, n: n, x: it.x, y: it.y, w: it.w, h: it.h, fit: it.fit, capH: capH });
+          syncCollagePageUI();
+          const split = splitCollageFrames(frames);
+          const sheetsMeta = [];
+          let firstLay = null;
+          let firstItems = [];
+          for (let p = 0; p < split.slices.length; p++) {
+            const slice = split.slices[p];
+            const lay = fill
+              ? fillLayout(slice.length, contentW, contentH, gap)
+              : orderLayout(slice.length, contentW, contentH, gap, capH);
+            const wrap = document.createElement("div");
+            wrap.className = "sheet-wrap";
+            const label = document.createElement("div");
+            label.className = "sheet-label";
+            label.textContent = "페이지 " + (p + 1) + " / " + split.pages + " · " + formatSliceRange(slice);
+            wrap.appendChild(label);
+            const sheet = document.createElement("div");
+            sheet.className = "sheet";
+            sheet.dataset.page = String(p + 1);
+            sheet.dataset.range = formatSliceRange(slice);
+            sheet.style.background = bg;
+            sheet.style.color = fg;
+            sheet.style.setProperty("--sheet-pad", pad + "mm");
+            const abs = document.createElement("div");
+            abs.className = "collage-abs";
+            const itemsOut = [];
+            for (let i = 0; i < lay.items.length; i++) {
+              const it = lay.items[i];
+              const n = slice[it.i];
+              const overlay = fill && ex.cCaption;
+              const cell = makeCell(n, it.fit, ex.cCaption, overlay);
+              cell.style.left = (it.x / contentW * 100) + "%";
+              cell.style.top = (it.y / contentH * 100) + "%";
+              cell.style.width = (it.w / contentW * 100) + "%";
+              cell.style.height = (it.h / contentH * 100) + "%";
+              abs.appendChild(cell);
+              itemsOut.push({ i: it.i, n: n, x: it.x, y: it.y, w: it.w, h: it.h, fit: it.fit, capH: capH, page: p });
+            }
+            sheet.appendChild(abs);
+            wrap.appendChild(sheet);
+            root.appendChild(wrap);
+            const pageMeta = {
+              index: p,
+              frames: slice.slice(),
+              items: itemsOut,
+              cols: lay.cols,
+              rows: lay.rows,
+              parts: lay.parts || null,
+              empty: lay.empty || 0,
+              first: slice[0],
+              last: slice[slice.length - 1]
+            };
+            sheetsMeta.push(pageMeta);
+            if (p === 0) { firstLay = lay; firstItems = itemsOut; }
           }
-          sheet.appendChild(abs);
-          root.appendChild(sheet);
-          npage = 1;
+          npage = split.pages || 1;
           layoutMeta = {
             kind: "collage",
-            pages: 1,
+            pages: npage,
             mode: ex.cmode,
+            pageMode: ex.cPageMode,
+            pageCount: ex.cPageCount,
+            perPage: ex.cPerPage,
+            clamped: split.clamped,
+            maxPer: split.maxPer,
             frames: frames.slice(),
-            cols: lay.cols,
-            rows: lay.rows,
-            parts: lay.parts || null,
-            empty: lay.empty || 0,
-            items: itemsOut,
+            pageFrames: split.slices,
+            sheets: sheetsMeta,
+            cols: firstLay ? firstLay.cols : undefined,
+            rows: firstLay ? firstLay.rows : undefined,
+            parts: firstLay ? (firstLay.parts || null) : null,
+            empty: firstLay ? (firstLay.empty || 0) : 0,
+            items: firstItems,
             pageMm: size,
             pad: pad,
             gap: gap,
@@ -3896,8 +4031,15 @@
             bg: bg
           };
           const modeName = fill ? "가득 채우기" : "지정 순서";
-          const gridInfo = fill ? ("행 " + lay.parts.join("+")) : (lay.cols + "×" + lay.rows);
-          $("exportInfo").textContent = frames.length + "장 · " + modeName + " · " + gridInfo;
+          const gridInfo = (npage === 1)
+            ? (fill ? ("행 " + ((firstLay && firstLay.parts) ? firstLay.parts.join("+") : "")) : ((firstLay ? firstLay.cols : "?") + "×" + (firstLay ? firstLay.rows : "?")))
+            : "";
+          $("exportInfo").textContent = "총 " + frames.length + "장 → " + npage + "페이지, 페이지당 최대 " + split.maxPer + "장 · " + modeName + (gridInfo ? (" · " + gridInfo) : "");
+          if (split.clamped) {
+            const clampMsg = "프레임이 " + frames.length + "장뿐이라 페이지 수를 " + npage + "로 맞춰 두었어.";
+            const prev = $("exportMsg").textContent;
+            setExportMsg(prev ? (prev + " " + clampMsg) : clampMsg, "warn");
+          }
         }
 
         sizer.style.setProperty("--npage", String(npage));
@@ -3925,6 +4067,7 @@
         $("exportTitle").textContent = kind === "print" ? "선택 프레임 인쇄" : "선택 프레임 콜라주";
         $("exportOptsPrint").style.display = kind === "print" ? "" : "none";
         $("exportOptsCollage").style.display = kind === "collage" ? "" : "none";
+        if (kind === "collage") syncCollagePageUI();
         $("exportPngBtn").style.display = kind === "collage" ? "" : "none";
         syncExportSourceUI();
         await refreshExport();
@@ -3947,9 +4090,11 @@
         if (!ex.layout) return;
         setExportMsg("이미지 불러오는 중…");
         await waitForImages($("exportRoot"));
-        setExportMsg(ex.kind === "print"
-          ? "인쇄 창에서 ‘PDF로 저장’을 고르면 PDF로 저장할 수 있어."
-          : "인쇄 창에서 ‘PDF로 저장’을 고르면 이 한 장을 PDF로 저장할 수 있어.");
+        setExportMsg(ex.pages > 1
+          ? "인쇄하면 각 페이지가 따로 나와. 인쇄 창에서 ‘PDF로 저장’을 고르면 여러 장짜리 PDF로 저장할 수 있어."
+          : (ex.kind === "print"
+            ? "인쇄 창에서 ‘PDF로 저장’을 고르면 PDF로 저장할 수 있어."
+            : "인쇄 창에서 ‘PDF로 저장’을 고르면 이 한 장을 PDF로 저장할 수 있어."));
         window.print();
       }
 
@@ -4026,12 +4171,7 @@
         }
       }
 
-      async function renderCollageCanvas() {
-        if (ex.kind !== "collage" || !ex.layout || !ex.layout.items) {
-          return { ok: false, error: "no-layout" };
-        }
-        const meta = ex.layout;
-        const pix = collagePixelSize();
+      async function renderCollageSheet(items, meta, pix) {
         const canvas = document.createElement("canvas");
         canvas.width = pix.w;
         canvas.height = pix.h;
@@ -4041,15 +4181,14 @@
         const ppm = pix.pxPerMm;
         const originX = meta.pad * ppm;
         const originY = meta.pad * ppm;
-
         const imgs = [];
-        for (let i = 0; i < meta.items.length; i++) {
-          imgs.push(await loadFrameImage(meta.items[i].n));
+        for (let i = 0; i < items.length; i++) {
+          imgs.push(await loadFrameImage(items[i].n));
         }
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
-        for (let i = 0; i < meta.items.length; i++) {
-          const it = meta.items[i];
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
           const im = imgs[i];
           if (!im || !im.naturalWidth) continue;
           const x = originX + it.x * ppm;
@@ -4094,13 +4233,45 @@
         };
       }
 
+      async function renderCollageCanvas() {
+        if (ex.kind !== "collage" || !ex.layout || !(ex.layout.items || (ex.layout.sheets && ex.layout.sheets.length))) {
+          return { ok: false, error: "no-layout" };
+        }
+        const meta = ex.layout;
+        const pix = collagePixelSize();
+        const sheets = (meta.sheets && meta.sheets.length)
+          ? meta.sheets
+          : [{ items: meta.items || [], frames: meta.frames || [] }];
+        const pageResults = [];
+        for (let p = 0; p < sheets.length; p++) {
+          const r = await renderCollageSheet(sheets[p].items || [], meta, pix);
+          r.page = p + 1;
+          r.frames = (sheets[p].frames || []).slice();
+          pageResults.push(r);
+          if (!r.ok) {
+            return { ok: false, error: r.error, message: r.message, width: pix.w, height: pix.h, pages: pageResults, pageCount: sheets.length };
+          }
+        }
+        const first = pageResults[0];
+        return {
+          ok: true,
+          canvas: first.canvas,
+          blob: first.blob || null,
+          dataURL: first.dataURL || null,
+          width: first.width,
+          height: first.height,
+          pages: pageResults,
+          pageCount: pageResults.length
+        };
+      }
+
       async function downloadCollagePng() {
         setExportMsg("PNG 만드는 중…");
         $("exportPngBtn").disabled = true;
         try {
           await waitForImages($("exportRoot"));
           const r = await renderCollageCanvas();
-          ex.lastPng = { ok: r.ok, error: r.error || null, width: r.width, height: r.height };
+          ex.lastPng = { ok: r.ok, error: r.error || null, width: r.width, height: r.height, pageCount: r.pageCount || (r.pages ? r.pages.length : 0) };
           if (!r.ok) {
             if (r.error === "tainted") {
               setExportMsg("이 브라우저는 로컬 파일(file://)로 바로 연 상태에서는 보안 제한 때문에 PNG로 저장할 수 없어. 대신 [인쇄]를 누른 다음 대상에서 ‘PDF로 저장’을 골라 줘. 폴더를 로컬 서버로 열면 PNG 저장이 돼.", "warn");
@@ -4109,22 +4280,29 @@
             }
             return r;
           }
-          const a = document.createElement("a");
-          a.download = "collage.png";
-          if (r.blob) {
-            const url = URL.createObjectURL(r.blob);
-            a.href = url;
+          const results = (r.pages && r.pages.length) ? r.pages : [r];
+          function padPage(n) { return (n < 10 ? "0" : "") + n; }
+          function trigger(href, name, isBlobUrl) {
+            const a = document.createElement("a");
+            a.download = name;
+            a.href = href;
             document.body.appendChild(a);
             a.click();
             a.remove();
-            setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-          } else {
-            a.href = r.dataURL;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+            if (isBlobUrl) setTimeout(function () { URL.revokeObjectURL(href); }, 4000);
           }
-          setExportMsg("PNG 저장 완료 (" + r.width + "×" + r.height + "px).");
+          for (let i = 0; i < results.length; i++) {
+            const page = results[i];
+            const name = results.length === 1
+              ? "collage.png"
+              : "collage-" + padPage(i + 1) + ".png";
+            if (page.blob) trigger(URL.createObjectURL(page.blob), name, true);
+            else trigger(page.dataURL, name, false);
+          }
+          ex.lastPng.pageCount = results.length;
+          setExportMsg(results.length > 1
+            ? ("PNG " + results.length + "장 저장 완료 (" + r.width + "×" + r.height + "px).")
+            : ("PNG 저장 완료 (" + r.width + "×" + r.height + "px)."));
           return r;
         } finally {
           $("exportPngBtn").disabled = false;
@@ -4160,6 +4338,10 @@
         if (opts.gap != null) { ex.cGap = parseInt(opts.gap, 10); $("collageGap").value = String(ex.cGap); $("collageGapVal").textContent = ex.cGap + "px"; }
         if (opts.caption != null) { ex.cCaption = !!opts.caption; $("collageCaption").checked = ex.cCaption; }
         if (opts.bg) { ex.cBg = opts.bg; activateSeg("collageBgSeg", "data-bg", ex.cBg); }
+        if (opts.pageMode) { ex.cPageMode = opts.pageMode === "perpage" ? "perpage" : "pages"; }
+        if (opts.pageCount != null) { ex.cPageMode = "pages"; ex.cPageCount = parsePageInt(opts.pageCount); }
+        if (opts.perPage != null) { ex.cPageMode = "perpage"; ex.cPerPage = parsePageInt(opts.perPage); }
+        syncCollagePageUI();
         applyExportSourceOpts(opts);
         if ($("exportModal").classList.contains("show") && ex.kind === "collage") refreshExport();
       }
@@ -4183,6 +4365,44 @@
       bindSeg("printOrientSeg", "data-orient", function (v) { ex.printOrient = v; rebuildExport(); });
       $("printCaption").addEventListener("change", function () { ex.printCaption = $("printCaption").checked; rebuildExport(); });
       bindSeg("collageModeSeg", "data-cmode", function (v) { ex.cmode = v; rebuildExport(); });
+      bindSeg("cPageModeSeg", "data-cpmode", function (v) {
+        const frames = exportFrameList();
+        const n = frames.length || 1;
+        if (v === "perpage") {
+          const pages = parsePageInt(ex.cPageCount);
+          ex.cPageMode = "perpage";
+          ex.cPerPage = Math.max(1, Math.ceil(n / Math.min(pages, n)));
+        } else {
+          const k = parsePageInt(ex.cPerPage);
+          ex.cPageMode = "pages";
+          ex.cPageCount = Math.max(1, Math.ceil(n / k));
+        }
+        syncCollagePageUI();
+        rebuildExport();
+      });
+      function applyCollagePageInputs(rebuild) {
+        if (ex.cPageMode === "perpage") ex.cPerPage = parsePageInt($("cPerPage").value);
+        else ex.cPageCount = parsePageInt($("cPageCount").value);
+        syncCollagePageUI();
+        if (rebuild) rebuildExport();
+      }
+      ["cPageCount", "cPerPage"].forEach(function (id) {
+        $(id).addEventListener("input", function () {
+          const raw = $(id).value;
+          if (raw === "" || raw === "-" || raw == null) return;
+          applyCollagePageInputs(false);
+          if (exRefreshTimer) clearTimeout(exRefreshTimer);
+          exRefreshTimer = setTimeout(function () { exRefreshTimer = 0; rebuildExport(); }, 400);
+        });
+        $(id).addEventListener("change", function () { applyCollagePageInputs(true); });
+        $(id).addEventListener("blur", function () { applyCollagePageInputs(true); });
+        $(id).addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            $(id).blur();
+          }
+        });
+      });
       bindSeg("collagePaperSeg", "data-paper", function (v) { ex.cPaper = v; rebuildExport(); });
       bindSeg("collageOrientSeg", "data-orient", function (v) { ex.cOrient = v; rebuildExport(); });
       bindSeg("collageBgSeg", "data-bg", function (v) { ex.cBg = v; rebuildExport(); });
@@ -4360,13 +4580,34 @@
             pages: ex.pages,
             pp: ex.pp,
             cmode: ex.cmode,
+            cPageMode: ex.cPageMode,
+            cPageCount: ex.cPageCount,
+            cPerPage: ex.cPerPage,
             lastPng: ex.lastPng,
             source: ex.source,
             interval: ex.interval,
             start: ex.start,
             end: ex.end,
-            frames: exportFrameList()
+            frames: exportFrameList(),
+            pageFrames: (ex.layout && ex.layout.pageFrames) ? ex.layout.pageFrames : [],
+            info: $("exportInfo") ? $("exportInfo").textContent : "",
+            msg: $("exportMsg") ? $("exportMsg").textContent : ""
           };
+        },
+        setCollagePageCount: function (n) {
+          ex.cPageMode = "pages";
+          ex.cPageCount = parsePageInt(n);
+          syncCollagePageUI();
+          if ($("exportModal").classList.contains("show") && ex.kind === "collage") return refreshExport();
+        },
+        setCollagePerPage: function (k) {
+          ex.cPageMode = "perpage";
+          ex.cPerPage = parsePageInt(k);
+          syncCollagePageUI();
+          if ($("exportModal").classList.contains("show") && ex.kind === "collage") return refreshExport();
+        },
+        getCollagePageFrames: function () {
+          return (ex.layout && ex.layout.pageFrames) ? ex.layout.pageFrames.map(function (s) { return s.slice(); }) : [];
         }
       });
 
