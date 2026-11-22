@@ -450,6 +450,13 @@
     #customList { display: flex; flex-wrap: wrap; gap: 4px; }
     .custom-item button { padding: 2px 6px; font-size: 11px; }
     .custom-item.sel button:first-child { outline: 1px solid var(--accent); }
+    .custom-item .chip { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; border: 1px solid rgba(255,255,255,0.35); }
+    #customDefColor, #customSelColor { width: 28px; height: 24px; padding: 0; border: 0; background: none; cursor: pointer; }
+    #customStyleTools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    #customStyleTools.hidden { display: none; }
+    .guide-swatches { display: inline-flex; gap: 3px; align-items: center; flex-wrap: wrap; }
+    .guide-swatch { width: 16px; height: 16px; border-radius: 3px; border: 1px solid #555; padding: 0; cursor: pointer; }
+    .guide-swatch[aria-current="true"] { outline: 2px solid #fff; outline-offset: 1px; }
     #onionPrevN, #onionNextN { width: 90px; }
     #onionPrevNNum, #onionNextNNum { width: 56px; }
     #onionFarMin { width: 80px; }
@@ -1305,7 +1312,26 @@
         <span id="customGuideTools" class="hidden">
           <button type="button" id="customLineBtn">두 점 선</button>
           <label class="chk"><input type="checkbox" id="customLockChk"> 잠금</label>
+          <span class="label" title="미리 잡은 구도 가이드 색과는 따로예요">새 가이드 색</span>
+          <input type="color" id="customDefColor" value="#ff8a1a" title="새로 만드는 커스텀 가이드 기본 색">
+          <span id="customDefSwatches" class="guide-swatches" title="기본 색 견본"></span>
           <span id="customList"></span>
+          <span id="customStyleTools" class="hidden">
+            <span class="label">선택한 가이드</span>
+            <input type="color" id="customSelColor" value="#ff8a1a" title="이 가이드 색">
+            <span id="customSelSwatches" class="guide-swatches" title="이 가이드 색 견본"></span>
+            <span class="label">굵기</span>
+            <input type="range" class="slim" id="customSelWidth" min="1" max="12" value="2" step="1">
+            <span id="customSelWidthVal">2</span>
+            <span class="label">투명도</span>
+            <input type="range" class="slim" id="customSelOp" min="15" max="100" value="90" step="1">
+            <span id="customSelOpVal">90%</span>
+            <div class="seg" id="customSelDashSeg">
+              <button type="button" data-dash="solid" class="active">실선</button>
+              <button type="button" data-dash="dashed">점선</button>
+            </div>
+            <button type="button" id="customSelDel" title="선택한 가이드 삭제">삭제</button>
+          </span>
         </span>
         <span id="penTools" class="hidden">
           <div class="seg" id="penKindSeg">
@@ -1457,7 +1483,7 @@
         <dt>? 또는 /</dt><dd>이 도움말 열기/닫기</dd>
         <dt>Esc</dt><dd>입력 중이면 포커스 해제, 아니면 도움말 닫기</dd>
       </dl>
-      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. 「구도 가이드 (n)」 버튼을 누르면 삼분할·황금분할·황금나선·황금 삼각형·하모닉 아머처·방사형 등 14가지를 체크박스로 고를 수 있고, G 키로 표시를 켜고 끈다. 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「피사체 박스」는 주요 피사체 상자를 자동으로 잡고(근사, 직접 드래그·크기 조절 가능) 헤드룸·여백 수치를 보여 줘. 「가이드 편집」에서 소실점 드래그, 위·왼쪽 자에서 커스텀 가이드, 두 점 선을 그릴 수 있고, 「펜」으로 체크·형광·지우기를 할 수 있어(잠금·출력 옵션, 모든 프레임/이 프레임만). 폴더에서 연 기본 영상에서는 픽셀을 못 읽으니 웹사이트나 「영상 불러오기」를 쓰면 돼. 어니언 스킨은 앞(이전)·뒤(다음) 장수를 슬라이더(최대 30)나 숫자로 남은 프레임까지 따로 지정하고, 가장 먼 장 최소 투명도를 고를 수 있어. AI 분석이 503·429·500으로 바쁠 때는 자동으로 다시 시도하고, 「바쁠 때 자동으로 다른 모델로 전환」을 켜 두면 다음 모델로 넘어가. 취소로 멈출 수 있어. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
+      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. 「구도 가이드 (n)」 버튼을 누르면 삼분할·황금분할·황금나선·황금 삼각형·하모닉 아머처·방사형 등 14가지를 체크박스로 고를 수 있고, G 키로 표시를 켜고 끈다. 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「피사체 박스」는 주요 피사체 상자를 자동으로 잡고(근사, 직접 드래그·크기 조절 가능) 헤드룸·여백 수치를 보여 줘. 「가이드 편집」에서 소실점 드래그, 위·왼쪽 자에서 커스텀 가이드, 두 점 선을 그릴 수 있고, 가이드마다 색·굵기·투명도·실선/점선을 지정할 수 있어(미리 잡은 구도 가이드 색과는 별개, 잠가도 스타일은 유지). 「펜」으로 체크·형광·지우기를 할 수 있어(잠금·출력 옵션, 모든 프레임/이 프레임만). 폴더에서 연 기본 영상에서는 픽셀을 못 읽으니 웹사이트나 「영상 불러오기」를 쓰면 돼. 어니언 스킨은 앞(이전)·뒤(다음) 장수를 슬라이더(최대 30)나 숫자로 남은 프레임까지 따로 지정하고, 가장 먼 장 최소 투명도를 고를 수 있어. AI 분석이 503·429·500으로 바쁠 때는 자동으로 다시 시도하고, 「바쁠 때 자동으로 다른 모델로 전환」을 켜 두면 다음 모델로 넘어가. 취소로 멈출 수 있어. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
     </div>
   </div>
 
@@ -3562,6 +3588,11 @@
       let customSel = -1;
       let customLineArmed = false;
       let customLineStart = null;
+      const CUSTOM_SWATCHES = ["#ff3b30", "#ff8a1a", "#ffd60a", "#34c759", "#00e5ff", "#0a84ff", "#bf5af2", "#ffffff", "#111111"];
+      let customDefaultColor = "#ff8a1a";
+      let customDefaultWidth = 2;
+      let customDefaultOpacity = 0.9;
+      let customDefaultDash = "solid";
       let toolMode = "view"; /* view | guide | pen */
       let bboxManual = null, bboxKeepManual = false, bboxFaceMode = true, bboxFrameId = 0;
       let lastAutoFraming = null;
@@ -3603,6 +3634,8 @@
           spiralFit: guideSpiralFit, spiralRects: guideSpiralRects, triDiag: guideTriDiag,
           radialCount: radialCount, radialDual: radialDual, radialVPs: radialVPs,
           customLock: customLock, bboxKeep: bboxKeepManual, bboxFace: bboxFaceMode,
+          customDefaultColor: customDefaultColor, customDefaultWidth: customDefaultWidth,
+          customDefaultOpacity: customDefaultOpacity, customDefaultDash: customDefaultDash,
           ids: guideIds, color: guideColor, opacity: guideOpacity,
           spiralOri: guideSpiralOri, spiralFlip: guideSpiralFlip, customC: guideCustomC, customR: guideCustomR
         });
@@ -3621,7 +3654,10 @@
           if (o.farMin != null) onionFarMin = Math.max(0.01, Math.min(0.4, +o.farMin || 0.08));
         }
         const cg = lsGetJson("fv-custom-guides", null);
-        if (Array.isArray(cg)) customGuides = cg;
+        if (Array.isArray(cg)) {
+          customGuides = cg;
+          for (let i = 0; i < customGuides.length; i++) ensureCustomStyle(customGuides[i], false);
+        }
         const p = lsGetJson("fv-pen", null);
         if (p) {
           if (Array.isArray(p.all)) penAll = p.all;
@@ -3652,6 +3688,10 @@
           if (t.spiralFlip != null) guideSpiralFlip = !!t.spiralFlip;
           if (t.customC) guideCustomC = t.customC | 0;
           if (t.customR) guideCustomR = t.customR | 0;
+          if (t.customDefaultColor) customDefaultColor = t.customDefaultColor;
+          if (t.customDefaultWidth != null) customDefaultWidth = Math.max(1, Math.min(12, t.customDefaultWidth | 0));
+          if (t.customDefaultOpacity != null) customDefaultOpacity = Math.max(0.15, Math.min(1, +t.customDefaultOpacity));
+          if (t.customDefaultDash) customDefaultDash = t.customDefaultDash === "dashed" ? "dashed" : "solid";
         }
       }
 
@@ -3659,20 +3699,49 @@
         return radialDual ? radialVPs.slice(0, 2) : radialVPs.slice(0, 1);
       }
 
+      function ensureCustomStyle(g, isNew) {
+        if (!g) return g;
+        if (!g.color) g.color = isNew ? customDefaultColor : "#00e5ff";
+        if (g.width == null || !isFinite(g.width)) g.width = isNew ? customDefaultWidth : 2;
+        if (g.opacity == null || !isFinite(g.opacity)) g.opacity = isNew ? customDefaultOpacity : 0.9;
+        if (g.dash !== "dashed" && g.dash !== "solid") g.dash = isNew ? customDefaultDash : "solid";
+        return g;
+      }
+      function applyCustomGuideStyle(ctx, w, g) {
+        const c = parseHexColor(g.color || customDefaultColor || "#ff8a1a");
+        const op = g.opacity == null ? 0.9 : g.opacity;
+        const unit = Math.max(1, Math.min(w, 1920) / 900);
+        const lw = Math.max(1, (g.width == null ? 2 : g.width) * unit);
+        ctx.strokeStyle = "rgba(" + c.r + "," + c.g + "," + c.b + "," + op + ")";
+        ctx.fillStyle = "rgba(" + c.r + "," + c.g + "," + c.b + "," + op + ")";
+        ctx.lineWidth = lw;
+        ctx.lineCap = "butt";
+        ctx.lineJoin = "miter";
+        if (g.dash === "dashed") ctx.setLineDash([Math.max(6, lw * 3), Math.max(4, lw * 2)]);
+        else ctx.setLineDash([]);
+      }
+      function strokeCustomGuide(ctx, g, w, h) {
+        if (g.type === "h") gLine(ctx, 0, g.a * h, w, g.a * h);
+        else if (g.type === "v") gLine(ctx, g.a * w, 0, g.a * w, h);
+        else if (g.type === "line") gLine(ctx, g.x1 * w, g.y1 * h, g.x2 * w, g.y2 * h);
+      }
       function drawCustomGuides(ctx, w, h, exportKind, handles) {
         for (let i = 0; i < customGuides.length; i++) {
           const g = customGuides[i];
           if (exportKind && g.output && g.output[exportKind] === false) continue;
-          applyGuideStyle(ctx, w, guideOptions());
+          ctx.save();
+          applyCustomGuideStyle(ctx, w, g);
           if (i === customSel && handles) {
             ctx.save();
-            ctx.strokeStyle = "rgba(255,220,80,0.95)";
-            ctx.lineWidth = Math.max(2, ctx.lineWidth);
+            ctx.strokeStyle = "rgba(255,220,80,0.75)";
+            ctx.lineWidth = ctx.lineWidth + 3;
+            ctx.setLineDash([]);
+            strokeCustomGuide(ctx, g, w, h);
+            ctx.restore();
+            applyCustomGuideStyle(ctx, w, g);
           }
-          if (g.type === "h") gLine(ctx, 0, g.a * h, w, g.a * h);
-          else if (g.type === "v") gLine(ctx, g.a * w, 0, g.a * w, h);
-          else if (g.type === "line") gLine(ctx, g.x1 * w, g.y1 * h, g.x2 * w, g.y2 * h);
-          if (i === customSel && handles) ctx.restore();
+          strokeCustomGuide(ctx, g, w, h);
+          ctx.restore();
         }
       }
 
@@ -3799,11 +3868,13 @@
       function addCustomGuide(g) {
         g.id = g.id || newCustomId();
         if (!g.output) g.output = Object.assign({}, customExportDefault);
+        ensureCustomStyle(g, true);
         customGuides.push(g);
         customSel = customGuides.length - 1;
         schedulePersist();
         syncCustomList();
         redrawGuides();
+        return g;
       }
       function removeCustomGuide(i) {
         if (customLock) return;
@@ -3813,6 +3884,65 @@
         syncCustomList();
         redrawGuides();
       }
+      function setCustomGuideStyle(i, opts) {
+        if (i == null) i = customSel;
+        const g = customGuides[i];
+        if (!g || !opts) return g;
+        if (opts.color) g.color = opts.color;
+        if (opts.width != null) g.width = Math.max(1, Math.min(12, opts.width | 0));
+        if (opts.opacity != null) g.opacity = Math.max(0.15, Math.min(1, +opts.opacity));
+        if (opts.dash) g.dash = opts.dash === "dashed" ? "dashed" : "solid";
+        schedulePersist();
+        syncCustomList();
+        redrawGuides();
+        return g;
+      }
+      function fillGuideSwatches(el, current, onPick) {
+        if (!el) return;
+        el.innerHTML = "";
+        for (let i = 0; i < CUSTOM_SWATCHES.length; i++) {
+          const hex = CUSTOM_SWATCHES[i];
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "guide-swatch";
+          b.style.background = hex;
+          b.title = hex;
+          b.setAttribute("data-swatch", hex);
+          if (String(current || "").toLowerCase() === hex) b.setAttribute("aria-current", "true");
+          b.addEventListener("click", function () { onPick(hex); });
+          el.appendChild(b);
+        }
+      }
+      function syncCustomDefaultUI() {
+        if ($("customDefColor")) $("customDefColor").value = customDefaultColor;
+        fillGuideSwatches($("customDefSwatches"), customDefaultColor, function (hex) {
+          customDefaultColor = hex;
+          schedulePersist();
+          syncCustomDefaultUI();
+        });
+      }
+      function syncCustomStyleUI() {
+        const box = $("customStyleTools");
+        if (!box) return;
+        const g = customSel >= 0 ? customGuides[customSel] : null;
+        box.classList.toggle("hidden", !g);
+        if (!g) return;
+        ensureCustomStyle(g, false);
+        if ($("customSelColor")) $("customSelColor").value = g.color;
+        if ($("customSelWidth")) $("customSelWidth").value = String(g.width);
+        if ($("customSelWidthVal")) $("customSelWidthVal").textContent = String(g.width);
+        if ($("customSelOp")) $("customSelOp").value = String(Math.round(g.opacity * 100));
+        if ($("customSelOpVal")) $("customSelOpVal").textContent = Math.round(g.opacity * 100) + "%";
+        const seg = $("customSelDashSeg");
+        if (seg) {
+          const btns = seg.querySelectorAll("button");
+          for (let i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-dash") === g.dash);
+        }
+        if ($("customSelDel")) $("customSelDel").disabled = !!customLock;
+        fillGuideSwatches($("customSelSwatches"), g.color, function (hex) {
+          setCustomGuideStyle(customSel, { color: hex });
+        });
+      }
       function syncCustomList() {
         const el = $("customList");
         if (!el) return;
@@ -3821,10 +3951,12 @@
           const row = document.createElement("span");
           row.className = "custom-item" + (i === customSel ? " sel" : "");
           const name = g.type === "h" ? "가로 " + Math.round(g.a * 100) + "%" : g.type === "v" ? "세로 " + Math.round(g.a * 100) + "%" : "선";
-          row.innerHTML = "<button type=\"button\" data-ci=\"" + i + "\">" + name + "</button>" +
+          const col = g.color || customDefaultColor || "#ff8a1a";
+          row.innerHTML = "<button type=\"button\" data-ci=\"" + i + "\"><span class=\"chip\" style=\"background:" + col + "\"></span>" + name + "</button>" +
             (customLock ? "" : "<button type=\"button\" data-cd=\"" + i + "\" title=\"삭제\">×</button>");
           el.appendChild(row);
         });
+        syncCustomStyleUI();
       }
 
       function hitRadialVP(nx, ny) {
@@ -8315,7 +8447,19 @@
         getToolMode: function () { return toolMode; },
         addCustomGuide: addCustomGuide,
         getCustomGuides: function () { return customGuides.slice(); },
-        setCustomLock: function (on) { customLock = !!on; if ($("customLockChk")) $("customLockChk").checked = customLock; schedulePersist(); },
+        setCustomGuideStyle: setCustomGuideStyle,
+        selectCustomGuide: function (i) { customSel = (i >= 0 && i < customGuides.length) ? i : -1; syncCustomList(); redrawGuides(); },
+        getCustomDefaultStyle: function () { return { color: customDefaultColor, width: customDefaultWidth, opacity: customDefaultOpacity, dash: customDefaultDash }; },
+        setCustomDefaultStyle: function (opts) {
+          opts = opts || {};
+          if (opts.color) customDefaultColor = opts.color;
+          if (opts.width != null) customDefaultWidth = Math.max(1, Math.min(12, opts.width | 0));
+          if (opts.opacity != null) customDefaultOpacity = Math.max(0.15, Math.min(1, +opts.opacity));
+          if (opts.dash) customDefaultDash = opts.dash === "dashed" ? "dashed" : "solid";
+          schedulePersist();
+          syncCustomDefaultUI();
+        },
+        setCustomLock: function (on) { customLock = !!on; if ($("customLockChk")) $("customLockChk").checked = customLock; schedulePersist(); syncCustomList(); },
         getPenStrokes: function () { return { all: penAll.slice(), byFrame: JSON.parse(JSON.stringify(penByFrame)) }; },
         addPenStroke: storePenStroke,
         setPenExport: function (k, v) { penExport[k] = !!v; schedulePersist(); },
@@ -8497,6 +8641,29 @@
         if (d) removeCustomGuide(parseInt(d.getAttribute("data-cd"), 10));
         else if (s) { customSel = parseInt(s.getAttribute("data-ci"), 10); syncCustomList(); redrawGuides(); }
       });
+      if ($("customDefColor")) $("customDefColor").addEventListener("input", function () {
+        customDefaultColor = $("customDefColor").value;
+        schedulePersist();
+        syncCustomDefaultUI();
+      });
+      if ($("customSelColor")) $("customSelColor").addEventListener("input", function () {
+        setCustomGuideStyle(customSel, { color: $("customSelColor").value });
+      });
+      if ($("customSelWidth")) $("customSelWidth").addEventListener("input", function () {
+        setCustomGuideStyle(customSel, { width: parseInt($("customSelWidth").value, 10) || 2 });
+      });
+      if ($("customSelOp")) $("customSelOp").addEventListener("input", function () {
+        setCustomGuideStyle(customSel, { opacity: (parseInt($("customSelOp").value, 10) || 90) / 100 });
+      });
+      if ($("customSelDashSeg")) $("customSelDashSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        setCustomGuideStyle(customSel, { dash: b.getAttribute("data-dash") });
+      });
+      if ($("customSelDel")) $("customSelDel").addEventListener("click", function () {
+        if (customSel >= 0) removeCustomGuide(customSel);
+      });
+      syncCustomDefaultUI();
       $("penKindSeg").addEventListener("click", function (e) {
         const b = e.target.closest("button");
         if (!b) return;
@@ -8676,6 +8843,8 @@
 
       loadToolPrefs();
       if ($("onionPrevOn")) syncOnionUI();
+      syncCustomDefaultUI();
+      syncCustomList();
       if ($("customLockChk")) $("customLockChk").checked = customLock;
       if ($("bboxKeepChk")) $("bboxKeepChk").checked = bboxKeepManual;
       if ($("bboxFaceChk")) $("bboxFaceChk").checked = bboxFaceMode;
