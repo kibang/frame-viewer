@@ -338,6 +338,102 @@
       min-height: 3em;
     }
     #azOut:empty { display: none; }
+
+    #guideCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 4;
+      pointer-events: none;
+    }
+    #guideBtn.active { font-weight: 650; }
+    #guideMenu {
+      position: absolute;
+      z-index: 20;
+      margin-top: 4px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      min-width: 200px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #guideMenu.hidden, .guide-extra.hidden { display: none; }
+    .guide-drop { position: relative; }
+    #guideMenu label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+    .guide-overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 3;
+    }
+    #azTabSeg { margin-left: 8px; }
+    #azTabColor, #azTabSpace, #azTabTech { margin-top: 8px; }
+    #azHueWheel {
+      display: block;
+      width: 180px;
+      height: 180px;
+      margin: 8px 0;
+      background: #111116;
+      border-radius: 50%;
+    }
+    .az-swatches { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 6px 0 10px; }
+    .az-swatch { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+    .az-swatch .chip {
+      width: 18px; height: 18px; border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.25);
+      display: inline-block;
+    }
+    .az-swatch em { color: var(--muted); font-style: normal; }
+    .az-muted { color: var(--muted); font-size: 12px; }
+    .az-local-err { color: #f0c040; font-size: 13px; line-height: 1.45; }
+    #azColorOut h3, #azSpaceOut h3, #azTechOut h3, #azOut .az-json h4 {
+      margin: 0.9em 0 0.35em;
+      font-size: 13px;
+      font-weight: 650;
+      color: var(--accent);
+    }
+    #azOut .az-json section p { margin: 0 0 0.4em; }
+    #azColorOut p, #azSpaceOut p, #azTechOut p { margin: 0.25em 0 0.5em; line-height: 1.5; font-size: 13px; }
+    #imgExportModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.72);
+      z-index: 70;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #imgExportModal.show { display: flex; }
+    #imgExportModal .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      max-width: 560px;
+      width: 100%;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    }
+    #imgExportModal h2 { margin: 0 0 12px; font-size: 16px; }
+    #imgExLinks { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 8px; }
+    #imgExLinks a { color: var(--accent); font-size: 12px; }
+    #imgExStart, #imgExEnd { width: 72px; }
+    #imgExInterval { width: 72px; }
+    @media print {
+      .guide-overlay {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      #imgExportModal, #guideMenu { display: none !important; }
+    }
+
     #azOut h3 {
       margin: 0.9em 0 0.35em;
       font-size: 13px;
@@ -919,6 +1015,7 @@
           <canvas id="viewCanvas"></canvas>
           <div id="onionPrev"></div>
           <div id="onionNext"></div>
+          <canvas id="guideCanvas"></canvas>
         </div>
         <div class="meta-overlay" id="meta">—</div>
         <div id="dropMask">영상을 여기에 놓으면 불러와</div>
@@ -971,6 +1068,7 @@
         <button type="button" id="selClear">전체 비우기</button>
         <button type="button" id="printBtn" title="선택한 프레임 인쇄">인쇄</button>
         <button type="button" id="collageBtn" title="선택한 프레임 콜라주">콜라주</button>
+        <button type="button" id="imgExportBtn" title="선택한 프레임을 JPG/PNG로 저장">이미지 저장</button>
         <button type="button" id="analyzeBtn" title="프레임 분석 (A)">분석</button>
         <span class="sel-status" id="selRangeHint"></span>
       </div>
@@ -1003,6 +1101,50 @@
           </div>
           <span id="onionHint"></span>
         </div>
+      </div>
+      <div class="row" id="guideRow">
+        <button type="button" id="guideBtn" title="구도 가이드 켜기/끄기 (G)">구도 가이드 OFF</button>
+        <div class="guide-drop">
+          <button type="button" id="guideMenuBtn">가이드 선택 ▾</button>
+          <div id="guideMenu" class="hidden">
+            <label><input type="checkbox" data-guide="thirds" checked> 삼분할</label>
+            <label><input type="checkbox" data-guide="phi"> 황금분할</label>
+            <label><input type="checkbox" data-guide="spiral"> 황금나선</label>
+            <label><input type="checkbox" data-guide="goldenTri"> 황금 삼각형</label>
+            <label><input type="checkbox" data-guide="diagonal"> 대각선·바로크</label>
+            <label><input type="checkbox" data-guide="cross"> 중앙선·십자</label>
+            <label><input type="checkbox" data-guide="symmetry"> 대칭(좌우·상하)</label>
+            <label><input type="checkbox" data-guide="dynamic"> 다이나믹 시메트리</label>
+            <label><input type="checkbox" data-guide="quad"> 4분할</label>
+            <label><input type="checkbox" data-guide="triangle"> 압축 대각선·삼각 구도</label>
+            <label><input type="checkbox" data-guide="safe"> 세이프 에어리어</label>
+            <label><input type="checkbox" data-guide="custom"> 커스텀 그리드</label>
+          </div>
+        </div>
+        <div class="group">
+          <span class="label">색</span>
+          <input type="color" id="guideColor" value="#00e5ff" title="가이드 색">
+          <span class="label">투명도</span>
+          <input type="range" class="slim" id="guideOp" min="15" max="100" value="85" step="1">
+          <span id="guideOpVal">85%</span>
+        </div>
+        <span id="guideSpiralOpts" class="guide-extra hidden">
+          <span class="label">나선</span>
+          <select id="guideSpiralOri" title="황금나선 방향">
+            <option value="0">방향 1</option>
+            <option value="1">방향 2</option>
+            <option value="2">방향 3</option>
+            <option value="3">방향 4</option>
+          </select>
+          <label class="chk"><input type="checkbox" id="guideSpiralFlip"> 좌우 반전</label>
+        </span>
+        <span id="guideCustomOpts" class="guide-extra hidden">
+          <span class="label">칸</span>
+          <input type="number" id="guideCustomC" min="1" max="24" value="5" title="가로 칸">
+          <span>×</span>
+          <input type="number" id="guideCustomR" min="1" max="24" value="5" title="세로 칸">
+        </span>
+        <label class="chk"><input type="checkbox" id="guideBBoxChk"> 피사체 박스</label>
       </div>
 
       <div id="thumbsWrap">
@@ -1074,10 +1216,33 @@
         <p class="az-guide-shared">키는 비밀번호처럼 다루고, 채팅이나 코드에 올리지 마. 이 브라우저에만 저장되고, 「키 지우기」로 지울 수 있어.</p>
       </details>
       <p class="az-note">API 키는 이 브라우저(localStorage)에만 저장되고, 요청은 해당 제공 업체로 바로 보내. 이 앱 저장소나 서버에는 올라가지 않아. 키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a> · <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI API keys</a></p>
-      <div id="azStatus"></div>
-      <div id="azModelHint" class="hidden"></div>
-      <div id="azPalette"></div>
-      <div id="azOut"></div>
+      <div class="row">
+        <div class="seg" id="azTabSeg">
+          <button type="button" data-aztab="ai" class="active">AI 분석</button>
+          <button type="button" data-aztab="color">색채</button>
+          <button type="button" data-aztab="space">여백·구도</button>
+          <button type="button" data-aztab="tech">기법</button>
+        </div>
+      </div>
+      <div id="azTabAi">
+        <div id="azStatus"></div>
+        <div id="azModelHint" class="hidden"></div>
+        <div id="azPalette"></div>
+        <div id="azOut"></div>
+      </div>
+      <div id="azTabColor" class="hidden">
+        <p class="az-muted">현재 프레임을 이 브라우저에서 바로 분석해. API 키가 없어도 돼.</p>
+        <canvas id="azHueWheel" width="180" height="180"></canvas>
+        <div id="azColorOut"></div>
+      </div>
+      <div id="azTabSpace" class="hidden">
+        <p class="az-muted">현재 프레임의 여백을 로컬로 추정해. API 키가 없어도 되고, AI 분석 결과와 같이 볼 수 있어.</p>
+        <div id="azSpaceOut"></div>
+      </div>
+      <div id="azTabTech" class="hidden">
+        <p class="az-muted">프레임 차이로 홀드(2코마/3코마)를 세고, AI가 말한 기법·샷 타입을 여기에 모아 줘.</p>
+        <div id="azTechOut"></div>
+      </div>
     </div>
   </div>
 
@@ -1095,10 +1260,11 @@
         <dt>O</dt><dd>어니언 스킨 켜기/끄기</dd>
         <dt>V</dt><dd>음소거 / 해제</dd>
         <dt>A</dt><dd>하단 분석 패널 열고 현재 설정으로 분석</dd>
+        <dt>G</dt><dd>구도 가이드 켜기/끄기</dd>
         <dt>? 또는 /</dt><dd>이 도움말 열기/닫기</dd>
         <dt>Esc</dt><dd>입력 중이면 포커스 해제, 아니면 도움말 닫기</dd>
       </dl>
-      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「영상 불러오기」로 로컬 영상도 같은 기능으로 볼 수 있어. 「분석」은 고른 제공 업체의 비전 모델로 카메라 각도·기법·색·(연속이면) 무빙을 설명해 줘. API 키는 이 브라우저에만 저장돼.</p>
+      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. G 키나 「구도 가이드」로 삼분할·황금분할·황금나선 등 가이드를 겹쳐 볼 수 있고, 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
     </div>
   </div>
 
@@ -1202,6 +1368,7 @@
           <span id="collageGapVal">6px</span>
         </div>
         <label class="chk"><input type="checkbox" id="collageCaption" checked> 프레임 번호 + 타임코드</label>
+        <label class="chk"><input type="checkbox" id="collageGuideChk"> 구도 가이드</label>
         <div class="group">
           <span class="label">배경</span>
           <div class="seg" id="collageBgSeg">
@@ -1241,6 +1408,7 @@
         </div>
         <label class="chk"><input type="checkbox" id="vidAudio" checked> 소리 넣기</label>
         <label class="chk"><input type="checkbox" id="vidCaption"> 프레임 번호 + 타임코드</label>
+        <label class="chk"><input type="checkbox" id="vidGuideChk"> 구도 가이드</label>
         <button type="button" class="primary" id="vidMakeBtn">영상으로 만들기</button>
         <button type="button" id="vidCancelBtn" style="display:none">취소</button>
         <span id="vidFpsHint"></span>
@@ -1268,6 +1436,46 @@
       <div id="exportSizer">
         <div id="exportRoot"></div>
       </div>
+    </div>
+  </div>
+  <div id="imgExportModal">
+    <div class="card">
+      <h2>이미지 저장</h2>
+      <div class="row">
+        <div class="group">
+          <span class="label">소스</span>
+          <div class="seg" id="imgExSrcSeg">
+            <button type="button" data-imgsrc="current" class="active">현재 프레임</button>
+            <button type="button" data-imgsrc="sel">선택한 프레임</button>
+            <button type="button" data-imgsrc="range">범위+간격</button>
+          </div>
+        </div>
+        <div class="group" id="imgExRangeGroup">
+          <span class="label">시작</span>
+          <input type="number" id="imgExStart" min="1" value="1">
+          <span class="label">끝</span>
+          <input type="number" id="imgExEnd" min="1" value="1">
+          <span class="label">간격</span>
+          <input type="number" id="imgExInterval" min="1" step="1" value="1">
+        </div>
+        <span class="sel-status" id="imgExCount">1장</span>
+      </div>
+      <div class="row">
+        <div class="group">
+          <span class="label">형식</span>
+          <div class="seg" id="imgExFmtSeg">
+            <button type="button" data-imgfmt="jpg" class="active">JPG</button>
+            <button type="button" data-imgfmt="png">PNG</button>
+          </div>
+        </div>
+        <label class="chk"><input type="checkbox" id="imgExGuideChk"> 구도 가이드 넣기</label>
+      </div>
+      <div class="row">
+        <button type="button" class="primary" id="imgExSaveBtn">저장</button>
+        <button type="button" id="imgExCloseBtn">닫기</button>
+        <span id="imgExMsg" class="sel-status"></span>
+      </div>
+      <div id="imgExLinks"></div>
     </div>
   </div>
   <style id="pageRule">@page { size: A4 portrait; margin: 0; }</style>
@@ -1582,6 +1790,8 @@
         updateChrome();
         const seq = ++displaySeq;
         renderView(n, opts, seq);
+        sizeGuideCanvas();
+        scheduleLocalAnalysis();
         if (playing && !opts.fromAudio) seekMediaToFrame(n);
         if (!playing && !opts.fromAudio && !opts.silent) playScrubSnippet();
       }
@@ -2842,6 +3052,7 @@
         $("analyzeBtn").classList.add("active");
         try { $("analyzePanel").scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {}
         syncAzUI();
+        scheduleLocalAnalysis();
       }
 
       function sampleIndices(arr, cap) {
@@ -3024,6 +3235,783 @@
         return out;
       }
 
+      /* ===== t77u: guides, zip export, local color/space/hold analysis ===== */
+      const PHI = 1.618033988749895;
+      const GUIDE_DEFS = [
+        { id: "thirds", label: "삼분할" },
+        { id: "phi", label: "황금분할" },
+        { id: "spiral", label: "황금나선" },
+        { id: "goldenTri", label: "황금 삼각형" },
+        { id: "diagonal", label: "대각선·바로크" },
+        { id: "cross", label: "중앙선·십자" },
+        { id: "symmetry", label: "대칭(좌우·상하)" },
+        { id: "dynamic", label: "다이나믹 시메트리" },
+        { id: "quad", label: "4분할" },
+        { id: "triangle", label: "압축 대각선·삼각 구도" },
+        { id: "safe", label: "세이프 에어리어" },
+        { id: "custom", label: "커스텀 그리드" }
+      ];
+      const GUIDE_IDS = GUIDE_DEFS.map(function (d) { return d.id; });
+
+      let guideOn = false;
+      let guideIds = { thirds: true, phi: false, spiral: false, goldenTri: false, diagonal: false, cross: false, symmetry: false, dynamic: false, quad: false, triangle: false, safe: false, custom: false };
+      let guideColor = "#00e5ff";
+      let guideOpacity = 0.85;
+      let guideSpiralOri = 0;
+      let guideSpiralFlip = false;
+      let guideCustomC = 5;
+      let guideCustomR = 5;
+      let guideShowBBox = false;
+      let lastFraming = null;
+      let lastColors = null;
+      let lastHolds = null;
+      let lastAzJson = null;
+      let azTab = "ai";
+      let localAzTimer = 0;
+      let collageGuides = false;
+      let videoGuides = false;
+      let imgExportGuides = false;
+
+      function guideOptions() {
+        return {
+          ids: Object.assign({}, guideIds),
+          color: guideColor,
+          opacity: guideOpacity,
+          spiralOri: guideSpiralOri,
+          spiralFlip: guideSpiralFlip,
+          customC: guideCustomC,
+          customR: guideCustomR
+        };
+      }
+
+      function parseHexColor(hex) {
+        const s = String(hex || "").replace("#", "");
+        const n = parseInt(s.length === 3 ? s[0]+s[0]+s[1]+s[1]+s[2]+s[2] : s, 16);
+        if (!isFinite(n)) return { r: 0, g: 229, b: 255 };
+        return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+      }
+
+      function applyGuideStyle(ctx, w, opts) {
+        const o = opts || {};
+        const c = parseHexColor(o.color || "#00e5ff");
+        const a = o.opacity == null ? 0.85 : o.opacity;
+        ctx.strokeStyle = "rgba(" + c.r + "," + c.g + "," + c.b + "," + a + ")";
+        ctx.fillStyle = "rgba(" + c.r + "," + c.g + "," + c.b + "," + a + ")";
+        ctx.lineWidth = Math.max(1, Math.round(Math.min(w, 1920) / 700));
+        ctx.lineCap = "butt";
+        ctx.lineJoin = "miter";
+        ctx.setLineDash([]);
+      }
+
+      function gLine(ctx, x1, y1, x2, y2) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      function gLines(ctx, segs) {
+        ctx.beginPath();
+        for (let i = 0; i < segs.length; i += 4) {
+          ctx.moveTo(segs[i], segs[i + 1]);
+          ctx.lineTo(segs[i + 2], segs[i + 3]);
+        }
+        ctx.stroke();
+      }
+
+      function closestPointOnSeg(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1, dy = y2 - y1;
+        const len2 = dx * dx + dy * dy || 1;
+        let t = ((px - x1) * dx + (py - y1) * dy) / len2;
+        t = Math.max(0, Math.min(1, t));
+        return { x: x1 + t * dx, y: y1 + t * dy };
+      }
+
+      function drawGoldenSpiral(ctx, W, H, ori, flip) {
+        ctx.save();
+        ctx.translate(W / 2, H / 2);
+        ctx.rotate((ori % 4) * Math.PI / 2);
+        if (flip) ctx.scale(-1, 1);
+        const rw = (ori % 2 === 0) ? W : H;
+        const rh = (ori % 2 === 0) ? H : W;
+        ctx.translate(-rw / 2, -rh / 2);
+        let x = 0, y = 0, w = rw, h = rh;
+        let dir = 0;
+        ctx.beginPath();
+        for (let i = 0; i < 16 && w > 1.5 && h > 1.5; i++) {
+          if (w >= h) {
+            const s = h;
+            if (dir === 0) {
+              ctx.moveTo(x, y + s);
+              ctx.arc(x + s, y + s, s, Math.PI, 1.5 * Math.PI, false);
+              x += s; w -= s;
+            } else {
+              ctx.moveTo(x + w, y);
+              ctx.arc(x + w - s, y + s, s, 0, 0.5 * Math.PI, false);
+              w -= s;
+            }
+            dir = 1 - dir;
+          } else {
+            const s = w;
+            if (dir === 0) {
+              ctx.moveTo(x, y);
+              ctx.arc(x + s, y + s, s, 1.5 * Math.PI, 2 * Math.PI, false);
+              y += s; h -= s;
+            } else {
+              ctx.moveTo(x + s, y + h);
+              ctx.arc(x, y + h - s, s, 0.5 * Math.PI, Math.PI, false);
+              h -= s;
+            }
+            dir = 1 - dir;
+          }
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawCompositionGuides(ctx, w, h, opts) {
+        opts = opts || {};
+        const ids = opts.ids || {};
+        applyGuideStyle(ctx, w, opts);
+        if (ids.thirds) {
+          gLines(ctx, [w / 3, 0, w / 3, h, 2 * w / 3, 0, 2 * w / 3, h, 0, h / 3, w, h / 3, 0, 2 * h / 3, w, 2 * h / 3]);
+        }
+        if (ids.phi) {
+          const a = 1 / PHI;
+          const xs = [a * w, (1 - a) * w];
+          const ys = [a * h, (1 - a) * h];
+          gLines(ctx, [xs[0], 0, xs[0], h, xs[1], 0, xs[1], h, 0, ys[0], w, ys[0], 0, ys[1], w, ys[1]]);
+        }
+        if (ids.spiral) {
+          drawGoldenSpiral(ctx, w, h, opts.spiralOri || 0, !!opts.spiralFlip);
+        }
+        if (ids.goldenTri) {
+          const diags = [[0, h, w, 0], [0, 0, w, h]];
+          for (let d = 0; d < diags.length; d++) {
+            const x1 = diags[d][0], y1 = diags[d][1], x2 = diags[d][2], y2 = diags[d][3];
+            gLine(ctx, x1, y1, x2, y2);
+            const corners = d === 0 ? [[0, 0], [w, h]] : [[0, h], [w, 0]];
+            for (let c = 0; c < corners.length; c++) {
+              const p = closestPointOnSeg(corners[c][0], corners[c][1], x1, y1, x2, y2);
+              gLine(ctx, corners[c][0], corners[c][1], p.x, p.y);
+            }
+          }
+        }
+        if (ids.diagonal) {
+          gLines(ctx, [0, 0, w, h, 0, h, w, 0]);
+        }
+        if (ids.cross) {
+          gLines(ctx, [w / 2, 0, w / 2, h, 0, h / 2, w, h / 2]);
+        }
+        if (ids.symmetry) {
+          ctx.save();
+          ctx.setLineDash([Math.max(4, w / 80), Math.max(3, w / 120)]);
+          gLines(ctx, [w / 2, 0, w / 2, h, 0, h / 2, w, h / 2]);
+          ctx.restore();
+          const m = Math.max(8, Math.round(Math.min(w, h) * 0.06));
+          gLines(ctx, [
+            0, m, m, m, m, m, m, 0,
+            w, m, w - m, m, w - m, m, w - m, 0,
+            0, h - m, m, h - m, m, h - m, m, h,
+            w, h - m, w - m, h - m, w - m, h - m, w - m, h
+          ]);
+        }
+        if (ids.dynamic) {
+          gLines(ctx, [0, 0, w, h, 0, h, w, 0]);
+          const diags = [[0, 0, w, h], [0, h, w, 0]];
+          const corners = [[0, 0], [w, 0], [0, h], [w, h]];
+          for (let i = 0; i < corners.length; i++) {
+            for (let d = 0; d < 2; d++) {
+              const a = diags[d];
+              const on = (Math.abs((corners[i][0] - a[0]) * (a[3] - a[1]) - (corners[i][1] - a[1]) * (a[2] - a[0])) < 1);
+              if (on) continue;
+              const p = closestPointOnSeg(corners[i][0], corners[i][1], a[0], a[1], a[2], a[3]);
+              gLine(ctx, corners[i][0], corners[i][1], p.x, p.y);
+            }
+          }
+          if (w > h) {
+            gLines(ctx, [h, 0, h, h, w - h, 0, w - h, h]);
+          } else {
+            gLines(ctx, [0, w, w, w, 0, h - w, w, h - w]);
+          }
+        }
+        if (ids.quad) {
+          const segs = [];
+          for (let i = 1; i < 4; i++) {
+            segs.push(w * i / 4, 0, w * i / 4, h, 0, h * i / 4, w, h * i / 4);
+          }
+          gLines(ctx, segs);
+        }
+        if (ids.triangle) {
+          gLines(ctx, [
+            0, h, w / 2, 0, w / 2, 0, w, h, 0, h, w, h,
+            0, h, w, h / 3, w, h, 0, h / 3,
+            0, 0, w, h * 2 / 3, w, 0, 0, h * 2 / 3
+          ]);
+        }
+        if (ids.safe) {
+          const a = 0.05, t = 0.1;
+          ctx.beginPath();
+          ctx.rect(w * a, h * a, w * (1 - 2 * a), h * (1 - 2 * a));
+          ctx.stroke();
+          ctx.save();
+          ctx.setLineDash([Math.max(4, w / 90), Math.max(3, w / 130)]);
+          ctx.beginPath();
+          ctx.rect(w * t, h * t, w * (1 - 2 * t), h * (1 - 2 * t));
+          ctx.stroke();
+          ctx.restore();
+        }
+        if (ids.custom) {
+          const cols = Math.max(1, Math.min(24, (opts.customC | 0) || 5));
+          const rows = Math.max(1, Math.min(24, (opts.customR | 0) || 5));
+          const segs = [];
+          for (let i = 1; i < cols; i++) segs.push(w * i / cols, 0, w * i / cols, h);
+          for (let j = 1; j < rows; j++) segs.push(0, h * j / rows, w, h * j / rows);
+          if (segs.length) gLines(ctx, segs);
+        }
+      }
+
+      function drawFramingOverlay(ctx, w, h, framing, opts) {
+        if (!framing || !framing.bbox) return;
+        const o = opts || {};
+        const c = parseHexColor(o.color || "#ffe14d");
+        const a = o.opacity == null ? 0.95 : o.opacity;
+        ctx.save();
+        ctx.strokeStyle = "rgba(" + c.r + "," + c.g + "," + c.b + "," + a + ")";
+        ctx.fillStyle = "rgba(" + c.r + "," + c.g + "," + c.b + "," + a + ")";
+        ctx.lineWidth = Math.max(2, Math.round(Math.min(w, 1920) / 500));
+        const b = framing.bbox;
+        const x = b.x * w, y = b.y * h, bw = b.w * w, bh = b.h * h;
+        ctx.strokeRect(x, y, bw, bh);
+        ctx.beginPath();
+        ctx.moveTo(0, 0); ctx.lineTo(0, y); ctx.moveTo(w, 0); ctx.lineTo(w, y);
+        ctx.moveTo(0, 0); ctx.lineTo(x, 0); ctx.moveTo(x + bw, 0); ctx.lineTo(w, 0);
+        ctx.stroke();
+        const fs = Math.max(11, Math.round(Math.min(w, h) / 36));
+        ctx.font = "600 " + fs + "px ui-sans-serif, system-ui, sans-serif";
+        ctx.textBaseline = "top";
+        const lines = [
+          "헤드룸 " + (framing.headroomPct != null ? framing.headroomPct.toFixed(1) : "?") + "%",
+          "왼쪽 " + (framing.leftGapPct != null ? framing.leftGapPct.toFixed(1) : "?") + "% · 오른쪽 " + (framing.rightGapPct != null ? framing.rightGapPct.toFixed(1) : "?") + "%",
+          "네거티브 " + (framing.negativePct != null ? framing.negativePct.toFixed(1) : "?") + "% · 포지티브 " + (framing.positivePct != null ? framing.positivePct.toFixed(1) : "?") + "%"
+        ];
+        const pad = fs * 0.4;
+        const tw = Math.max.apply(null, lines.map(function (s) { return ctx.measureText(s).width; }));
+        const boxh = lines.length * (fs + 3) + pad * 2;
+        const bx = 8, by = 8;
+        ctx.fillStyle = "rgba(8,10,16,0.72)";
+        ctx.fillRect(bx, by, tw + pad * 2, boxh);
+        ctx.fillStyle = "rgba(" + c.r + "," + c.g + "," + c.b + ",1)";
+        for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], bx + pad, by + pad + i * (fs + 3));
+        ctx.restore();
+      }
+
+      /* --- ZIP STORE (no compression, no CDN) --- */
+      const CRC_TABLE = (function () {
+        const t = new Uint32Array(256);
+        for (let i = 0; i < 256; i++) {
+          let c = i;
+          for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+          t[i] = c >>> 0;
+        }
+        return t;
+      })();
+      function crc32Bytes(u8) {
+        let c = 0xFFFFFFFF;
+        for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 255] ^ (c >>> 8);
+        return (c ^ 0xFFFFFFFF) >>> 0;
+      }
+      function zipU16(n) {
+        return new Uint8Array([n & 255, (n >> 8) & 255]);
+      }
+      function zipU32(n) {
+        return new Uint8Array([n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >> 24) & 255]);
+      }
+      function zipConcat(arrs) {
+        let n = 0;
+        for (let i = 0; i < arrs.length; i++) n += arrs[i].length;
+        const out = new Uint8Array(n);
+        let o = 0;
+        for (let i = 0; i < arrs.length; i++) { out.set(arrs[i], o); o += arrs[i].length; }
+        return out;
+      }
+      function dosDateTime(d) {
+        d = d || new Date();
+        const time = ((d.getHours() & 31) << 11) | ((d.getMinutes() & 63) << 5) | ((d.getSeconds() / 2) | 0);
+        const date = (((d.getFullYear() - 1980) & 127) << 9) | (((d.getMonth() + 1) & 15) << 5) | (d.getDate() & 31);
+        return { time: time, date: date };
+      }
+      function makeStoreZip(files) {
+        const enc = new TextEncoder();
+        const now = dosDateTime(new Date());
+        const locals = [];
+        const centrals = [];
+        let offset = 0;
+        for (let i = 0; i < files.length; i++) {
+          const name = enc.encode(files[i].name);
+          const data = files[i].data instanceof Uint8Array ? files[i].data : new Uint8Array(files[i].data);
+          const crc = crc32Bytes(data);
+          const local = zipConcat([
+            zipU32(0x04034b50), zipU16(20), zipU16(0x0800), zipU16(0),
+            zipU16(now.time), zipU16(now.date),
+            zipU32(crc), zipU32(data.length), zipU32(data.length),
+            zipU16(name.length), zipU16(0), name, data
+          ]);
+          const central = zipConcat([
+            zipU32(0x02014b50), zipU16(20), zipU16(20), zipU16(0x0800), zipU16(0),
+            zipU16(now.time), zipU16(now.date),
+            zipU32(crc), zipU32(data.length), zipU32(data.length),
+            zipU16(name.length), zipU16(0), zipU16(0), zipU16(0), zipU16(0),
+            zipU32(0), zipU32(offset), name
+          ]);
+          locals.push(local);
+          centrals.push(central);
+          offset += local.length;
+        }
+        const centralDir = zipConcat(centrals);
+        const eocd = zipConcat([
+          zipU32(0x06054b50), zipU16(0), zipU16(0),
+          zipU16(files.length), zipU16(files.length),
+          zipU32(centralDir.length), zipU32(offset), zipU16(0)
+        ]);
+        return zipConcat(locals.concat([centralDir, eocd]));
+      }
+
+      const IMG_TAINTED_MSG = "file://로 연 기본 영상은 브라우저 보안 때문에 캔버스로 이미지를 저장하거나 합칠 수 없습니다. HTTPS(GitHub Pages)에서 열거나, 아래에서 프레임을 하나씩 저장하세요.";
+
+      /* --- Color analysis --- */
+      function rgbToHsv(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+        let h = 0;
+        if (d) {
+          if (max === r) h = ((g - b) / d) % 6;
+          else if (max === g) h = (b - r) / d + 2;
+          else h = (r - g) / d + 4;
+          h *= 60;
+          if (h < 0) h += 360;
+        }
+        return { h: h, s: max ? d / max : 0, v: max };
+      }
+      function relLum(r, g, b) {
+        function f(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+      }
+      function wcagRatio(c1, c2) {
+        const L1 = relLum(c1[0], c1[1], c1[2]), L2 = relLum(c2[0], c2[1], c2[2]);
+        const hi = Math.max(L1, L2), lo = Math.min(L1, L2);
+        return (hi + 0.05) / (lo + 0.05);
+      }
+      function hueDiff(a, b) {
+        let d = Math.abs(a - b) % 360;
+        return d > 180 ? 360 - d : d;
+      }
+      function classifyHarmony(colors) {
+        const chrom = colors.filter(function (c) { return c.hsv.s >= 0.12 && c.hsv.v >= 0.08; });
+        const shareAchrom = colors.reduce(function (s, c) { return s + ((c.hsv.s < 0.12 || c.hsv.v < 0.08) ? c.pct : 0); }, 0);
+        if (!chrom.length || shareAchrom >= 78) {
+          return { id: "achromatic", label: "무채색 위주", explain: "채도가 낮거나 밝기만 다른 색이 대부분입니다. 명암과 질감이 구도를 이끕니다." };
+        }
+        const hues = chrom.map(function (c) { return c.hsv.h; });
+        let maxSpan = 0;
+        for (let i = 0; i < hues.length; i++) {
+          for (let j = i + 1; j < hues.length; j++) maxSpan = Math.max(maxSpan, hueDiff(hues[i], hues[j]));
+        }
+        const top = chrom.slice().sort(function (a, b) { return b.pct - a.pct; });
+        const scores = [];
+        if (maxSpan <= 28) {
+          scores.push({ id: "mono", label: "단색", score: 100 - maxSpan, explain: "주된 색의 색상환 거리가 좁습니다. 밝기·채도 차이로 리듬을 만듭니다." });
+        }
+        if (maxSpan <= 90 && maxSpan > 18) {
+          scores.push({ id: "analogous", label: "유사색", score: 80 - Math.abs(maxSpan - 50), explain: "이웃한 색상들이 모여 부드러운 조화를 이룹니다." });
+        }
+        if (top.length >= 2) {
+          const d = hueDiff(top[0].hsv.h, top[1].hsv.h);
+          if (d >= 150 && d <= 210) {
+            scores.push({ id: "complementary", label: "보색", score: 100 - Math.abs(d - 180), explain: "색상환에서 거의 반대되는 두 색이 대비를 만듭니다." });
+          }
+        }
+        if (top.length >= 3) {
+          const h0 = top[0].hsv.h;
+          const ds = top.slice(1, 4).map(function (c) { return hueDiff(c.hsv.h, h0); }).sort(function (a, b) { return a - b; });
+          /* split-comp: around 150 and 210 (180±30) */
+          let split = false;
+          for (let i = 0; i < top.length; i++) {
+            const base = top[i].hsv.h;
+            let near150 = false, near210 = false;
+            for (let j = 0; j < top.length; j++) {
+              if (i === j) continue;
+              const d = hueDiff(top[j].hsv.h, (base + 180) % 360);
+              const signed = ((top[j].hsv.h - ((base + 180) % 360) + 540) % 360) - 180;
+              if (d >= 15 && d <= 50 && signed < 0) near150 = true;
+              if (d >= 15 && d <= 50 && signed > 0) near210 = true;
+              /* unsigned fallback */
+              if (Math.abs(hueDiff(top[j].hsv.h, (base + 150) % 360)) <= 25) near150 = true;
+              if (Math.abs(hueDiff(top[j].hsv.h, (base + 210) % 360)) <= 25) near210 = true;
+            }
+            if (near150 && near210) split = true;
+          }
+          if (split) scores.push({ id: "split", label: "분할보색", score: 85, explain: "한 색과, 그 보색을 좌우로 나눈 두 색이 함께 쓰입니다." });
+          /* triadic ~120 */
+          let tri = 0;
+          for (let i = 0; i < top.length; i++) {
+            for (let j = i + 1; j < top.length; j++) {
+              for (let k = j + 1; k < top.length; k++) {
+                const hs = [top[i].hsv.h, top[j].hsv.h, top[k].hsv.h].sort(function (a, b) { return a - b; });
+                const d1 = hueDiff(hs[0], hs[1]), d2 = hueDiff(hs[1], hs[2]), d3 = hueDiff(hs[2], hs[0]);
+                const err = Math.abs(d1 - 120) + Math.abs(d2 - 120) + Math.abs(d3 - 120);
+                if (err < 90) tri = Math.max(tri, 100 - err);
+              }
+            }
+          }
+          if (tri > 40) scores.push({ id: "triadic", label: "삼각", score: tri, explain: "색상환을 대략 120°로 나눈 세 색이 균형 있게 쓰입니다." });
+          /* tetrad */
+          if (top.length >= 4) {
+            let tet = 0;
+            for (let i = 0; i < top.length; i++) {
+              for (let j = i + 1; j < top.length; j++) {
+                const d = hueDiff(top[i].hsv.h, top[j].hsv.h);
+                if (d < 70 || d > 110) continue;
+                let p1 = false, p2 = false;
+                for (let k = 0; k < top.length; k++) {
+                  if (k === i || k === j) continue;
+                  if (hueDiff(top[k].hsv.h, (top[i].hsv.h + 180) % 360) <= 30) p1 = true;
+                  if (hueDiff(top[k].hsv.h, (top[j].hsv.h + 180) % 360) <= 30) p2 = true;
+                }
+                if (p1 && p2) tet = 90;
+              }
+            }
+            if (tet) scores.push({ id: "tetrad", label: "사각·테트라드", score: tet, explain: "두 쌍의 보색(또는 약 90° 간격의 네 색)이 쓰입니다." });
+          }
+        }
+        if (!scores.length) {
+          if (maxSpan <= 40) return { id: "mono", label: "단색", explain: "주된 색들이 비슷한 색상에 모여 있습니다." };
+          if (maxSpan <= 100) return { id: "analogous", label: "유사색", explain: "가까운 색상들이 조화를 이룹니다." };
+          if (top.length >= 2 && hueDiff(top[0].hsv.h, top[1].hsv.h) >= 140) {
+            return { id: "complementary", label: "보색", explain: "주요 두 색이 색상환에서 멀리 떨어져 대비를 만듭니다." };
+          }
+          return { id: "mixed", label: "복합 조화", explain: "뚜렷한 한 가지 공식에 잘 들어맞지 않는 여러 색이 섞여 있습니다." };
+        }
+        scores.sort(function (a, b) { return b.score - a.score; });
+        return scores[0];
+      }
+
+      function analyzeColorsFromImageData(imgData) {
+        const data = imgData.data, n = imgData.width * imgData.height;
+        if (!n) return null;
+        /* subsample */
+        const step = Math.max(1, Math.floor(Math.sqrt(n / 40000)));
+        const px = [];
+        let sumY = 0, sumY2 = 0, count = 0;
+        const hist = new Uint32Array(32);
+        const sats = [], vals = [];
+        let warm = 0, cool = 0, neutr = 0;
+        for (let y = 0; y < imgData.height; y += step) {
+          for (let x = 0; x < imgData.width; x += step) {
+            const i = (y * imgData.width + x) * 4;
+            const r = data[i], g = data[i + 1], b = data[i + 2];
+            px.push([r, g, b]);
+            const Y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            sumY += Y; sumY2 += Y * Y; count++;
+            hist[Math.min(31, (Y / 256 * 32) | 0)]++;
+            const hsv = rgbToHsv(r, g, b);
+            sats.push(hsv.s); vals.push(hsv.v);
+            if (hsv.s < 0.1 || hsv.v < 0.08) neutr++;
+            else if (hsv.h < 60 || hsv.h >= 300) warm++;
+            else if (hsv.h >= 60 && hsv.h <= 90) { warm += 0.5; cool += 0.5; }
+            else cool++;
+          }
+        }
+        const samples = px;
+        const k = Math.min(6, Math.max(3, Math.round(Math.sqrt(samples.length / 800))));
+        /* simple kmeans on samples */
+        let cents = [];
+        const used = {};
+        for (let i = 0; i < samples.length && cents.length < k; i++) {
+          const idx = ((i * 9973) + 13) % samples.length;
+          const key = samples[idx].join(",");
+          if (used[key]) continue;
+          used[key] = 1;
+          cents.push(samples[idx].slice());
+        }
+        while (cents.length < k && samples.length) cents.push(samples[cents.length % samples.length].slice());
+        for (let iter = 0; iter < 8; iter++) {
+          const acc = [];
+          for (let i = 0; i < k; i++) acc.push([0, 0, 0, 0]);
+          for (let i = 0; i < samples.length; i++) {
+            let bi = 0, bd = 1e15;
+            for (let j = 0; j < k; j++) {
+              const d0 = samples[i][0] - cents[j][0], d1 = samples[i][1] - cents[j][1], d2 = samples[i][2] - cents[j][2];
+              const d = d0 * d0 + d1 * d1 + d2 * d2;
+              if (d < bd) { bd = d; bi = j; }
+            }
+            acc[bi][0] += samples[i][0]; acc[bi][1] += samples[i][1]; acc[bi][2] += samples[i][2]; acc[bi][3]++;
+          }
+          for (let j = 0; j < k; j++) {
+            if (acc[j][3]) cents[j] = [acc[j][0] / acc[j][3], acc[j][1] / acc[j][3], acc[j][2] / acc[j][3]];
+          }
+        }
+        const counts = new Array(k).fill(0);
+        for (let i = 0; i < samples.length; i++) {
+          let bi = 0, bd = 1e15;
+          for (let j = 0; j < k; j++) {
+            const d0 = samples[i][0] - cents[j][0], d1 = samples[i][1] - cents[j][1], d2 = samples[i][2] - cents[j][2];
+            const d = d0 * d0 + d1 * d1 + d2 * d2;
+            if (d < bd) { bd = d; bi = j; }
+          }
+          counts[bi]++;
+        }
+        const palette = [];
+        for (let j = 0; j < k; j++) {
+          if (!counts[j]) continue;
+          const rgb = [Math.round(cents[j][0]), Math.round(cents[j][1]), Math.round(cents[j][2])];
+          const hsv = rgbToHsv(rgb[0], rgb[1], rgb[2]);
+          palette.push({ rgb: rgb, hex: "#" + rgb.map(function (v) { return (v | 0).toString(16).padStart(2, "0"); }).join(""), hsv: hsv, pct: counts[j] / samples.length * 100, n: counts[j] });
+        }
+        palette.sort(function (a, b) { return b.pct - a.pct; });
+        const meanY = sumY / count;
+        const rms = Math.sqrt(Math.max(0, sumY2 / count - meanY * meanY));
+        /* histogram summary: shadows / mid / highlights */
+        let sh = 0, mid = 0, hi = 0;
+        for (let i = 0; i < 32; i++) {
+          if (i < 8) sh += hist[i];
+          else if (i < 24) mid += hist[i];
+          else hi += hist[i];
+        }
+        const totH = sh + mid + hi || 1;
+        function mean(arr) { return arr.reduce(function (s, v) { return s + v; }, 0) / (arr.length || 1); }
+        function stdev(arr, m) { return Math.sqrt(arr.reduce(function (s, v) { return s + (v - m) * (v - m); }, 0) / (arr.length || 1)); }
+        const meanS = mean(sats), meanV = mean(vals);
+        const top2 = palette.slice(0, 2);
+        const contrast = (top2.length >= 2) ? wcagRatio(top2[0].rgb, top2[1].rgb) : 1;
+        const harmony = classifyHarmony(palette);
+        const totWC = warm + cool + neutr || 1;
+        return {
+          palette: palette,
+          rmsContrast: rms / 255,
+          rmsRaw: rms,
+          meanLuma: meanY / 255,
+          histogram: { shadows: sh / totH * 100, midtones: mid / totH * 100, highlights: hi / totH * 100, bins: Array.from(hist) },
+          wcag: contrast,
+          wcagPair: top2,
+          sat: { mean: meanS, spread: stdev(sats, meanS) },
+          value: { mean: meanV, spread: stdev(vals, meanV) },
+          harmony: harmony,
+          warmCool: { warm: warm / totWC * 100, cool: cool / totWC * 100, neutral: neutr / totWC * 100 }
+        };
+      }
+
+      function analyzeColors(canvas) {
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width, h = canvas.height;
+        const img = ctx.getImageData(0, 0, w, h);
+        return analyzeColorsFromImageData(img);
+      }
+
+      function analyzeFraming(canvas) {
+        const src = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+        const W = 160, H = Math.max(1, Math.round(160 * canvas.height / canvas.width));
+        const tmp = document.createElement("canvas");
+        tmp.width = W; tmp.height = H;
+        const tctx = tmp.getContext("2d");
+        tctx.drawImage(canvas, 0, 0, W, H);
+        const img = tctx.getImageData(0, 0, W, H);
+        const d = img.data;
+        function lumAt(x, y) {
+          const i = (y * W + x) * 4;
+          return 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+        }
+        /* border mean color (background hint) */
+        let br = 0, bg = 0, bb = 0, bn = 0;
+        for (let x = 0; x < W; x++) {
+          for (let y of [0, 1, H - 2, H - 1]) {
+            const i = (y * W + x) * 4;
+            br += d[i]; bg += d[i + 1]; bb += d[i + 2]; bn++;
+          }
+        }
+        for (let y = 0; y < H; y++) {
+          for (let x of [0, 1, W - 2, W - 1]) {
+            const i = (y * W + x) * 4;
+            br += d[i]; bg += d[i + 1]; bb += d[i + 2]; bn++;
+          }
+        }
+        br /= bn; bg /= bn; bb /= bn;
+        const sal = new Float32Array(W * H);
+        let ssum = 0, ssum2 = 0;
+        for (let y = 1; y < H - 1; y++) {
+          for (let x = 1; x < W - 1; x++) {
+            const tl = lumAt(x - 1, y - 1), tc = lumAt(x, y - 1), tr = lumAt(x + 1, y - 1);
+            const ml = lumAt(x - 1, y), mr = lumAt(x + 1, y);
+            const bl = lumAt(x - 1, y + 1), bc = lumAt(x, y + 1), brl = lumAt(x + 1, y + 1);
+            const gx = -tl + tr - 2 * ml + 2 * mr - bl + brl;
+            const gy = -tl - 2 * tc - tr + bl + 2 * bc + brl;
+            const edge = Math.sqrt(gx * gx + gy * gy) / 1020;
+            const i = (y * W + x) * 4;
+            const dr = d[i] - br, dg = d[i + 1] - bg, db = d[i + 2] - bb;
+            const distinct = Math.min(1, Math.sqrt(dr * dr + dg * dg + db * db) / 255);
+            const cx = (x + 0.5) / W - 0.5, cy = (y + 0.5) / H - 0.45;
+            const center = Math.exp(-(cx * cx * 4 + cy * cy * 4));
+            const v = 0.4 * edge + 0.4 * distinct + 0.2 * center;
+            sal[y * W + x] = v;
+            ssum += v; ssum2 += v * v;
+          }
+        }
+        const nn = (W - 2) * (H - 2) || 1;
+        const mean = ssum / nn;
+        const std = Math.sqrt(Math.max(0, ssum2 / nn - mean * mean));
+        const thr = mean + 0.35 * std;
+        const mask = new Uint8Array(W * H);
+        let mcount = 0;
+        for (let i = 0; i < sal.length; i++) {
+          if (sal[i] >= thr) { mask[i] = 1; mcount++; }
+        }
+        /* blur/dilate 1px to fill holes */
+        const mask2 = new Uint8Array(W * H);
+        for (let y = 1; y < H - 1; y++) {
+          for (let x = 1; x < W - 1; x++) {
+            let s = 0;
+            for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) s += mask[(y + dy) * W + (x + dx)];
+            if (s >= 3) mask2[y * W + x] = 1;
+          }
+        }
+        let minX = W, minY = H, maxX = 0, maxY = 0, area = 0;
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            if (!mask2[y * W + x]) continue;
+            area++;
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+        if (area < 4) {
+          return {
+            bbox: { x: 0.25, y: 0.25, w: 0.5, h: 0.5 },
+            headroomPct: 25, leftGapPct: 25, rightGapPct: 25,
+            negativePct: 100, positivePct: 0,
+            weak: true
+          };
+        }
+        /* add 1px pad */
+        minX = Math.max(0, minX); minY = Math.max(0, minY);
+        const bw = (maxX - minX + 1) / W, bh = (maxY - minY + 1) / H;
+        const bx = minX / W, by = minY / H;
+        const headroomPct = by * 100;
+        const leftGapPct = bx * 100;
+        const rightGapPct = (1 - bx - bw) * 100;
+        const positivePct = area / (W * H) * 100;
+        const negativePct = 100 - positivePct;
+        return {
+          bbox: { x: bx, y: by, w: bw, h: bh },
+          headroomPct: headroomPct,
+          leftGapPct: leftGapPct,
+          rightGapPct: rightGapPct,
+          negativePct: negativePct,
+          positivePct: positivePct,
+          weak: false
+        };
+      }
+
+      function detectHolds(canvases, fps) {
+        fps = fps || 24;
+        const n = canvases.length;
+        if (n < 2) return { unique: n, drawingsPerSec: n ? fps : 0, holds: [], fps: fps, frames: n };
+        const diffs = [];
+        function sample(c) {
+          const w = 64, h = Math.max(1, Math.round(64 * c.height / c.width));
+          const t = document.createElement("canvas");
+          t.width = w; t.height = h;
+          const ctx = t.getContext("2d");
+          ctx.drawImage(c, 0, 0, w, h);
+          return ctx.getImageData(0, 0, w, h).data;
+        }
+        const bufs = canvases.map(sample);
+        const pix = bufs[0].length;
+        for (let i = 1; i < n; i++) {
+          let acc = 0;
+          const a = bufs[i - 1], b = bufs[i];
+          for (let p = 0; p < pix; p += 4) {
+            acc += Math.abs(a[p] - b[p]) + Math.abs(a[p + 1] - b[p + 1]) + Math.abs(a[p + 2] - b[p + 2]);
+          }
+          diffs.push(acc / (pix / 4) / 765);
+        }
+        /* threshold: new drawing if mean channel diff > 0.012 (about 3/255) */
+        const thr = 0.012;
+        let unique = 1;
+        const isNew = [true];
+        for (let i = 0; i < diffs.length; i++) {
+          const neu = diffs[i] >= thr;
+          isNew.push(neu);
+          if (neu) unique++;
+        }
+        const duration = n / fps;
+        return {
+          unique: unique,
+          drawingsPerSec: unique / duration,
+          onTwosHint: Math.abs(unique / duration - fps / 2) < 2,
+          onThreesHint: Math.abs(unique / duration - fps / 3) < 2,
+          diffs: diffs,
+          isNew: isNew,
+          fps: fps,
+          frames: n,
+          threshold: thr
+        };
+      }
+
+      const AZ_JSON_KEYS = [
+        ["shotSize", "샷 사이즈"],
+        ["shotType", "샷 타입"],
+        ["cameraAngle", "카메라 각도"],
+        ["lens", "렌즈감"],
+        ["composition", "구도"],
+        ["colorHarmony", "색 조합"],
+        ["animationTechnique", "애니메이션 기법"],
+        ["subjectPosition", "피사체 위치"],
+        ["facingDirection", "시선·방향"],
+        ["motionDirection", "동작·이동 방향"],
+        ["headroom", "헤드룸"],
+        ["noseroom", "노즈룸"],
+        ["leadroom", "리드룸"],
+        ["negativeSpace", "네거티브 스페이스"],
+        ["notes", "메모"]
+      ];
+
+      function parseAnalysisPayload(text) {
+        text = String(text || "");
+        let json = null, rest = text;
+        const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+        if (fence) {
+          try {
+            json = JSON.parse(fence[1]);
+            rest = (text.slice(0, fence.index) + text.slice(fence.index + fence[0].length)).trim();
+          } catch (e) { json = null; }
+        }
+        if (!json) {
+          const i = text.indexOf("{");
+          const j = text.lastIndexOf("}");
+          if (i >= 0 && j > i) {
+            try {
+              json = JSON.parse(text.slice(i, j + 1));
+              rest = (text.slice(0, i) + text.slice(j + 1)).trim();
+            } catch (e) { json = null; }
+          }
+        }
+        return { json: json, rest: rest };
+      }
+
+      function renderAnalysisStructured(json) {
+        if (!json || typeof json !== "object") return "";
+        let h = '<div class="az-json">';
+        for (let i = 0; i < AZ_JSON_KEYS.length; i++) {
+          const k = AZ_JSON_KEYS[i][0], lab = AZ_JSON_KEYS[i][1];
+          const v = json[k];
+          if (v == null || v === "") continue;
+          h += "<section><h4>" + escapeHtml(lab) + "</h4><p>" + escapeHtml(String(v)) + "</p></section>";
+        }
+        h += "</div>";
+        return h;
+      }
       function renderPalette(items) {
         const box = $("azPalette");
         box.innerHTML = "";
@@ -3052,7 +4040,10 @@
       function renderAnalysisText(text) {
         azLastText = text || "";
         const el = $("azOut");
-        if (!text) { el.innerHTML = ""; return; }
+        const parsed = parseAnalysisPayload(text || "");
+        lastAzJson = parsed.json;
+        if (!text) { el.innerHTML = ""; renderSpaceTab(lastFraming); renderTechTab(lastHolds); return; }
+        text = parsed.rest || text;
         const lines = String(text).replace(/\r\n/g, "\n").split("\n");
         let html = "";
         let para = [];
@@ -3093,31 +4084,50 @@
           }
         }
         flushPara(); flushList();
-        el.innerHTML = html;
+        el.innerHTML = (parsed.json ? renderAnalysisStructured(parsed.json) : "") + html;
+        renderSpaceTab(lastFraming);
+        renderTechTab(lastHolds);
+      }
+
+      function azLocalPromptNotes() {
+        const bits = [];
+        if (lastFraming && !lastFraming.weak) {
+          bits.push("헤드룸 " + lastFraming.headroomPct.toFixed(1) + "% (상자 위 여백), 왼쪽 " + lastFraming.leftGapPct.toFixed(1) + "%, 오른쪽 " + lastFraming.rightGapPct.toFixed(1) + "%, 네거티브 스페이스 " + lastFraming.negativePct.toFixed(1) + "%, 포지티브 " + lastFraming.positivePct.toFixed(1) + "%");
+        }
+        if (lastHolds && lastHolds.drawingsPerSec != null) {
+          bits.push("홀드 감지 약 " + lastHolds.drawingsPerSec.toFixed(1) + "장/초" + (lastHolds.onTwosHint ? " (2코마 느낌)" : lastHolds.onThreesHint ? " (3코마 느낌)" : ""));
+        }
+        if (lastColors && lastColors.harmony) {
+          bits.push("로컬 색 조화 추정: " + lastColors.harmony.label + ", RMS 대비 " + lastColors.rmsContrast.toFixed(3) + ", 상위2색 WCAG " + lastColors.wcag.toFixed(2) + ":1");
+        }
+        if (!bits.length) return "";
+        return "\n로컬 휴리스틱 측정(참고용, 틀릴 수 있음):\n- " + bits.join("\n- ") + "\n";
       }
 
       function azPrompt(frames, sequence) {
         let head = "너는 영상·애니메이션 화면 분석가다. 답은 반드시 한국어로, 간결하고 구체적으로 써. 이미지에 없는 내용은 지어내지 말고, 추측이면 추측이라고 밝혀.\n";
         if (sequence) {
           head += "아래는 시간 순으로 나열한 " + frames.length + "장의 연속 프레임이야. 각 이미지 앞에 프레임 번호와 타임코드가 있어.\n";
-          head += "다음 제목(마크다운 ##)으로 나눠 분석해:\n\n";
-          head += "## 카메라 각도\n(아이 레벨, 로우, 하이, 더치, 버드아이 등. 변화가 있으면 프레임을 들어 설명해)\n\n";
-          head += "## 샷 사이즈\n(익스트림 클로즈업, 클로즈업, 미디엄, 풀, 롱, 와이드 등)\n\n";
-          head += "## 렌즈감과 심도\n(광각/망원 느낌, 심도, 보케, 원근)\n\n";
-          head += "## 구도와 기법\n(구도, 조명, 애니메이션·연출 기법)\n\n";
-          head += "## 색 조합\n(주요 색, 대비, 톤)\n\n";
-          head += "## 카메라 무빙\n(팬, 틸트, 줌/돌리, 트럭/트랙, 크레인, 핸드헬드 흔들림, 컷 등. 프레임 번호를 들어 설명해)\n\n";
-          head += "## 동작 설명\n(피사체와 화면의 움직임)\n";
         } else {
           const n = frames[0];
           head += "아래는 프레임 " + n + " (타임코드 " + timecode(n) + ") 한 장이야.\n";
-          head += "다음 제목(마크다운 ##)으로 나눠 분석해:\n\n";
-          head += "## 카메라 각도\n(아이 레벨, 로우, 하이, 더치, 버드아이 등)\n\n";
-          head += "## 샷 사이즈\n(익스트림 클로즈업, 클로즈업, 미디엄, 풀, 롱, 와이드 등)\n\n";
-          head += "## 렌즈감과 심도\n(광각/망원 느낌, 심도, 보케, 원근)\n\n";
-          head += "## 구도와 기법\n(구도, 조명, 애니메이션·연출 기법)\n\n";
-          head += "## 색 조합\n(주요 색, 대비, 톤)\n";
         }
+        head += "다음 제목(마크다운 ##)으로 나눠 분석해:\n\n";
+        head += "## 카메라 각도\n(아이 레벨, 로우, 하이, 더치, 버드아이 등" + (sequence ? ". 변화가 있으면 프레임을 들어 설명해" : "") + ")\n\n";
+        head += "## 샷 사이즈·샷 타입\n(샷 사이즈는 ECU/익스트림 클로즈업, CU, MCU, MS, MLS, LS, ELS 등으로. 샷 타입은 해당하면 OTS, POV, insert, two-shot, establishing 등도 명시)\n\n";
+        head += "## 렌즈감과 심도\n(광각/망원 느낌, 심도, 보케, 원근)\n\n";
+        head += "## 구도와 기법\n(구도, 조명, 연출 기법)\n\n";
+        head += "## 애니메이션 기법\n(리미티드 애니메이션, 2코마(on 2s), 3코마(on 3s), 스미어, 멀티플, 임팩트 프레임, 스피드라인, 카메라 쉐이크, 3DCG/2D 합성, 로토스코프, 셀셰이딩, 조명 효과 등 이 컷에서 보이는 것만)\n\n";
+        head += "## 색 조합\n(주요 색, 대비, 톤, 보색·유사색 등 조화)\n\n";
+        head += "## 여백과 시선\n(피사체 위치, 시선·동작 방향, 헤드룸이 충분한지, 노즈룸(바라보는 쪽 공간)과 리드룸(진행 방향 공간)이 충분한지, 네거티브/포지티브 스페이스)\n";
+        if (sequence) {
+          head += "\n## 카메라 무빙\n(팬, 틸트, 줌/돌리, 트럭/트랙, 크레인, 핸드헬드 흔들림, 컷 등. 프레임 번호를 들어 설명해)\n\n";
+          head += "## 동작 설명\n(피사체와 화면의 움직임)\n";
+        }
+        head += azLocalPromptNotes();
+        head += "\n분석 마지막에 아래 키를 가진 JSON을 ```json 코드블록으로 반드시 붙여. 값은 한국어로 짧게:\n";
+        head += '{"shotSize":"","shotType":"","cameraAngle":"","lens":"","composition":"","colorHarmony":"","animationTechnique":"","subjectPosition":"","facingDirection":"","motionDirection":"","headroom":"","noseroom":"","leadroom":"","negativeSpace":"","notes":""}\n';
+        head += "shotType은 해당하면 ECU, CU, MCU, MS, MLS, LS, ELS, OTS, POV, insert, two-shot, establishing 등을 쓰고, animationTechnique은 위에서 보인 기법만 적어.\n";
         return head;
       }
 
@@ -3519,6 +4529,9 @@
           showAnalyzePanel();
           if (azKey()) runAnalysis();
           else azSetStatus("API 키를 입력한 뒤 「분석 실행」을 눌러 줘.", "warn");
+        } else if (e.key === "g" || e.key === "G") {
+          e.preventDefault();
+          setGuideOn(!guideOn);
         }
       });
 
@@ -3940,6 +4953,7 @@
         img.src = src(n);
         img.draggable = false;
         ibox.appendChild(img);
+        if (collageGuides) attachGuideOverlay(ibox);
         const capEl = caption ? document.createElement("figcaption") : null;
         if (capEl) capEl.textContent = captionText(n);
         if (fit === "cover") {
@@ -4459,6 +5473,12 @@
           const s = Math.min(w / img.naturalWidth, h / img.naturalHeight);
           const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
           ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+          if (videoGuides) {
+            ctx.save();
+            ctx.translate((w - dw) / 2, (h - dh) / 2);
+            drawCompositionGuides(ctx, dw, dh, guideOptions());
+            ctx.restore();
+          }
         }
         if (caption && n != null) {
           const text = captionText(n);
@@ -4812,6 +5832,23 @@
           const imgBoxH = Math.max(1, h - capHpx);
           if (it.fit === "cover") drawCover(ctx, im, x, y, w, h);
           else drawContain(ctx, im, x, y, w, imgBoxH);
+          if (collageGuides) {
+            ctx.save();
+            if (it.fit === "cover") {
+              ctx.beginPath();
+              ctx.rect(x, y, w, h);
+              ctx.clip();
+              ctx.translate(x, y);
+              drawCompositionGuides(ctx, w, h, guideOptions());
+            } else {
+              const s = Math.min(w / im.naturalWidth, imgBoxH / im.naturalHeight);
+              const dw = im.naturalWidth * s, dh = im.naturalHeight * s;
+              const dx = x + (w - dw) / 2, dy = y + (imgBoxH - dh) / 2;
+              ctx.translate(dx, dy);
+              drawCompositionGuides(ctx, dw, dh, guideOptions());
+            }
+            ctx.restore();
+          }
           if (ex.cCaption) {
             const text = captionText(it.n);
             if (it.fit === "cover") {
@@ -4950,6 +5987,7 @@
         if (opts.orient) { ex.cOrient = opts.orient; activateSeg("collageOrientSeg", "data-orient", ex.cOrient); }
         if (opts.gap != null) { ex.cGap = parseInt(opts.gap, 10); $("collageGap").value = String(ex.cGap); $("collageGapVal").textContent = ex.cGap + "px"; }
         if (opts.caption != null) { ex.cCaption = !!opts.caption; $("collageCaption").checked = ex.cCaption; }
+        if (opts.guides != null) { collageGuides = !!opts.guides; $("collageGuideChk").checked = collageGuides; }
         if (opts.bg) { ex.cBg = opts.bg; activateSeg("collageBgSeg", "data-bg", ex.cBg); }
         if (opts.pageMode) { ex.cPageMode = opts.pageMode === "perpage" ? "perpage" : "pages"; }
         if (opts.pageCount != null) { ex.cPageMode = "pages"; ex.cPageCount = parsePageInt(opts.pageCount); }
@@ -5025,6 +6063,7 @@
         rebuildExport();
       });
       $("collageCaption").addEventListener("change", function () { ex.cCaption = $("collageCaption").checked; rebuildExport(); });
+      $("collageGuideChk").addEventListener("change", function () { collageGuides = $("collageGuideChk").checked; rebuildExport(); });
       bindSeg("vidFpsSeg", "data-vfps", function (v) {
         ex.vFpsMode = v;
         if (v === "custom") {
@@ -5078,6 +6117,7 @@
       });
       $("vidAudio").addEventListener("change", function () { ex.vAudio = $("vidAudio").checked; syncVideoUI(); });
       $("vidCaption").addEventListener("change", function () { ex.vCaption = $("vidCaption").checked; syncVideoUI(); });
+      $("vidGuideChk").addEventListener("change", function () { videoGuides = $("vidGuideChk").checked; ex.vGuides = videoGuides; syncVideoUI(); });
       $("vidMakeBtn").addEventListener("click", function () { makeExportVideo(); });
       $("vidCancelBtn").addEventListener("click", function () { cancelExportVideo(); });
       $("vidDownloadBtn").addEventListener("click", function () {
@@ -5197,6 +6237,491 @@
       });
 
 
+      function framesAreFetchable() {
+        return location.protocol !== "file:";
+      }
+
+      function downloadBlob(blob, name) {
+        const a = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 4000);
+      }
+
+      function exportFileStem(n) {
+        const name = (project && project.id === "builtin") ? "frame" : "frame";
+        return name + "_f" + pad(n);
+      }
+
+      async function canvasFromFetchedUrl(url) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("fetch " + res.status);
+        const blob = await res.blob();
+        const bmp = await createImageBitmap(blob);
+        const c = document.createElement("canvas");
+        c.width = bmp.width;
+        c.height = bmp.height;
+        c.getContext("2d").drawImage(bmp, 0, 0);
+        if (bmp.close) try { bmp.close(); } catch (e) {}
+        return { canvas: c, blob: blob };
+      }
+
+      async function fullFrameCanvas(n) {
+        if (project.type === "builtin" && framesAreFetchable()) {
+          try { return (await canvasFromFetchedUrl(src(n))).canvas; } catch (e) {}
+        }
+        if (urlCache.has(n) && framesAreFetchable()) {
+          try { return (await canvasFromFetchedUrl(urlCache.get(n))).canvas; } catch (e) {}
+        }
+        const d = await getDrawable(n);
+        if (!d) {
+          const err = new Error(IMG_TAINTED_MSG);
+          err.code = "TAINTED";
+          throw err;
+        }
+        const sz = drawableSize(d);
+        const c = document.createElement("canvas");
+        c.width = sz.w;
+        c.height = sz.h;
+        c.getContext("2d").drawImage(d, 0, 0, sz.w, sz.h);
+        try { c.getContext("2d").getImageData(0, 0, 1, 1); }
+        catch (e) {
+          const err = new Error(IMG_TAINTED_MSG);
+          err.code = "TAINTED";
+          throw err;
+        }
+        return c;
+      }
+
+      async function frameCanvasForExport(n, withGuides) {
+        const c = await fullFrameCanvas(n);
+        if (withGuides) drawCompositionGuides(c.getContext("2d"), c.width, c.height, guideOptions());
+        return c;
+      }
+
+      function canvasToBlob(canvas, type, quality) {
+        return new Promise(function (resolve, reject) {
+          try {
+            canvas.toBlob(function (b) { b ? resolve(b) : reject(new Error("toBlob 실패")); }, type, quality);
+          } catch (e) { reject(e); }
+        });
+      }
+
+      function blobToU8(blob) {
+        return blob.arrayBuffer().then(function (ab) { return new Uint8Array(ab); });
+      }
+
+      async function exportFrameImages(opts) {
+        opts = opts || {};
+        const format = (opts.format === "png") ? "png" : "jpg";
+        const mime = format === "png" ? "image/png" : "image/jpeg";
+        const quality = format === "png" ? undefined : 0.92;
+        const withGuides = !!opts.guides;
+        const list = (opts.frames && opts.frames.length) ? opts.frames.slice() : exportFrameList();
+        if (!list.length) return { ok: false, error: "내보낼 프레임이 없습니다." };
+        if (list.length > MAX_EXPORT_FRAMES) return { ok: false, error: "한 번에 최대 " + MAX_EXPORT_FRAMES + "장입니다." };
+        const fallbackLinks = list.map(function (n) {
+          return { n: n, name: exportFileStem(n) + ".jpg", href: src(n) };
+        });
+        const fileBuiltin = (location.protocol === "file:" && project.type === "builtin");
+        if (fileBuiltin && (withGuides || format === "png")) {
+          return { ok: false, tainted: true, error: IMG_TAINTED_MSG, links: fallbackLinks, count: list.length };
+        }
+        const files = [];
+        try {
+          for (let i = 0; i < list.length; i++) {
+            const n = list[i];
+            const name = exportFileStem(n) + (format === "png" ? ".png" : ".jpg");
+            if (!withGuides && format === "jpg" && project.type === "builtin" && framesAreFetchable()) {
+              const res = await fetch(src(n));
+              if (!res.ok) throw new Error("프레임을 불러오지 못했습니다.");
+              const blob = await res.blob();
+              files.push({ name: name, data: await blobToU8(blob), blob: blob });
+            } else if (fileBuiltin && format === "jpg" && !withGuides) {
+              /* no fetch on file://; caller shows per-file links */
+              return { ok: false, tainted: true, error: IMG_TAINTED_MSG, links: fallbackLinks, count: list.length };
+            } else {
+              const c = await frameCanvasForExport(n, withGuides);
+              const blob = await canvasToBlob(c, mime, quality);
+              files.push({ name: name, data: await blobToU8(blob), blob: blob });
+            }
+          }
+        } catch (e) {
+          if (e && e.code === "TAINTED") return { ok: false, tainted: true, error: IMG_TAINTED_MSG, links: fallbackLinks, count: list.length };
+          return { ok: false, error: (e && e.message) || "내보내기에 실패했습니다.", links: fallbackLinks };
+        }
+        if (files.length === 1) {
+          return { ok: true, files: files, blob: files[0].blob, filename: files[0].name, count: 1 };
+        }
+        const zip = makeStoreZip(files);
+        const blob = new Blob([zip], { type: "application/zip" });
+        const zipName = (project && project.id === "builtin" ? "frame" : "frames") + "_frames.zip";
+        return { ok: true, files: files, blob: blob, filename: zipName, zip: zip, count: files.length };
+      }
+
+      function sizeGuideCanvas() {
+        const c = $("guideCanvas");
+        const vp = $("viewport");
+        if (!c || !vp) return;
+        const r = vp.getBoundingClientRect();
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        const w = Math.max(1, Math.round(r.width * dpr));
+        const h = Math.max(1, Math.round(r.height * dpr));
+        if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+        redrawGuides();
+      }
+
+      function redrawGuides() {
+        const c = $("guideCanvas");
+        if (!c) return;
+        const ctx = c.getContext("2d");
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, c.width, c.height);
+        if (guideOn) drawCompositionGuides(ctx, c.width, c.height, guideOptions());
+        if (guideShowBBox && lastFraming) drawFramingOverlay(ctx, c.width, c.height, lastFraming, { color: "#ffe14d", opacity: 0.95 });
+      }
+
+      function setGuideOn(on) {
+        guideOn = !!on;
+        const btn = $("guideBtn");
+        if (btn) {
+          btn.textContent = "구도 가이드 " + (guideOn ? "ON" : "OFF");
+          btn.classList.toggle("active", guideOn);
+        }
+        sizeGuideCanvas();
+      }
+
+      function syncGuideOptsVisibility() {
+        const sp = $("guideSpiralOpts");
+        const cu = $("guideCustomOpts");
+        if (sp) sp.classList.toggle("hidden", !guideIds.spiral);
+        if (cu) cu.classList.toggle("hidden", !guideIds.custom);
+      }
+
+      function setGuides(opts) {
+        opts = opts || {};
+        if (opts.on != null) guideOn = !!opts.on;
+        if (opts.ids) {
+          GUIDE_IDS.forEach(function (id) {
+            if (Object.prototype.hasOwnProperty.call(opts.ids, id)) guideIds[id] = !!opts.ids[id];
+          });
+        }
+        if (opts.color) {
+          guideColor = opts.color;
+          if ($("guideColor")) $("guideColor").value = guideColor;
+        }
+        if (opts.opacity != null) {
+          guideOpacity = Math.max(0, Math.min(1, opts.opacity));
+          if ($("guideOp")) {
+            $("guideOp").value = String(Math.round(guideOpacity * 100));
+            if ($("guideOpVal")) $("guideOpVal").textContent = Math.round(guideOpacity * 100) + "%";
+          }
+        }
+        if (opts.spiralOri != null) {
+          guideSpiralOri = ((opts.spiralOri | 0) % 4 + 4) % 4;
+          if ($("guideSpiralOri")) $("guideSpiralOri").value = String(guideSpiralOri);
+        }
+        if (opts.spiralFlip != null) {
+          guideSpiralFlip = !!opts.spiralFlip;
+          if ($("guideSpiralFlip")) $("guideSpiralFlip").checked = guideSpiralFlip;
+        }
+        if (opts.customC != null) {
+          guideCustomC = Math.max(1, Math.min(24, opts.customC | 0));
+          if ($("guideCustomC")) $("guideCustomC").value = String(guideCustomC);
+        }
+        if (opts.customR != null) {
+          guideCustomR = Math.max(1, Math.min(24, opts.customR | 0));
+          if ($("guideCustomR")) $("guideCustomR").value = String(guideCustomR);
+        }
+        if (opts.showBBox != null) {
+          guideShowBBox = !!opts.showBBox;
+          if ($("guideBBoxChk")) $("guideBBoxChk").checked = guideShowBBox;
+        }
+        syncGuideMenuChecks();
+        syncGuideOptsVisibility();
+        setGuideOn(guideOn);
+      }
+
+      function getGuides() {
+        return {
+          on: guideOn,
+          ids: Object.assign({}, guideIds),
+          color: guideColor,
+          opacity: guideOpacity,
+          spiralOri: guideSpiralOri,
+          spiralFlip: guideSpiralFlip,
+          customC: guideCustomC,
+          customR: guideCustomR,
+          showBBox: guideShowBBox,
+          collageGuides: collageGuides,
+          videoGuides: videoGuides,
+          imgExportGuides: imgExportGuides
+        };
+      }
+
+      function syncGuideMenuChecks() {
+        const menu = $("guideMenu");
+        if (!menu) return;
+        const boxes = menu.querySelectorAll("input[data-guide]");
+        for (let i = 0; i < boxes.length; i++) {
+          boxes[i].checked = !!guideIds[boxes[i].getAttribute("data-guide")];
+        }
+      }
+
+      function attachGuideOverlay(host) {
+        const c = document.createElement("canvas");
+        c.className = "guide-overlay";
+        c.width = 640;
+        c.height = 360;
+        c.setAttribute("aria-hidden", "true");
+        drawCompositionGuides(c.getContext("2d"), c.width, c.height, guideOptions());
+        host.appendChild(c);
+        return c;
+      }
+
+      function imgExportListFromUI() {
+        const modeEl = document.querySelector("#imgExSrcSeg button.active");
+        const mode = modeEl ? modeEl.getAttribute("data-imgsrc") : "current";
+        if (mode === "sel") {
+          return selection && selection.length ? selection.slice() : [];
+        }
+        if (mode === "range") {
+          const a = parseInt($("imgExStart").value, 10);
+          const b = parseInt($("imgExEnd").value, 10);
+          const iv = parseInterval($("imgExInterval").value);
+          const start = Math.min(a, b), end = Math.max(a, b);
+          const out = [];
+          for (let n = start; n <= end; n += iv) out.push(n);
+          return out;
+        }
+        return [frame];
+      }
+
+      function showImgExport(on) {
+        const m = $("imgExportModal");
+        if (!m) return;
+        m.classList.toggle("show", !!on);
+        if (on) {
+          $("imgExStart").value = String(rangeFrom || 1);
+          $("imgExEnd").value = String(frame);
+          syncImgExportCount();
+          $("imgExLinks").innerHTML = "";
+          $("imgExMsg").textContent = "";
+          $("imgExMsg").className = "sel-status";
+        }
+      }
+
+      function syncImgExportCount() {
+        const list = imgExportListFromUI();
+        const el = $("imgExCount");
+        if (el) el.textContent = list.length ? (list.length + "장") : "0장";
+      }
+
+      function renderImgExportLinks(links, msg) {
+        const box = $("imgExLinks");
+        const ms = $("imgExMsg");
+        if (ms) {
+          ms.textContent = msg || IMG_TAINTED_MSG;
+          ms.className = "sel-status";
+        }
+        if (!box) return;
+        box.innerHTML = "";
+        (links || []).forEach(function (l) {
+          const a = document.createElement("a");
+          a.href = l.href;
+          a.download = l.name;
+          a.textContent = l.name;
+          box.appendChild(a);
+        });
+      }
+
+      function setAzTab(id) {
+        azTab = (id === "color" || id === "space" || id === "tech") ? id : "ai";
+        const map = { ai: "azTabAi", color: "azTabColor", space: "azTabSpace", tech: "azTabTech" };
+        Object.keys(map).forEach(function (k) {
+          const el = $(map[k]);
+          if (el) el.classList.toggle("hidden", k !== azTab);
+        });
+        const seg = $("azTabSeg");
+        if (seg) {
+          const btns = seg.querySelectorAll("button");
+          for (let i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-aztab") === azTab);
+        }
+        if (azTab !== "ai") scheduleLocalAnalysis(true);
+      }
+
+      function drawHueWheel(canvas, analysis) {
+        if (!canvas || !analysis) return;
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width, h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 2 - 6;
+        for (let a = 0; a < 360; a++) {
+          ctx.beginPath();
+          ctx.strokeStyle = "hsl(" + a + ", 100%, 50%)";
+          ctx.lineWidth = Math.max(8, r * 0.18);
+          const a0 = (a - 90) * Math.PI / 180;
+          ctx.arc(cx, cy, r - ctx.lineWidth / 2, a0, a0 + (2 * Math.PI / 360) + 0.01);
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.fillStyle = "#141820";
+        ctx.arc(cx, cy, r * 0.62, 0, Math.PI * 2);
+        ctx.fill();
+        const wc = analysis.warmCool || {};
+        ctx.fillStyle = "#c9d0dc";
+        ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("따뜻 " + (wc.warm != null ? wc.warm.toFixed(0) : "?") + "%", cx, cy - 10);
+        ctx.fillText("차가움 " + (wc.cool != null ? wc.cool.toFixed(0) : "?") + "%", cx, cy + 8);
+        (analysis.palette || []).slice(0, 8).forEach(function (p) {
+          const ang = ((p.hsv.h - 90) * Math.PI / 180);
+          const pr = r * 0.78;
+          const x = cx + Math.cos(ang) * pr;
+          const y = cy + Math.sin(ang) * pr;
+          const rad = Math.max(4, Math.min(12, 3 + (p.pct || 0) / 8));
+          ctx.beginPath();
+          ctx.fillStyle = p.hex;
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 1.5;
+          ctx.arc(x, y, rad, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        });
+      }
+
+      function renderColorTab(analysis, err) {
+        const el = $("azColorOut");
+        if (!el) return;
+        if (err) { el.innerHTML = "<p class=\"az-local-err\">" + escapeHtml(err) + "</p>"; return; }
+        if (!analysis) { el.innerHTML = "<p class=\"az-muted\">현재 프레임의 색을 읽으면 여기에 보여 줘.</p>"; return; }
+        let h = "<h3>주조색 팔레트</h3><div class=\"az-swatches\">";
+        (analysis.palette || []).forEach(function (p) {
+          h += "<div class=\"az-swatch\"><span class=\"chip\" style=\"background:" + p.hex + "\"></span><code>" + escapeHtml(p.hex) + "</code> <em>" + p.pct.toFixed(1) + "%</em></div>";
+        });
+        h += "</div>";
+        const hist = analysis.histogram || {};
+        h += "<h3>휘도 대비</h3><p><strong>RMS 대비</strong> " + analysis.rmsContrast.toFixed(3) + " (0–1). 화면 전체 밝기 차이의 크기야.</p>";
+        h += "<p><strong>히스토그램</strong> 그림자 " + (hist.shadows || 0).toFixed(1) + "% · 중간조 " + (hist.midtones || 0).toFixed(1) + "% · 하이라이트 " + (hist.highlights || 0).toFixed(1) + "%</p>";
+        const pair = analysis.wcagPair || [];
+        if (pair.length >= 2) {
+          h += "<p><strong>WCAG 대비</strong> 상위 두 색 " + pair[0].hex + " / " + pair[1].hex + " → <strong>" + analysis.wcag.toFixed(2) + ":1</strong>. ";
+          if (analysis.wcag >= 7) h += "텍스트 기준 AAA 수준으로 대비가 커.</p>";
+          else if (analysis.wcag >= 4.5) h += "텍스트 기준 AA 수준이야. 화면 배색으로는 뚜렷한 편이야.</p>";
+          else if (analysis.wcag >= 3) h += "큰 글씨 AA(3:1) 근처야. 배색 대비는 중간 정도야.</p>";
+          else h += "대비가 낮아. 비슷한 밝기의 색이 주를 이뤄.</p>";
+        }
+        h += "<h3>채도·명도</h3><p>채도 평균 " + (analysis.sat.mean * 100).toFixed(1) + "%, 퍼짐 " + (analysis.sat.spread * 100).toFixed(1) + "% · 명도 평균 " + (analysis.value.mean * 100).toFixed(1) + "%, 퍼짐 " + (analysis.value.spread * 100).toFixed(1) + "%</p>";
+        const hm = analysis.harmony || {};
+        h += "<h3>색 조화</h3><p><strong>" + escapeHtml(hm.label || "") + "</strong> — " + escapeHtml(hm.explain || "") + "</p>";
+        const wc = analysis.warmCool || {};
+        h += "<p>따뜻함 " + (wc.warm || 0).toFixed(0) + "% · 차가움 " + (wc.cool || 0).toFixed(0) + "% · 무채색 " + (wc.neutral || 0).toFixed(0) + "%</p>";
+        el.innerHTML = h;
+        drawHueWheel($("azHueWheel"), analysis);
+      }
+
+      function renderSpaceTab(framing, err) {
+        const el = $("azSpaceOut");
+        if (!el) return;
+        if (err) { el.innerHTML = "<p class=\"az-local-err\">" + escapeHtml(err) + "</p>"; return; }
+        if (!framing) { el.innerHTML = "<p class=\"az-muted\">현재 프레임에서 피사체 상자를 추정하면 여기에 보여 줘.</p>"; return; }
+        let h = "<h3>로컬 추정</h3>";
+        h += "<p class=\"az-muted\">가장자리 밀도·색 차이·화면 중앙 가중으로 피사체 상자를 잡은 휴리스틱이야. 복잡한 컷이나 여러 인물, 이펙트가 강하면 오차가 클 수 있어.</p>";
+        if (framing.weak) h += "<p class=\"az-local-err\">피사체를 뚜렷하게 못 찾았어. 숫자는 참고만 해.</p>";
+        h += "<p><strong>헤드룸</strong> " + framing.headroomPct.toFixed(1) + "% <span class=\"az-muted\">(상자 위쪽 여백)</span></p>";
+        h += "<p><strong>왼쪽 여백</strong> " + framing.leftGapPct.toFixed(1) + "% · <strong>오른쪽 여백</strong> " + framing.rightGapPct.toFixed(1) + "%</p>";
+        h += "<p><strong>네거티브 스페이스</strong> " + framing.negativePct.toFixed(1) + "% · <strong>포지티브 스페이스</strong> " + framing.positivePct.toFixed(1) + "%</p>";
+        h += "<p class=\"az-muted\">노즈룸(바라보는 쪽 공간)과 리드룸(진행 방향 공간)은 시선·동작 방향이 필요해서, AI 분석에서 같이 판단해.</p>";
+        if (lastAzJson) {
+          h += "<h3>AI 판단</h3>";
+          const keys = [["subjectPosition", "피사체 위치"], ["facingDirection", "시선·방향"], ["motionDirection", "동작·이동"], ["headroom", "헤드룸"], ["noseroom", "노즈룸"], ["leadroom", "리드룸"], ["negativeSpace", "네거티브 스페이스"]];
+          keys.forEach(function (kv) {
+            if (lastAzJson[kv[0]]) h += "<p><strong>" + kv[1] + "</strong> " + escapeHtml(String(lastAzJson[kv[0]])) + "</p>";
+          });
+        }
+        el.innerHTML = h;
+      }
+
+      function renderTechTab(holds, err) {
+        const el = $("azTechOut");
+        if (!el) return;
+        if (err) { el.innerHTML = "<p class=\"az-local-err\">" + escapeHtml(err) + "</p>"; return; }
+        let h = "<h3>로컬 홀드 감지</h3>";
+        if (!holds) {
+          h += "<p class=\"az-muted\">현재 프레임 부근의 프레임 차이로 고유 그림 수를 세면 여기에 보여 줘.</p>";
+        } else {
+          const dps = holds.drawingsPerSec;
+          h += "<p>이 부근에서 초당 약 <strong>" + dps.toFixed(1) + "장</strong>의 그림";
+          h += " (" + holds.fps.toFixed(2) + "fps 기준, 고유 " + holds.unique + "장 / " + holds.frames + "프레임).";
+          if (holds.onTwosHint) h += " <strong>2코마(on 2s)</strong>에 가까운 리듬이야.";
+          else if (holds.onThreesHint) h += " <strong>3코마(on 3s)</strong>에 가까운 리듬이야.";
+          else if (dps >= holds.fps * 0.9) h += " 거의 매 프레임이 다른 그림이야(1코마에 가까움).";
+          else if (dps < 6) h += " 홀드가 긴 편이야.";
+          h += "</p>";
+        }
+        if (lastAzJson) {
+          h += "<h3>AI 기법·샷</h3>";
+          if (lastAzJson.animationTechnique) h += "<p><strong>애니메이션 기법</strong> " + escapeHtml(String(lastAzJson.animationTechnique)) + "</p>";
+          if (lastAzJson.shotType) h += "<p><strong>샷 타입</strong> " + escapeHtml(String(lastAzJson.shotType)) + "</p>";
+          if (lastAzJson.shotSize) h += "<p><strong>샷 사이즈</strong> " + escapeHtml(String(lastAzJson.shotSize)) + "</p>";
+          if (lastAzJson.cameraAngle) h += "<p><strong>카메라 각도</strong> " + escapeHtml(String(lastAzJson.cameraAngle)) + "</p>";
+        } else {
+          h += "<p class=\"az-muted\">샷 타입과 기법의 의미 판단은 AI 분석 탭에서 실행하면 여기에 같이 붙어.</p>";
+        }
+        el.innerHTML = h;
+      }
+
+      async function runLocalAnalyses() {
+        const panel = $("analyzePanel");
+        if (!panel || !panel.classList.contains("show")) return;
+        try {
+          const cap = await captureFrameForAnalysis(frame);
+          lastColors = analyzeColors(cap.canvas);
+          lastFraming = analyzeFraming(cap.canvas);
+          renderColorTab(lastColors);
+          renderSpaceTab(lastFraming);
+          redrawGuides();
+        } catch (e) {
+          const msg = (e && e.code === "TAINTED") ? AZ_TAINTED_MSG : ((e && e.message) || AZ_TAINTED_MSG);
+          lastColors = null;
+          lastFraming = null;
+          renderColorTab(null, msg);
+          renderSpaceTab(null, msg);
+        }
+        try {
+          const fps = FPS || 24;
+          const span = Math.max(8, Math.round(fps));
+          const a = Math.max(1, frame - Math.floor(span / 2));
+          const b = Math.min(TOTAL, a + span - 1);
+          const canvases = [];
+          for (let n = a; n <= b; n++) {
+            const cap = await captureFrameForAnalysis(n);
+            canvases.push(cap.canvas);
+          }
+          lastHolds = detectHolds(canvases, fps);
+          lastHolds.from = a;
+          lastHolds.to = b;
+          renderTechTab(lastHolds);
+        } catch (e) {
+          const msg = (e && e.code === "TAINTED") ? AZ_TAINTED_MSG : ((e && e.message) || AZ_TAINTED_MSG);
+          lastHolds = null;
+          renderTechTab(null, msg);
+        }
+      }
+
+      function scheduleLocalAnalysis(immediate) {
+        if (localAzTimer) clearTimeout(localAzTimer);
+        localAzTimer = setTimeout(function () {
+          localAzTimer = 0;
+          runLocalAnalyses();
+        }, immediate ? 20 : 350);
+      }
+
       Object.assign(window.__flipbook, {
         openPrint: function () { return openExport("print"); },
         openCollage: function () { return openExport("collage"); },
@@ -5270,7 +6795,8 @@
             frames: exportFrameList(),
             pageFrames: (ex.layout && ex.layout.pageFrames) ? ex.layout.pageFrames : [],
             info: $("exportInfo") ? $("exportInfo").textContent : "",
-            msg: $("exportMsg") ? $("exportMsg").textContent : ""
+            msg: $("exportMsg") ? $("exportMsg").textContent : "",
+            collageGuides: !!collageGuides
           };
         },
         setCollagePageCount: function (n) {
@@ -5297,6 +6823,11 @@
           if (opts.res) ex.vRes = opts.res === "640x360" ? "640x360" : "1280x720";
           if (opts.audio != null) ex.vAudio = !!opts.audio;
           if (opts.caption != null) ex.vCaption = !!opts.caption;
+          if (opts.guides != null) {
+            videoGuides = !!opts.guides;
+            ex.vGuides = videoGuides;
+            if ($("vidGuideChk")) $("vidGuideChk").checked = videoGuides;
+          }
           syncVideoUI();
         },
         makeExportVideo: makeExportVideo,
@@ -5314,6 +6845,7 @@
           st.res = ex.vRes;
           st.audioWanted = !!ex.vAudio;
           st.caption = !!ex.vCaption;
+          st.guides = !!videoGuides;
           st.expectedDuration = videoExpectedDuration(exportFrameList());
           st.hint = $("vidFpsHint") ? $("vidFpsHint").textContent : "";
           st.msg = $("exportMsg") ? $("exportMsg").textContent : "";
@@ -5321,7 +6853,119 @@
           return st;
         },
         getVideoBlob: function () { return ex.vBlob || null; },
-        getVideoDrawnFrames: function () { return ex.vDrawn ? ex.vDrawn.slice() : []; }
+        getVideoDrawnFrames: function () { return ex.vDrawn ? ex.vDrawn.slice() : []; },
+        drawCompositionGuides: drawCompositionGuides,
+        GUIDE_IDS: GUIDE_IDS,
+        GUIDE_DEFS: GUIDE_DEFS,
+        setGuides: setGuides,
+        getGuides: getGuides,
+        analyzeColors: analyzeColors,
+        analyzeFraming: analyzeFraming,
+        detectHolds: detectHolds,
+        makeStoreZip: makeStoreZip,
+        exportFrameImages: exportFrameImages,
+        azPrompt: azPrompt,
+        parseAnalysisPayload: parseAnalysisPayload,
+        renderAnalysisText: renderAnalysisText,
+        setAzTab: setAzTab,
+        getLocalAnalysis: function () {
+          return { colors: lastColors, framing: lastFraming, holds: lastHolds, json: lastAzJson, text: azLastText, tab: azTab };
+        },
+        sizeGuideCanvas: sizeGuideCanvas,
+        IMG_TAINTED_MSG: IMG_TAINTED_MSG
+      });
+
+      $("guideBtn").addEventListener("click", function () { setGuideOn(!guideOn); });
+      $("guideMenuBtn").addEventListener("click", function (e) {
+        e.stopPropagation();
+        $("guideMenu").classList.toggle("hidden");
+      });
+      document.addEventListener("click", function (e) {
+        const menu = $("guideMenu");
+        if (!menu || menu.classList.contains("hidden")) return;
+        if (e.target.closest && e.target.closest(".guide-drop")) return;
+        menu.classList.add("hidden");
+      });
+      $("guideMenu").addEventListener("change", function (e) {
+        const inp = e.target.closest("input[data-guide]");
+        if (!inp) return;
+        guideIds[inp.getAttribute("data-guide")] = inp.checked;
+        syncGuideOptsVisibility();
+        if (guideOn) sizeGuideCanvas();
+      });
+      $("guideColor").addEventListener("input", function () { guideColor = $("guideColor").value; if (guideOn) redrawGuides(); });
+      $("guideOp").addEventListener("input", function () {
+        guideOpacity = parseInt($("guideOp").value, 10) / 100;
+        $("guideOpVal").textContent = Math.round(guideOpacity * 100) + "%";
+        if (guideOn) redrawGuides();
+      });
+      $("guideSpiralOri").addEventListener("change", function () {
+        guideSpiralOri = parseInt($("guideSpiralOri").value, 10) || 0;
+        if (guideOn) redrawGuides();
+      });
+      $("guideSpiralFlip").addEventListener("change", function () {
+        guideSpiralFlip = $("guideSpiralFlip").checked;
+        if (guideOn) redrawGuides();
+      });
+      $("guideCustomC").addEventListener("change", function () {
+        guideCustomC = Math.max(1, Math.min(24, parseInt($("guideCustomC").value, 10) || 5));
+        $("guideCustomC").value = String(guideCustomC);
+        if (guideOn) redrawGuides();
+      });
+      $("guideCustomR").addEventListener("change", function () {
+        guideCustomR = Math.max(1, Math.min(24, parseInt($("guideCustomR").value, 10) || 5));
+        $("guideCustomR").value = String(guideCustomR);
+        if (guideOn) redrawGuides();
+      });
+      $("guideBBoxChk").addEventListener("change", function () {
+        guideShowBBox = $("guideBBoxChk").checked;
+        if (guideShowBBox) scheduleLocalAnalysis(true);
+        redrawGuides();
+      });
+      window.addEventListener("resize", function () { sizeGuideCanvas(); });
+      $("azTabSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        setAzTab(b.getAttribute("data-aztab"));
+      });
+      $("imgExportBtn").addEventListener("click", function () { showImgExport(true); });
+      $("imgExCloseBtn").addEventListener("click", function () { showImgExport(false); });
+      $("imgExportModal").addEventListener("click", function (e) {
+        if (e.target.id === "imgExportModal") showImgExport(false);
+      });
+      $("imgExSrcSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        activateSeg("imgExSrcSeg", "data-imgsrc", b.getAttribute("data-imgsrc"));
+        syncImgExportCount();
+      });
+      $("imgExFmtSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        activateSeg("imgExFmtSeg", "data-imgfmt", b.getAttribute("data-imgfmt"));
+      });
+      ["imgExStart", "imgExEnd", "imgExInterval"].forEach(function (id) {
+        $(id).addEventListener("input", syncImgExportCount);
+        $(id).addEventListener("change", syncImgExportCount);
+      });
+      $("imgExGuideChk").addEventListener("change", function () { imgExportGuides = $("imgExGuideChk").checked; });
+      $("imgExSaveBtn").addEventListener("click", async function () {
+        const fmtBtn = document.querySelector("#imgExFmtSeg button.active");
+        const format = fmtBtn && fmtBtn.getAttribute("data-imgfmt") === "png" ? "png" : "jpg";
+        const guides = $("imgExGuideChk").checked;
+        imgExportGuides = guides;
+        const frames = imgExportListFromUI();
+        $("imgExMsg").textContent = "준비 중…";
+        $("imgExLinks").innerHTML = "";
+        const res = await exportFrameImages({ frames: frames, format: format, guides: guides });
+        if (res.ok) {
+          downloadBlob(res.blob, res.filename);
+          $("imgExMsg").textContent = res.count + "장 저장 · " + res.filename;
+        } else if (res.tainted) {
+          renderImgExportLinks(res.links, res.error);
+        } else {
+          $("imgExMsg").textContent = res.error || "저장에 실패했습니다.";
+        }
       });
 
       // Start
