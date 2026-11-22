@@ -348,23 +348,80 @@
       pointer-events: none;
     }
     #guideBtn.active { font-weight: 650; }
+    #controls { overflow: visible; }
+    #guideRow { position: relative; z-index: 6; overflow: visible; }
+    .guide-drop { position: relative; }
     #guideMenu {
-      position: absolute;
-      z-index: 20;
-      margin-top: 4px;
+      position: fixed;
+      z-index: 45;
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 10px;
-      min-width: 200px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+      border-radius: 10px;
+      padding: 10px 12px 12px;
+      width: 420px;
+      max-width: calc(100vw - 16px);
+      max-height: min(70vh, 560px);
+      overflow: auto;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.55);
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 8px;
+      box-sizing: border-box;
     }
-    #guideMenu.hidden, .guide-extra.hidden { display: none; }
-    .guide-drop { position: relative; }
-    #guideMenu label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+    #guideMenu.hidden { display: none; }
+    .guide-extra.hidden { display: none; }
+    .guide-menu-head {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .guide-menu-head strong { font-size: 13px; margin-right: auto; }
+    .guide-menu-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 10px;
+    }
+    @media (max-width: 520px) {
+      .guide-menu-list { grid-template-columns: 1fr; }
+    }
+    .guide-menu-list label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+    }
+    .guide-menu-list label:hover { background: var(--panel-2, #22222a); }
+    .guide-menu-list canvas {
+      width: 48px;
+      height: 27px;
+      border-radius: 3px;
+      background: #111;
+      flex-shrink: 0;
+      pointer-events: none;
+    }
+    .guide-menu-opts {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+    .guide-bbox-msg {
+      color: #f0c040;
+      font-size: 12px;
+      line-height: 1.45;
+      max-width: 36em;
+    }
+    .guide-bbox-msg a { color: var(--accent); }
+    .guide-bbox-msg[hidden] { display: none !important; }
+    #guideBBoxLabel { cursor: help; }
     .guide-overlay {
       position: absolute;
       inset: 0;
@@ -1103,48 +1160,60 @@
         </div>
       </div>
       <div class="row" id="guideRow">
-        <button type="button" id="guideBtn" title="구도 가이드 켜기/끄기 (G)">구도 가이드 OFF</button>
-        <div class="guide-drop">
-          <button type="button" id="guideMenuBtn">가이드 선택 ▾</button>
-          <div id="guideMenu" class="hidden">
-            <label><input type="checkbox" data-guide="thirds" checked> 삼분할</label>
-            <label><input type="checkbox" data-guide="phi"> 황금분할</label>
-            <label><input type="checkbox" data-guide="spiral"> 황금나선</label>
-            <label><input type="checkbox" data-guide="goldenTri"> 황금 삼각형</label>
-            <label><input type="checkbox" data-guide="diagonal"> 대각선·바로크</label>
-            <label><input type="checkbox" data-guide="cross"> 중앙선·십자</label>
-            <label><input type="checkbox" data-guide="symmetry"> 대칭(좌우·상하)</label>
-            <label><input type="checkbox" data-guide="dynamic"> 다이나믹 시메트리</label>
-            <label><input type="checkbox" data-guide="quad"> 4분할</label>
-            <label><input type="checkbox" data-guide="triangle"> 압축 대각선·삼각 구도</label>
-            <label><input type="checkbox" data-guide="safe"> 세이프 에어리어</label>
-            <label><input type="checkbox" data-guide="custom"> 커스텀 그리드</label>
+        <div class="guide-drop" id="guideDrop">
+          <button type="button" id="guideBtn" title="구도 가이드 종류를 고르고 켜기 (G로 표시 전환)">구도 가이드 (1)</button>
+          <div id="guideMenu" class="hidden" role="dialog" aria-label="구도 가이드 선택">
+            <div class="guide-menu-head">
+              <strong>구도 가이드</strong>
+              <label class="chk"><input type="checkbox" id="guideOnChk"> 표시 (G)</label>
+              <button type="button" id="guideDefaultBtn">기본</button>
+              <button type="button" id="guideClearBtn">전체 해제</button>
+            </div>
+            <div class="guide-menu-list" id="guideMenuList">
+            <label><input type="checkbox" data-guide="thirds" checked><canvas data-guide-icon="thirds" width="48" height="27" aria-hidden="true"></canvas> 삼분할</label>
+            <label><input type="checkbox" data-guide="phi"><canvas data-guide-icon="phi" width="48" height="27" aria-hidden="true"></canvas> 황금분할</label>
+            <label><input type="checkbox" data-guide="spiral"><canvas data-guide-icon="spiral" width="48" height="27" aria-hidden="true"></canvas> 황금나선</label>
+            <label><input type="checkbox" data-guide="goldenTri"><canvas data-guide-icon="goldenTri" width="48" height="27" aria-hidden="true"></canvas> 황금 삼각형</label>
+            <label><input type="checkbox" data-guide="diagonal"><canvas data-guide-icon="diagonal" width="48" height="27" aria-hidden="true"></canvas> 대각선·바로크</label>
+            <label><input type="checkbox" data-guide="cross"><canvas data-guide-icon="cross" width="48" height="27" aria-hidden="true"></canvas> 중앙선·십자</label>
+            <label><input type="checkbox" data-guide="symmetry"><canvas data-guide-icon="symmetry" width="48" height="27" aria-hidden="true"></canvas> 대칭(좌우·상하)</label>
+            <label><input type="checkbox" data-guide="dynamic"><canvas data-guide-icon="dynamic" width="48" height="27" aria-hidden="true"></canvas> 다이나믹 시메트리</label>
+            <label><input type="checkbox" data-guide="quad"><canvas data-guide-icon="quad" width="48" height="27" aria-hidden="true"></canvas> 4분할</label>
+            <label><input type="checkbox" data-guide="triangle"><canvas data-guide-icon="triangle" width="48" height="27" aria-hidden="true"></canvas> 압축 대각선·삼각</label>
+            <label><input type="checkbox" data-guide="safe"><canvas data-guide-icon="safe" width="48" height="27" aria-hidden="true"></canvas> 세이프 에어리어</label>
+            <label><input type="checkbox" data-guide="custom"><canvas data-guide-icon="custom" width="48" height="27" aria-hidden="true"></canvas> 커스텀 그리드</label>
+            </div>
+            <div class="guide-menu-opts">
+              <div class="group">
+                <span class="label">색</span>
+                <input type="color" id="guideColor" value="#00e5ff" title="가이드 색">
+                <span class="label">투명도</span>
+                <input type="range" class="slim" id="guideOp" min="15" max="100" value="85" step="1">
+                <span id="guideOpVal">85%</span>
+              </div>
+              <span id="guideSpiralOpts" class="guide-extra hidden">
+                <span class="label">나선</span>
+                <select id="guideSpiralOri" title="황금나선 방향">
+                  <option value="0">방향 1</option>
+                  <option value="1">방향 2</option>
+                  <option value="2">방향 3</option>
+                  <option value="3">방향 4</option>
+                </select>
+                <label class="chk"><input type="checkbox" id="guideSpiralFlip"> 좌우 반전</label>
+              </span>
+              <span id="guideCustomOpts" class="guide-extra hidden">
+                <span class="label">칸</span>
+                <input type="number" id="guideCustomC" min="1" max="24" value="5" title="가로 칸">
+                <span>×</span>
+                <input type="number" id="guideCustomR" min="1" max="24" value="5" title="세로 칸">
+              </span>
+            </div>
           </div>
         </div>
-        <div class="group">
-          <span class="label">색</span>
-          <input type="color" id="guideColor" value="#00e5ff" title="가이드 색">
-          <span class="label">투명도</span>
-          <input type="range" class="slim" id="guideOp" min="15" max="100" value="85" step="1">
-          <span id="guideOpVal">85%</span>
-        </div>
-        <span id="guideSpiralOpts" class="guide-extra hidden">
-          <span class="label">나선</span>
-          <select id="guideSpiralOri" title="황금나선 방향">
-            <option value="0">방향 1</option>
-            <option value="1">방향 2</option>
-            <option value="2">방향 3</option>
-            <option value="3">방향 4</option>
-          </select>
-          <label class="chk"><input type="checkbox" id="guideSpiralFlip"> 좌우 반전</label>
-        </span>
-        <span id="guideCustomOpts" class="guide-extra hidden">
-          <span class="label">칸</span>
-          <input type="number" id="guideCustomC" min="1" max="24" value="5" title="가로 칸">
-          <span>×</span>
-          <input type="number" id="guideCustomR" min="1" max="24" value="5" title="세로 칸">
-        </span>
-        <label class="chk"><input type="checkbox" id="guideBBoxChk"> 피사체 박스</label>
+        <label class="chk" id="guideBBoxLabel" title="현재 프레임에서 주요 피사체 상자를 자동으로 잡아, 헤드룸·네거티브 스페이스 수치를 계산할 때 씁니다.">
+          <input type="checkbox" id="guideBBoxChk"> 피사체 박스
+        </label>
+        <span id="guideBBoxMsg" class="guide-bbox-msg" hidden></span>
       </div>
 
       <div id="thumbsWrap">
@@ -1260,11 +1329,11 @@
         <dt>O</dt><dd>어니언 스킨 켜기/끄기</dd>
         <dt>V</dt><dd>음소거 / 해제</dd>
         <dt>A</dt><dd>하단 분석 패널 열고 현재 설정으로 분석</dd>
-        <dt>G</dt><dd>구도 가이드 켜기/끄기</dd>
+        <dt>G</dt><dd>구도 가이드 표시 켜기/끄기 (종류는 「구도 가이드 (n)」 버튼에서 고름)</dd>
         <dt>? 또는 /</dt><dd>이 도움말 열기/닫기</dd>
         <dt>Esc</dt><dd>입력 중이면 포커스 해제, 아니면 도움말 닫기</dd>
       </dl>
-      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. G 키나 「구도 가이드」로 삼분할·황금분할·황금나선 등 가이드를 겹쳐 볼 수 있고, 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
+      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. 「구도 가이드 (n)」 버튼을 누르면 삼분할·황금분할·황금나선 등 12가지를 체크박스로 고를 수 있고, G 키로 표시를 켜고 끈다. 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「피사체 박스」는 주요 피사체 상자를 자동으로 잡아 헤드룸·여백 수치를 보여 줘. 폴더에서 연 기본 영상에서는 픽셀을 못 읽으니 웹사이트나 「영상 불러오기」를 쓰면 돼. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
     </div>
   </div>
 
@@ -3263,6 +3332,9 @@
       let guideCustomR = 5;
       let guideShowBBox = false;
       let lastFraming = null;
+      let lastFramingError = null;
+      const BBOX_TAINTED_MSG = "폴더에서 연 파일은 기본 영상 픽셀을 못 읽어요. 웹사이트나 영상 불러오기에서 쓰세요";
+      const LIVE_SITE = "https://kibang.github.io/frame-viewer/";
       let lastColors = null;
       let lastHolds = null;
       let lastAzJson = null;
@@ -4487,6 +4559,8 @@
         }
         if (e.key === "Escape") {
           showHelp(false);
+          showGuideMenu(false);
+          showImgExport(false);
           return;
         }
         if (e.key === "?" || e.key === "/") {
@@ -6383,16 +6457,128 @@
         ctx.clearRect(0, 0, c.width, c.height);
         if (guideOn) drawCompositionGuides(ctx, c.width, c.height, guideOptions());
         if (guideShowBBox && lastFraming) drawFramingOverlay(ctx, c.width, c.height, lastFraming, { color: "#ffe14d", opacity: 0.95 });
+        else if (guideShowBBox && lastFramingError) drawFramingNotice(ctx, c.width, c.height, lastFramingError);
+      }
+
+      function drawFramingNotice(ctx, w, h, msg) {
+        ctx.save();
+        const fs = Math.max(13, Math.round(Math.min(w, h) / 28));
+        ctx.font = "600 " + fs + "px ui-sans-serif, system-ui, \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
+        const pad = Math.max(10, fs * 0.6);
+        const maxW = Math.min(w - pad * 2, fs * 28);
+        const words = String(msg || "").split(" ");
+        const lines = [];
+        let cur = "";
+        for (let i = 0; i < words.length; i++) {
+          const t = cur ? cur + " " + words[i] : words[i];
+          if (cur && ctx.measureText(t).width > maxW) { lines.push(cur); cur = words[i]; }
+          else cur = t;
+        }
+        if (cur) lines.push(cur);
+        const boxh = lines.length * (fs + 5) + pad * 2;
+        const boxw = Math.min(maxW + pad * 2, w - 16);
+        const bx = 8, by = 8;
+        ctx.fillStyle = "rgba(8,10,16,0.82)";
+        ctx.fillRect(bx, by, boxw, boxh);
+        ctx.strokeStyle = "rgba(240,192,64,0.9)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx + 0.5, by + 0.5, boxw - 1, boxh - 1);
+        ctx.fillStyle = "#f0c040";
+        ctx.textBaseline = "top";
+        for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], bx + pad, by + pad + i * (fs + 5), boxw - pad * 2);
+        ctx.restore();
+      }
+
+      function selectedGuideCount() {
+        let n = 0;
+        for (let i = 0; i < GUIDE_IDS.length; i++) if (guideIds[GUIDE_IDS[i]]) n++;
+        return n;
+      }
+
+      function updateGuideChrome() {
+        const btn = $("guideBtn");
+        const menu = $("guideMenu");
+        const open = menu && !menu.classList.contains("hidden");
+        if (btn) {
+          btn.textContent = "구도 가이드 (" + selectedGuideCount() + ")";
+          btn.classList.toggle("active", !!guideOn);
+          btn.setAttribute("aria-expanded", open ? "true" : "false");
+        }
+        const chk = $("guideOnChk");
+        if (chk) chk.checked = !!guideOn;
+        syncGuideOptsVisibility();
+        syncGuideMenuChecks();
+      }
+
+      function paintGuideIcons() {
+        const root = $("guideMenu");
+        if (!root) return;
+        const icons = root.querySelectorAll("canvas[data-guide-icon]");
+        for (let i = 0; i < icons.length; i++) {
+          const c = icons[i];
+          const id = c.getAttribute("data-guide-icon");
+          const ids = {};
+          ids[id] = true;
+          c.width = 48; c.height = 27;
+          const ctx = c.getContext("2d");
+          ctx.fillStyle = "#15151c";
+          ctx.fillRect(0, 0, 48, 27);
+          drawCompositionGuides(ctx, 48, 27, {
+            ids: ids, color: "#7fd9ff", opacity: 1,
+            customC: 4, customR: 3, spiralOri: 0, spiralFlip: false
+          });
+        }
+      }
+
+      function positionGuideMenu() {
+        const menu = $("guideMenu");
+        const btn = $("guideBtn");
+        if (!menu || !btn || menu.classList.contains("hidden")) return;
+        const pad = 8;
+        const br = btn.getBoundingClientRect();
+        const mw = Math.min(420, Math.max(260, window.innerWidth - pad * 2));
+        menu.style.width = mw + "px";
+        menu.style.maxHeight = Math.min(window.innerHeight - pad * 2, 560) + "px";
+        const mh = menu.offsetHeight;
+        let left = br.left;
+        if (left + mw > window.innerWidth - pad) left = window.innerWidth - pad - mw;
+        if (left < pad) left = pad;
+        const spaceAbove = br.top - pad;
+        const spaceBelow = window.innerHeight - br.bottom - pad;
+        let top;
+        if (spaceAbove >= Math.min(mh, 240) || spaceAbove > spaceBelow) {
+          top = Math.max(pad, br.top - mh - 6);
+        } else {
+          top = br.bottom + 6;
+        }
+        if (top + mh > window.innerHeight - pad) top = Math.max(pad, window.innerHeight - pad - mh);
+        menu.style.left = left + "px";
+        menu.style.top = top + "px";
+      }
+
+      function showGuideMenu(on) {
+        const menu = $("guideMenu");
+        if (!menu) return;
+        const open = (on == null) ? menu.classList.contains("hidden") : !!on;
+        menu.classList.toggle("hidden", !open);
+        if (open) {
+          paintGuideIcons();
+          positionGuideMenu();
+        }
+        updateGuideChrome();
       }
 
       function setGuideOn(on) {
         guideOn = !!on;
-        const btn = $("guideBtn");
-        if (btn) {
-          btn.textContent = "구도 가이드 " + (guideOn ? "ON" : "OFF");
-          btn.classList.toggle("active", guideOn);
-        }
+        updateGuideChrome();
         sizeGuideCanvas();
+      }
+
+      function applyGuidePreset(kind) {
+        GUIDE_IDS.forEach(function (id) { guideIds[id] = false; });
+        if (kind !== "none") guideIds.thirds = true;
+        updateGuideChrome();
+        if (guideOn) sizeGuideCanvas();
       }
 
       function syncGuideOptsVisibility() {
@@ -6676,22 +6862,59 @@
         el.innerHTML = h;
       }
 
+      function syncBBoxMsg() {
+        const el = $("guideBBoxMsg");
+        if (!el) return;
+        const show = !!(guideShowBBox && lastFramingError);
+        el.hidden = !show;
+        if (show) {
+          el.innerHTML = escapeHtml(lastFramingError) + ' <a href="' + LIVE_SITE + '" target="_blank" rel="noopener noreferrer">웹사이트에서 열기</a>';
+        }
+      }
+
+      async function refreshFraming() {
+        try {
+          const cap = await captureFrameForAnalysis(frame);
+          lastFraming = analyzeFraming(cap.canvas);
+          lastFramingError = null;
+        } catch (e) {
+          lastFraming = null;
+          lastFramingError = (e && e.code === "TAINTED") ? BBOX_TAINTED_MSG : ((e && e.message) || BBOX_TAINTED_MSG);
+        }
+        syncBBoxMsg();
+        redrawGuides();
+        const panel = $("analyzePanel");
+        if (panel && panel.classList.contains("show")) renderSpaceTab(lastFraming, lastFramingError);
+        return lastFraming;
+      }
+
       async function runLocalAnalyses() {
         const panel = $("analyzePanel");
-        if (!panel || !panel.classList.contains("show")) return;
+        const panelOpen = !!(panel && panel.classList.contains("show"));
+        if (!panelOpen && !guideShowBBox) return;
+        if (guideShowBBox && !panelOpen) {
+          await refreshFraming();
+          return;
+        }
         try {
           const cap = await captureFrameForAnalysis(frame);
           lastColors = analyzeColors(cap.canvas);
           lastFraming = analyzeFraming(cap.canvas);
+          lastFramingError = null;
           renderColorTab(lastColors);
           renderSpaceTab(lastFraming);
+          syncBBoxMsg();
           redrawGuides();
         } catch (e) {
-          const msg = (e && e.code === "TAINTED") ? AZ_TAINTED_MSG : ((e && e.message) || AZ_TAINTED_MSG);
+          const tainted = !!(e && e.code === "TAINTED");
+          const msg = tainted ? AZ_TAINTED_MSG : ((e && e.message) || AZ_TAINTED_MSG);
           lastColors = null;
           lastFraming = null;
+          lastFramingError = tainted ? BBOX_TAINTED_MSG : msg;
           renderColorTab(null, msg);
-          renderSpaceTab(null, msg);
+          renderSpaceTab(null, lastFramingError);
+          syncBBoxMsg();
+          redrawGuides();
         }
         try {
           const fps = FPS || 24;
@@ -6869,28 +7092,38 @@
         renderAnalysisText: renderAnalysisText,
         setAzTab: setAzTab,
         getLocalAnalysis: function () {
-          return { colors: lastColors, framing: lastFraming, holds: lastHolds, json: lastAzJson, text: azLastText, tab: azTab };
+          return { colors: lastColors, framing: lastFraming, framingError: lastFramingError, holds: lastHolds, json: lastAzJson, text: azLastText, tab: azTab };
         },
+        showGuideMenu: showGuideMenu,
+        BBOX_TAINTED_MSG: BBOX_TAINTED_MSG,
         sizeGuideCanvas: sizeGuideCanvas,
         IMG_TAINTED_MSG: IMG_TAINTED_MSG
       });
 
-      $("guideBtn").addEventListener("click", function () { setGuideOn(!guideOn); });
-      $("guideMenuBtn").addEventListener("click", function (e) {
+      $("guideBtn").addEventListener("click", function (e) {
         e.stopPropagation();
-        $("guideMenu").classList.toggle("hidden");
+        showGuideMenu();
+      });
+      $("guideOnChk").addEventListener("change", function () { setGuideOn($("guideOnChk").checked); });
+      $("guideDefaultBtn").addEventListener("click", function (e) {
+        e.stopPropagation();
+        applyGuidePreset("default");
+      });
+      $("guideClearBtn").addEventListener("click", function (e) {
+        e.stopPropagation();
+        applyGuidePreset("none");
       });
       document.addEventListener("click", function (e) {
         const menu = $("guideMenu");
         if (!menu || menu.classList.contains("hidden")) return;
-        if (e.target.closest && e.target.closest(".guide-drop")) return;
-        menu.classList.add("hidden");
+        if (e.target.closest && (e.target.closest("#guideMenu") || e.target.closest("#guideBtn"))) return;
+        showGuideMenu(false);
       });
       $("guideMenu").addEventListener("change", function (e) {
         const inp = e.target.closest("input[data-guide]");
         if (!inp) return;
         guideIds[inp.getAttribute("data-guide")] = inp.checked;
-        syncGuideOptsVisibility();
+        updateGuideChrome();
         if (guideOn) sizeGuideCanvas();
       });
       $("guideColor").addEventListener("input", function () { guideColor = $("guideColor").value; if (guideOn) redrawGuides(); });
@@ -6919,10 +7152,11 @@
       });
       $("guideBBoxChk").addEventListener("change", function () {
         guideShowBBox = $("guideBBoxChk").checked;
-        if (guideShowBBox) scheduleLocalAnalysis(true);
-        redrawGuides();
+        if (guideShowBBox) refreshFraming();
+        else { syncBBoxMsg(); redrawGuides(); }
       });
-      window.addEventListener("resize", function () { sizeGuideCanvas(); });
+      window.addEventListener("resize", function () { sizeGuideCanvas(); positionGuideMenu(); });
+      window.addEventListener("scroll", function () { positionGuideMenu(); }, true);
       $("azTabSeg").addEventListener("click", function (e) {
         const b = e.target.closest("button");
         if (!b) return;
