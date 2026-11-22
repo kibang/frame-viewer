@@ -445,6 +445,39 @@
       background: #22232a; border-right: 1px solid #333; border-bottom: 1px solid #333;
     }
     body.tool-pen #viewport { cursor: crosshair; }
+    #viewport.guide-hover-del { cursor: pointer; }
+    #guideHoverHint {
+      position: absolute;
+      z-index: 12;
+      pointer-events: none;
+      background: rgba(16,16,20,0.92);
+      color: #f2f3f7;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    #guideHoverHint.hidden { display: none; }
+    #fvToast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      z-index: 90;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #1c1d24;
+      color: #f2f3f7;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    }
+    #fvToast.hidden { display: none; }
+    #fvToastAction { font-size: 12px; }
     #penTools, #customGuideTools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     #penTools.hidden, #customGuideTools.hidden { display: none; }
     #customList { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -1121,6 +1154,7 @@
           <canvas id="toolCanvas"></canvas>
         </div>
         <div class="meta-overlay" id="meta">—</div>
+        <div id="guideHoverHint" class="hidden">우클릭으로 삭제</div>
         <div id="dropMask">영상을 여기에 놓으면 불러와</div>
       </div>
     </div>
@@ -1477,13 +1511,14 @@
         <dt>M</dt><dd>현재 프레임 선택/해제</dd>
         <dt>[ / ]</dt><dd>여기부터 / 여기까지 (범위 추가)</dd>
         <dt>O</dt><dd>어니언 스킨 켜기/끄기 (앞/뒤 장수는 따로 지정)</dd>
+        <dt>Ctrl+Z</dt><dd>삭제한 커스텀 가이드 되돌리기</dd>
         <dt>V</dt><dd>음소거 / 해제</dd>
         <dt>A</dt><dd>하단 분석 패널 열고 현재 설정으로 분석</dd>
         <dt>G</dt><dd>구도 가이드 표시 켜기/끄기 (종류는 「구도 가이드 (n)」 버튼에서 고름)</dd>
         <dt>? 또는 /</dt><dd>이 도움말 열기/닫기</dd>
         <dt>Esc</dt><dd>입력 중이면 포커스 해제, 아니면 도움말 닫기</dd>
       </dl>
-      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. 「구도 가이드 (n)」 버튼을 누르면 삼분할·황금분할·황금나선·황금 삼각형·하모닉 아머처·방사형 등 14가지를 체크박스로 고를 수 있고, G 키로 표시를 켜고 끈다. 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「피사체 박스」는 주요 피사체 상자를 자동으로 잡고(근사, 직접 드래그·크기 조절 가능) 헤드룸·여백 수치를 보여 줘. 「가이드 편집」에서 소실점 드래그, 위·왼쪽 자에서 커스텀 가이드, 두 점 선을 그릴 수 있고, 가이드마다 색·굵기·투명도·실선/점선을 지정할 수 있어(미리 잡은 구도 가이드 색과는 별개, 잠가도 스타일은 유지). 「펜」으로 체크·형광·지우기를 할 수 있어(잠금·출력 옵션, 모든 프레임/이 프레임만). 폴더에서 연 기본 영상에서는 픽셀을 못 읽으니 웹사이트나 「영상 불러오기」를 쓰면 돼. 어니언 스킨은 앞(이전)·뒤(다음) 장수를 슬라이더(최대 30)나 숫자로 남은 프레임까지 따로 지정하고, 가장 먼 장 최소 투명도를 고를 수 있어. AI 분석이 503·429·500으로 바쁠 때는 자동으로 다시 시도하고, 「바쁠 때 자동으로 다른 모델로 전환」을 켜 두면 다음 모델로 넘어가. 취소로 멈출 수 있어. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
+      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. 「구도 가이드 (n)」 버튼을 누르면 삼분할·황금분할·황금나선·황금 삼각형·하모닉 아머처·방사형 등 14가지를 체크박스로 고를 수 있고, G 키로 표시를 켜고 끈다. 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「피사체 박스」는 주요 피사체 상자를 자동으로 잡고(근사, 직접 드래그·크기 조절 가능) 헤드룸·여백 수치를 보여 줘. 「가이드 편집」에서 소실점 드래그, 위·왼쪽 자에서 커스텀 가이드, 두 점 선을 그릴 수 있고, 가이드마다 색·굵기·투명도·실선/점선을 지정할 수 있어(미리 잡은 구도 가이드 색과는 별개, 잠가도 스타일은 유지). 뷰어에서 놓아 둔 커스텀 가이드 가까이 우클릭하면 삭제되고, 「되돌리기」나 Ctrl+Z로 되돌릴 수 있어. 잠긴 가이드는 삭제되지 않아. 「펜」으로 체크·형광·지우기를 할 수 있어(잠금·출력 옵션, 모든 프레임/이 프레임만). 폴더에서 연 기본 영상에서는 픽셀을 못 읽으니 웹사이트나 「영상 불러오기」를 쓰면 돼. 어니언 스킨은 앞(이전)·뒤(다음) 장수를 슬라이더(최대 30)나 숫자로 남은 프레임까지 따로 지정하고, 가장 먼 장 최소 투명도를 고를 수 있어. AI 분석이 503·429·500으로 바쁠 때는 자동으로 다시 시도하고, 「바쁠 때 자동으로 다른 모델로 전환」을 켜 두면 다음 모델로 넘어가. 취소로 멈출 수 있어. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
     </div>
   </div>
 
@@ -1700,6 +1735,10 @@
   </div>
   <style id="pageRule">@page { size: A4 portrait; margin: 0; }</style>
 
+  <div id="fvToast" class="hidden" role="status">
+    <span id="fvToastMsg"></span>
+    <button type="button" id="fvToastAction" class="hidden">되돌리기</button>
+  </div>
   <script>
     (function () {
       let TOTAL = 2700;
@@ -3588,6 +3627,11 @@
       let customSel = -1;
       let customLineArmed = false;
       let customLineStart = null;
+      let customHover = -1;
+      let customGuideUndo = [];
+      let lastGuideCtxMenu = { prevented: false, hit: -1, locked: false };
+      let toastTimer = 0;
+      let lastToast = { msg: "", visible: false, action: "" };
       const CUSTOM_SWATCHES = ["#ff3b30", "#ff8a1a", "#ffd60a", "#34c759", "#00e5ff", "#0a84ff", "#bf5af2", "#ffffff", "#111111"];
       let customDefaultColor = "#ff8a1a";
       let customDefaultWidth = 2;
@@ -3731,9 +3775,11 @@
           if (exportKind && g.output && g.output[exportKind] === false) continue;
           ctx.save();
           applyCustomGuideStyle(ctx, w, g);
-          if (i === customSel && handles) {
+          if ((i === customSel && handles) || i === customHover) {
             ctx.save();
-            ctx.strokeStyle = "rgba(255,220,80,0.75)";
+            ctx.strokeStyle = (i === customHover && !(i === customSel && handles))
+              ? "rgba(255,255,255,0.7)"
+              : "rgba(255,220,80,0.75)";
             ctx.lineWidth = ctx.lineWidth + 3;
             ctx.setLineDash([]);
             strokeCustomGuide(ctx, g, w, h);
@@ -3876,13 +3922,73 @@
         redrawGuides();
         return g;
       }
-      function removeCustomGuide(i) {
-        if (customLock) return;
+      function hideToast() {
+        if (toastTimer) { clearTimeout(toastTimer); toastTimer = 0; }
+        const el = $("fvToast");
+        if (el) el.classList.add("hidden");
+        lastToast.visible = false;
+        const btn = $("fvToastAction");
+        if (btn) { btn.classList.add("hidden"); btn.onclick = null; }
+      }
+      function showToast(msg, action) {
+        const el = $("fvToast");
+        const text = $("fvToastMsg");
+        const btn = $("fvToastAction");
+        lastToast = { msg: msg || "", visible: true, action: (action && action.label) || "" };
+        if (text) text.textContent = msg || "";
+        if (btn) {
+          if (action && action.label && action.onClick) {
+            btn.classList.remove("hidden");
+            btn.textContent = action.label;
+            btn.onclick = function () { hideToast(); action.onClick(); };
+          } else {
+            btn.classList.add("hidden");
+            btn.onclick = null;
+          }
+        }
+        if (el) el.classList.remove("hidden");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(hideToast, 4500);
+      }
+      function cloneCustomGuide(g) {
+        try { return JSON.parse(JSON.stringify(g)); } catch (e) { return Object.assign({}, g); }
+      }
+      function removeCustomGuide(i, opts) {
+        opts = opts || {};
+        if (i == null || i < 0 || i >= customGuides.length) return false;
+        if (customLock) {
+          showToast("잠긴 가이드는 삭제할 수 없어요");
+          return false;
+        }
+        const g = customGuides[i];
+        customGuideUndo.push({ typ: "remove", i: i, guide: cloneCustomGuide(g), sel: customSel });
+        if (customGuideUndo.length > 40) customGuideUndo.shift();
         customGuides.splice(i, 1);
+        if (customHover === i) customHover = -1;
+        else if (customHover > i) customHover--;
+        if (customSel === i) customSel = -1;
+        else if (customSel > i) customSel--;
         if (customSel >= customGuides.length) customSel = customGuides.length - 1;
         schedulePersist();
         syncCustomList();
         redrawGuides();
+        if (opts.silent) return true;
+        showToast("가이드를 삭제했어.", { label: "되돌리기", onClick: undoLastCustomGuide });
+        return true;
+      }
+      function undoLastCustomGuide() {
+        const u = customGuideUndo.pop();
+        if (!u) return false;
+        if (u.typ === "remove" && u.guide) {
+          const at = Math.max(0, Math.min(customGuides.length, u.i));
+          customGuides.splice(at, 0, u.guide);
+          customSel = at;
+        }
+        schedulePersist();
+        syncCustomList();
+        redrawGuides();
+        showToast("가이드를 되돌렸어.");
+        return true;
       }
       function setCustomGuideStyle(i, opts) {
         if (i == null) i = customSel;
@@ -3969,10 +4075,10 @@
         }
         return -1;
       }
-      function hitCustomGuide(nx, ny) {
-        const c = $("guideCanvas") || $("toolCanvas");
+      function hitCustomGuide(nx, ny, pxTol) {
+        const c = $("guideCanvas") || $("toolCanvas") || $("viewport");
         const r = c ? c.getBoundingClientRect() : { width: 800, height: 450 };
-        const tol = 6 / Math.min(r.height, r.width);
+        const tol = Math.max(1, pxTol == null ? 8 : pxTol) / Math.max(1, Math.min(r.height, r.width));
         let best = -1, bd = tol;
         for (let i = 0; i < customGuides.length; i++) {
           const g = customGuides[i];
@@ -4056,6 +4162,9 @@
           const arr = u.scope === "frame" ? (penByFrame[String(u.frame)] || []) : penAll;
           const i = arr.lastIndexOf(u.stroke);
           if (i >= 0) arr.splice(i, 1);
+        } else if (u.typ === "remove") {
+          const arr = u.scope === "frame" ? (penByFrame[String(u.frame)] || (penByFrame[String(u.frame)] = [])) : penAll;
+          arr.splice(Math.max(0, Math.min(arr.length, u.i == null ? arr.length : u.i)), 0, u.stroke);
         } else if (u.typ === "clear") {
           if (u.scope === "frame") penByFrame[String(u.frame)] = u.saved || [];
           else penAll = u.saved || [];
@@ -5805,6 +5914,11 @@
             e.preventDefault();
             e.target.blur();
           }
+          return;
+        }
+        if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "z" || e.key === "Z") && !e.shiftKey) {
+          e.preventDefault();
+          if (!undoLastCustomGuide() && toolMode === "pen") penUndoOnce();
           return;
         }
         if (e.key === "Escape") {
@@ -8460,6 +8574,9 @@
           syncCustomDefaultUI();
         },
         setCustomLock: function (on) { customLock = !!on; if ($("customLockChk")) $("customLockChk").checked = customLock; schedulePersist(); syncCustomList(); },
+        undoCustomGuide: undoLastCustomGuide,
+        getToast: function () { return { msg: lastToast.msg, visible: !!lastToast.visible, action: lastToast.action }; },
+        getLastGuideContextMenu: function () { return { prevented: !!lastGuideCtxMenu.prevented, hit: lastGuideCtxMenu.hit, locked: !!lastGuideCtxMenu.locked }; },
         getPenStrokes: function () { return { all: penAll.slice(), byFrame: JSON.parse(JSON.stringify(penByFrame)) }; },
         addPenStroke: storePenStroke,
         setPenExport: function (k, v) { penExport[k] = !!v; schedulePersist(); },
@@ -8833,6 +8950,101 @@
           $(id).addEventListener("pointercancel", function () { rulerDrag = null; });
         });
       })();
+      function distToPenPts(nx, ny, pts) {
+        if (!pts || pts.length < 2) return 1;
+        let best = 1;
+        if (pts.length < 4) return Math.hypot(nx - pts[0], ny - pts[1]);
+        for (let i = 0; i + 3 < pts.length; i += 2) {
+          const x1 = pts[i], y1 = pts[i + 1], x2 = pts[i + 2], y2 = pts[i + 3];
+          const dx = x2 - x1, dy = y2 - y1, len2 = dx * dx + dy * dy || 1e-8;
+          let tt = ((nx - x1) * dx + (ny - y1) * dy) / len2;
+          tt = Math.max(0, Math.min(1, tt));
+          const d = Math.hypot(nx - (x1 + tt * dx), ny - (y1 + tt * dy));
+          if (d < best) best = d;
+        }
+        return best;
+      }
+      function hitPenStrokeAt(nx, ny, pxTol) {
+        const c = $("viewport");
+        const r = c ? c.getBoundingClientRect() : { width: 800, height: 450 };
+        const tol = Math.max(1, pxTol == null ? 8 : pxTol) / Math.max(1, Math.min(r.width, r.height));
+        let best = null, bd = tol;
+        function consider(arr, scope, frameN) {
+          if (!arr) return;
+          for (let i = 0; i < arr.length; i++) {
+            const d = distToPenPts(nx, ny, (arr[i] && arr[i].pts) || []);
+            if (d < bd) { bd = d; best = { scope: scope, frame: frameN, i: i, stroke: arr[i] }; }
+          }
+        }
+        consider(penByFrame[String(frame)] || [], "frame", frame);
+        consider(penAll, "all", frame);
+        return best;
+      }
+      function removePenStrokeAt(hit) {
+        if (!hit) return false;
+        if (penLock) { showToast("잠긴 펜 선은 삭제할 수 없어요"); return false; }
+        const arr = hit.scope === "frame" ? (penByFrame[String(hit.frame)] || []) : penAll;
+        const i = arr.indexOf(hit.stroke);
+        if (i < 0) return false;
+        arr.splice(i, 1);
+        pushPenUndo({ typ: "remove", scope: hit.scope, frame: hit.frame, i: i, stroke: hit.stroke });
+        schedulePersist();
+        redrawGuides();
+        showToast("펜 선을 삭제했어.", { label: "되돌리기", onClick: function () { penUndoOnce(); } });
+        return true;
+      }
+      function setGuideHoverFromEvent(e) {
+        const hint = $("guideHoverHint");
+        const vp = $("viewport");
+        if (!vp) return;
+        const p = eventToNorm(e, vp);
+        const gi = hitCustomGuide(p.x, p.y, 8);
+        if (gi !== customHover) {
+          customHover = gi;
+          redrawGuides();
+        }
+        vp.classList.toggle("guide-hover-del", gi >= 0 && !customLock);
+        if (!hint) return;
+        if (gi < 0) { hint.classList.add("hidden"); return; }
+        hint.textContent = customLock ? "잠긴 가이드는 삭제할 수 없어요" : "우클릭으로 삭제";
+        hint.classList.remove("hidden");
+        const r = vp.getBoundingClientRect();
+        let x = e.clientX - r.left + 12, y = e.clientY - r.top + 14;
+        if (x + 160 > r.width) x = e.clientX - r.left - 160;
+        if (y + 28 > r.height) y = e.clientY - r.top - 28;
+        hint.style.left = Math.max(4, x) + "px";
+        hint.style.top = Math.max(4, y) + "px";
+      }
+      function clearGuideHover() {
+        const hint = $("guideHoverHint");
+        if (hint) hint.classList.add("hidden");
+        if ($("viewport")) $("viewport").classList.remove("guide-hover-del");
+        if (customHover !== -1) { customHover = -1; redrawGuides(); }
+      }
+      $("viewport").addEventListener("contextmenu", function (e) {
+        const p = eventToNorm(e, $("viewport"));
+        const gi = hitCustomGuide(p.x, p.y, 8);
+        lastGuideCtxMenu = { prevented: false, hit: gi, locked: !!customLock };
+        if (gi >= 0) {
+          lastGuideCtxMenu.prevented = true;
+          e.preventDefault();
+          if (customLock) showToast("잠긴 가이드는 삭제할 수 없어요");
+          else removeCustomGuide(gi);
+          return;
+        }
+        const ph = hitPenStrokeAt(p.x, p.y, 8);
+        if (ph) {
+          lastGuideCtxMenu.prevented = true;
+          lastGuideCtxMenu.hit = -2;
+          e.preventDefault();
+          removePenStrokeAt(ph);
+        }
+      });
+      $("viewport").addEventListener("pointermove", function (e) {
+        if (bboxDrag || penStroke || dragGuideStart) return;
+        setGuideHoverFromEvent(e);
+      });
+      $("viewport").addEventListener("pointerleave", function () { clearGuideHover(); });
       document.addEventListener("keydown", function (e) {
         if (isEditable(e.target)) return;
         if ((e.key === "Delete" || e.key === "Backspace") && toolMode === "guide" && customSel >= 0 && !customLock) {
