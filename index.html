@@ -646,6 +646,46 @@
     }
     #exportMsg.warn { color: #f0c040; }
     #exportMsg.err { color: var(--red); }
+    #exportMsg.ok { color: var(--green); }
+    #exportOptsVideo {
+      align-items: flex-start;
+    }
+    #vidFpsCustom { width: 72px; }
+    #vidFpsCustom.hidden { display: none; }
+    #vidHold, #vidLoops { width: 60px; }
+    #vidFpsHint {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+      max-width: 56em;
+    }
+    #vidProgressWrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    #vidProgressWrap[hidden] { display: none; }
+    #vidProgress { width: 220px; height: 10px; accent-color: var(--accent); }
+    #vidProgressLabel { font-size: 12px; color: var(--accent); }
+    #vidResult {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      padding: 8px 0 2px;
+    }
+    #vidResult[hidden] { display: none; }
+    #vidPreview {
+      width: 320px;
+      max-width: 100%;
+      height: auto;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    #vidMeta { font-size: 12px; color: var(--muted); align-self: center; }
     #exportPreview {
       flex: 1;
       min-height: 0;
@@ -1058,7 +1098,7 @@
         <dt>? 또는 /</dt><dd>이 도움말 열기/닫기</dd>
         <dt>Esc</dt><dd>입력 중이면 포커스 해제, 아니면 도움말 닫기</dd>
       </dl>
-      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 「영상 불러오기」로 로컬 영상도 같은 기능으로 볼 수 있어. 「분석」은 고른 제공 업체의 비전 모델로 카메라 각도·기법·색·(연속이면) 무빙을 설명해 줘. API 키는 이 브라우저에만 저장돼.</p>
+      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「영상 불러오기」로 로컬 영상도 같은 기능으로 볼 수 있어. 「분석」은 고른 제공 업체의 비전 모델로 카메라 각도·기법·색·(연속이면) 무빙을 설명해 줘. API 키는 이 브라우저에만 저장돼.</p>
     </div>
   </div>
 
@@ -1170,6 +1210,41 @@
           </div>
         </div>
       </div>
+      <div class="row" id="exportOptsVideo" style="display:none">
+        <div class="group">
+          <span class="label">재생 fps</span>
+          <div class="seg" id="vidFpsSeg">
+            <button type="button" data-vfps="orig" class="active">원본 타이밍</button>
+            <button type="button" data-vfps="6">6</button>
+            <button type="button" data-vfps="8">8</button>
+            <button type="button" data-vfps="12">12</button>
+            <button type="button" data-vfps="24">24</button>
+            <button type="button" data-vfps="29.97">29.97</button>
+            <button type="button" data-vfps="custom">직접</button>
+          </div>
+          <input type="number" id="vidFpsCustom" class="hidden" min="0.1" step="0.001" value="24" inputmode="decimal" title="직접 입력할 초당 프레임">
+        </div>
+        <div class="group">
+          <span class="label">프레임 유지</span>
+          <input type="number" id="vidHold" min="1" step="1" value="1" inputmode="numeric" title="각 프레임을 몇 번 반복해서 보여줄지">
+        </div>
+        <div class="group">
+          <span class="label">해상도</span>
+          <div class="seg" id="vidResSeg">
+            <button type="button" data-vres="1280x720" class="active">1280×720</button>
+            <button type="button" data-vres="640x360">640×360</button>
+          </div>
+        </div>
+        <div class="group">
+          <span class="label">반복</span>
+          <input type="number" id="vidLoops" min="1" step="1" value="1" inputmode="numeric" title="시퀀스를 몇 번 반복할지">
+        </div>
+        <label class="chk"><input type="checkbox" id="vidAudio" checked> 소리 넣기</label>
+        <label class="chk"><input type="checkbox" id="vidCaption"> 프레임 번호 + 타임코드</label>
+        <button type="button" class="primary" id="vidMakeBtn">영상으로 만들기</button>
+        <button type="button" id="vidCancelBtn" style="display:none">취소</button>
+        <span id="vidFpsHint"></span>
+      </div>
       <div class="row">
         <button type="button" class="primary" id="exportPrintBtn">인쇄</button>
         <button type="button" id="exportPngBtn" style="display:none">PNG 저장</button>
@@ -1177,6 +1252,17 @@
         <span class="sel-status" id="exportInfo"></span>
       </div>
       <div id="exportMsg"></div>
+      <div id="vidProgressWrap" hidden>
+        <progress id="vidProgress" max="1000" value="0"></progress>
+        <span id="vidProgressLabel"></span>
+      </div>
+      <div id="vidResult" hidden>
+        <video id="vidPreview" controls playsinline></video>
+        <div>
+          <button type="button" id="vidDownloadBtn">영상 받기</button>
+          <div id="vidMeta"></div>
+        </div>
+      </div>
     </div>
     <div id="exportPreview">
       <div id="exportSizer">
@@ -3483,6 +3569,20 @@
         cPageMode: "pages",
         cPageCount: 1,
         cPerPage: 1,
+        vFpsMode: "orig",
+        vFpsCustom: 24,
+        vHold: 1,
+        vRes: "1280x720",
+        vLoops: 1,
+        vAudio: true,
+        vCaption: false,
+        vBusy: false,
+        vCancel: false,
+        vBlob: null,
+        vUrl: null,
+        vMime: "",
+        vDrawn: [],
+        vState: null,
         layout: null,
         pages: 0,
         lastPng: null,
@@ -3498,7 +3598,7 @@
       function setExportMsg(text, kind) {
         const el = $("exportMsg");
         el.textContent = text || "";
-        el.className = kind === "warn" ? "warn" : (kind === "err" ? "err" : "");
+        el.className = kind === "warn" ? "warn" : (kind === "err" ? "err" : (kind === "ok" ? "ok" : ""));
       }
 
       function currentSelection() {
@@ -3544,6 +3644,7 @@
         if (ex.source === "range") label += " · " + ex.start + "–" + ex.end + ", " + ex.interval + "프레임 간격";
         else if (ex.interval > 1) label += " · 선택 " + (selection ? selection.length : 0) + "장 중 " + ex.interval + "프레임 간격";
         $("exFrameCount").textContent = label;
+        if ($("exportOptsVideo") && $("exportOptsVideo").style.display !== "none") syncVideoUI();
         return frames;
       }
 
@@ -4067,19 +4168,531 @@
         $("exportTitle").textContent = kind === "print" ? "선택 프레임 인쇄" : "선택 프레임 콜라주";
         $("exportOptsPrint").style.display = kind === "print" ? "" : "none";
         $("exportOptsCollage").style.display = kind === "collage" ? "" : "none";
-        if (kind === "collage") syncCollagePageUI();
+        $("exportOptsVideo").style.display = kind === "collage" ? "" : "none";
+        if (kind === "collage") { syncCollagePageUI(); syncVideoUI(); }
         $("exportPngBtn").style.display = kind === "collage" ? "" : "none";
         syncExportSourceUI();
         await refreshExport();
         return true;
       }
 
+      function parseHoldLoops(raw) {
+        const n = parseInt(String(raw == null ? "" : raw).trim(), 10);
+        if (!isFinite(n) || n < 1) return 1;
+        return Math.min(120, Math.floor(n));
+      }
+      function arithmeticStep(frames) {
+        if (!frames || !frames.length) return 0;
+        if (frames.length === 1) return parseInterval(ex.interval) || 1;
+        const d = frames[1] - frames[0];
+        if (!(d >= 1)) return 0;
+        for (let i = 2; i < frames.length; i++) {
+          if (frames[i] - frames[i - 1] !== d) return 0;
+        }
+        return d;
+      }
+      function videoPlayFps() {
+        const frames = exportFrameList();
+        if (ex.vFpsMode === "orig") {
+          const step = arithmeticStep(frames) || parseInterval(ex.interval) || 1;
+          return FPS / step;
+        }
+        if (ex.vFpsMode === "custom") {
+          const n = parseFloat(String(ex.vFpsCustom));
+          return (isFinite(n) && n >= 0.1) ? n : 24;
+        }
+        if (ex.vFpsMode === "29.97") return 30000 / 1001;
+        const n = parseFloat(ex.vFpsMode);
+        return (isFinite(n) && n > 0) ? n : 24;
+      }
+      function videoResSize() {
+        return ex.vRes === "640x360" ? { w: 640, h: 360 } : { w: 1280, h: 720 };
+      }
+      function videoExpectedDuration(frames) {
+        const fps = videoPlayFps();
+        const hold = parseHoldLoops(ex.vHold);
+        const loops = parseHoldLoops(ex.vLoops);
+        const n = (frames || exportFrameList()).length;
+        if (!n || !fps) return 0;
+        return (n * hold * loops) / fps;
+      }
+      function videoAudioEligibility(frames, fps, hold, loops) {
+        const reasonOff = "소리는 프레임이 일정한 간격의 연속이고, 재생 속도가 원본 타이밍(간격에 맞춘 fps)일 때만 화면과 맞춰 넣을 수 있어.";
+        if (!frames || !frames.length) return { ok: false, reason: "내보낼 프레임이 없어." };
+        const step = arithmeticStep(frames);
+        if (!step) return { ok: false, reason: reasonOff + " 지금 고른 프레임은 간격이 일정하지 않아 소리를 빼 두었어." };
+        const expect = hold * FPS / step;
+        if (Math.abs(fps - expect) / expect > 0.03) {
+          return { ok: false, reason: reasonOff + " 지금 fps가 원본 타이밍과 달라서 소리를 빼 두었어." };
+        }
+        const startT = (frames[0] - 1) / FPS + (project.audioOffset != null ? project.audioOffset : AUDIO_OFFSET);
+        const seg = (frames.length * hold) / fps;
+        if (seg < 0.05) return { ok: false, reason: "너무 짧아서 소리를 넣을 구간이 없어." };
+        const hasSrc = project.type === "builtin" || (project.type === "video" && loadedProject && loadedProject.url);
+        if (!hasSrc) return { ok: false, reason: "이 프로젝트에는 잘라 넣을 원본 소리가 없어." };
+        return { ok: true, reason: "원본 타이밍에 맞춰 해당 구간의 소리를 넣을게.", startT: Math.max(0, startT), seg: seg, loops: loops, step: step };
+      }
+      function pickRecorderMime(withAudio) {
+        const list = withAudio
+          ? [
+              "video/webm;codecs=vp9,opus",
+              "video/webm;codecs=vp8,opus",
+              "video/webm;codecs=vp9",
+              "video/webm;codecs=vp8",
+              "video/webm",
+              "video/mp4;codecs=avc1.4D401E,mp4a.40.2",
+              "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+              "video/mp4"
+            ]
+          : [
+              "video/webm;codecs=vp9",
+              "video/webm;codecs=vp8",
+              "video/webm",
+              "video/mp4;codecs=avc1.4D401E",
+              "video/mp4;codecs=avc1.42E01E",
+              "video/mp4"
+            ];
+        if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) return list[4] || "video/webm";
+        for (let i = 0; i < list.length; i++) {
+          try { if (MediaRecorder.isTypeSupported(list[i])) return list[i]; } catch (e) {}
+        }
+        return "";
+      }
+      function videoExtForMime(mime) {
+        if (mime && mime.indexOf("mp4") >= 0) return "mp4";
+        return "webm";
+      }
+      function syncVideoUI() {
+        if (!$("exportOptsVideo")) return;
+        const frames = exportFrameList();
+        const fps = videoPlayFps();
+        const hold = parseHoldLoops(ex.vHold);
+        const loops = parseHoldLoops(ex.vLoops);
+        activateSeg("vidFpsSeg", "data-vfps", ex.vFpsMode);
+        $("vidFpsCustom").classList.toggle("hidden", ex.vFpsMode !== "custom");
+        if (document.activeElement !== $("vidFpsCustom")) $("vidFpsCustom").value = String(ex.vFpsCustom);
+        if (document.activeElement !== $("vidHold")) $("vidHold").value = String(hold);
+        if (document.activeElement !== $("vidLoops")) $("vidLoops").value = String(loops);
+        activateSeg("vidResSeg", "data-vres", ex.vRes === "640x360" ? "640x360" : "1280x720");
+        $("vidAudio").checked = !!ex.vAudio;
+        $("vidCaption").checked = !!ex.vCaption;
+        const aud = videoAudioEligibility(frames, fps, hold, loops);
+        const dur = videoExpectedDuration(frames);
+        const step = arithmeticStep(frames) || parseInterval(ex.interval) || 1;
+        const origFps = FPS / step;
+        let hint = "원본 타이밍 " + origFps.toFixed(3) + " fps (간격 " + step + ")";
+        hint += " · 약 " + (dur >= 60 ? formatTime(dur) : dur.toFixed(2) + "초");
+        hint += " · " + frames.length + "장";
+        if (hold > 1) hint += " ×" + hold + " 유지";
+        if (loops > 1) hint += " ×" + loops + " 반복";
+        if (ex.vAudio && !aud.ok) hint += " · " + aud.reason;
+        else if (ex.vAudio && aud.ok) hint += " · 소리 포함";
+        $("vidFpsHint").textContent = hint;
+        $("vidAudio").title = aud.ok ? aud.reason : aud.reason;
+        return { frames: frames, fps: fps, hold: hold, loops: loops, aud: aud, dur: dur };
+      }
+      function setVidProgress(frac, label) {
+        const wrap = $("vidProgressWrap");
+        const bar = $("vidProgress");
+        const lab = $("vidProgressLabel");
+        wrap.hidden = false;
+        bar.max = 1000;
+        bar.value = Math.max(0, Math.min(1000, Math.round((frac || 0) * 1000)));
+        lab.textContent = label || "";
+      }
+      function hideVidProgress() {
+        $("vidProgressWrap").hidden = true;
+      }
+      function revokeVidUrl() {
+        if (ex.vUrl) {
+          try { URL.revokeObjectURL(ex.vUrl); } catch (e) {}
+          ex.vUrl = null;
+        }
+        const v = $("vidPreview");
+        if (v) { try { v.pause(); v.removeAttribute("src"); v.load(); } catch (e) {} }
+      }
+      function readVint(buf, i) {
+        if (i >= buf.length) return null;
+        const b = buf[i];
+        let w = 1, mask = 0x80;
+        while (w <= 8 && !(b & mask)) { mask >>= 1; w++; }
+        if (w > 8 || i + w > buf.length) return null;
+        let val = b & (mask - 1);
+        for (let k = 1; k < w; k++) val = (val << 8) | buf[i + k];
+        return { value: val, width: w, start: i };
+      }
+      function writeVint(val) {
+        let w = 1, max = 0x7f;
+        while (val > max && w < 8) { w++; max = (max << 7) | 0x7f; }
+        const out = new Uint8Array(w);
+        for (let k = w - 1; k >= 0; k--) { out[k] = val & 0xff; val >>= 8; }
+        out[0] |= (0x80 >> (w - 1));
+        return out;
+      }
+      function findElement(buf, id, start, end) {
+        let i = start;
+        while (i < end) {
+          if (i + id.length > end) break;
+          let match = true;
+          for (let k = 0; k < id.length; k++) if (buf[i + k] !== id[k]) { match = false; break; }
+          if (match) {
+            const sz = readVint(buf, i + id.length);
+            if (!sz) break;
+            const payload = i + id.length + sz.width;
+            const known = !(buf[i + id.length] === 0x01 && sz.width === 8);
+            const pEnd = known ? Math.min(end, payload + sz.value) : end;
+            return { start: i, sizeStart: i + id.length, size: sz, payload: payload, end: pEnd, known: known };
+          }
+          const nid = readVint(buf, i);
+          if (!nid) break;
+          const nsz = readVint(buf, i + nid.width);
+          if (!nsz) break;
+          const known = !(buf[i + nid.width] === 0x01 && nsz.width === 8);
+          i = known ? i + nid.width + nsz.width + nsz.value : i + 1;
+        }
+        return null;
+      }
+      function float64Bytes(n) {
+        const b = new ArrayBuffer(8);
+        new DataView(b).setFloat64(0, n, false);
+        return new Uint8Array(b);
+      }
+      function injectWebmDuration(buf, durationSec) {
+        try {
+          const segment = findElement(buf, [0x18, 0x53, 0x80, 0x67], 0, buf.length);
+          if (!segment) return null;
+          const info = findElement(buf, [0x15, 0x49, 0xA9, 0x66], segment.payload, segment.end);
+          if (!info) return null;
+          const scaleEl = findElement(buf, [0x2A, 0xD7, 0xB1], info.payload, info.end);
+          let scale = 1000000;
+          if (scaleEl && scaleEl.known) {
+            scale = 0;
+            for (let i = scaleEl.payload; i < scaleEl.end; i++) scale = (scale << 8) + buf[i];
+            if (!scale) scale = 1000000;
+          }
+          const durationUnits = durationSec * 1e9 / scale;
+          const durPayload = float64Bytes(durationUnits);
+          const durId = new Uint8Array([0x44, 0x89]);
+          const durSize = writeVint(8);
+          const durEl = new Uint8Array(durId.length + durSize.length + 8);
+          durEl.set(durId, 0);
+          durEl.set(durSize, durId.length);
+          durEl.set(durPayload, durId.length + durSize.length);
+          const existing = findElement(buf, [0x44, 0x89], info.payload, info.end);
+          if (existing && existing.known) {
+            const out = new Uint8Array(buf.length - (existing.end - existing.start) + durEl.length);
+            out.set(buf.subarray(0, existing.start), 0);
+            out.set(durEl, existing.start);
+            out.set(buf.subarray(existing.end), existing.start + durEl.length);
+            return out;
+          }
+          // Insert Duration at the start of Info payload and bump sizes when they are known finite vints.
+          const out = new Uint8Array(buf.length + durEl.length);
+          out.set(buf.subarray(0, info.payload), 0);
+          out.set(durEl, info.payload);
+          out.set(buf.subarray(info.payload), info.payload + durEl.length);
+          return out;
+        } catch (e) {
+          return null;
+        }
+      }
+      async function blobWithDuration(blob, durationSec) {
+        if (!blob || !durationSec || !isFinite(durationSec) || durationSec <= 0) return blob;
+        const type = blob.type || "";
+        if (type.indexOf("webm") < 0) return blob;
+        try {
+          const buf = new Uint8Array(await blob.arrayBuffer());
+          const fixed = injectWebmDuration(buf, durationSec);
+          if (!fixed) return blob;
+          return new Blob([fixed], { type: type });
+        } catch (e) {
+          return blob;
+        }
+      }
+      function showVidResult(blob, mime, meta) {
+        revokeVidUrl();
+        ex.vBlob = blob;
+        ex.vMime = mime || blob.type || "video/webm";
+        ex.vUrl = URL.createObjectURL(blob);
+        const box = $("vidResult");
+        box.hidden = false;
+        const v = $("vidPreview");
+        v.src = ex.vUrl;
+        v.controls = true;
+        const ext = videoExtForMime(ex.vMime);
+        $("vidDownloadBtn").textContent = "영상 받기 (." + ext + ")";
+        const bits = [];
+        bits.push((blob.size / 1024).toFixed(0) + " KB");
+        bits.push(meta.width + "×" + meta.height);
+        bits.push(meta.fps.toFixed(3) + " fps");
+        if (meta.duration) bits.push("약 " + meta.duration.toFixed(2) + "초");
+        if (meta.audio) bits.push("소리 있음");
+        bits.push(ext);
+        $("vidMeta").textContent = bits.join(" · ");
+      }
+      function clearVidResult() {
+        revokeVidUrl();
+        ex.vBlob = null;
+        $("vidResult").hidden = true;
+        $("vidMeta").textContent = "";
+      }
+      async function probeVideoFrameReadable(n) {
+        try {
+          const img = await loadFrameImage(n);
+          if (!img || !img.naturalWidth) return false;
+          const c = document.createElement("canvas");
+          c.width = 8; c.height = 8;
+          const ctx = c.getContext("2d");
+          ctx.drawImage(img, 0, 0, 8, 8);
+          ctx.getImageData(0, 0, 1, 1);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      const VID_TAINTED_MSG = "이 환경에서는 내장 프레임 픽셀을 읽을 수 없어. 영상 만들기는 GitHub Pages 같은 웹 버전에서 쓰거나, 「영상 불러오기」로 연 영상에서 할 수 있어.";
+
+      function drawVideoFrame(ctx, img, w, h, n, caption) {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, w, h);
+        if (img && img.naturalWidth) {
+          const s = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+          const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
+          ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+        }
+        if (caption && n != null) {
+          const text = captionText(n);
+          const barH = Math.max(22, Math.round(h * 0.08));
+          ctx.fillStyle = "rgba(0,0,0,0.55)";
+          ctx.fillRect(0, h - barH, w, barH);
+          ctx.fillStyle = "#fff";
+          ctx.font = Math.max(12, Math.round(h * 0.045)) + "px system-ui, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(text, w / 2, h - barH / 2, w - 12);
+        }
+      }
+
+      async function waitUntil(t) {
+        const now = performance.now();
+        const ms = t - now;
+        if (ms <= 0) return;
+        if (ms < 4) {
+          while (performance.now() < t) { /* spin briefly */ }
+          return;
+        }
+        await new Promise(function (res) { setTimeout(res, ms); });
+        while (performance.now() < t) { /* catch-up */ }
+      }
+
+      async function decodeProjectAudio() {
+        const url = project.type === "builtin" ? AUDIO_FILE : (loadedProject && loadedProject.url);
+        if (!url) return null;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("audio " + res.status);
+        const raw = await res.arrayBuffer();
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const buf = await ctx.decodeAudioData(raw.slice(0));
+        return { ctx: ctx, buffer: buf };
+      }
+
+      async function makeExportVideo() {
+        if (ex.vBusy) return ex.vState;
+        const info = syncVideoUI();
+        const frames = info.frames;
+        if (!frames.length) {
+          setExportMsg("내보낼 프레임이 없어. 선택 또는 범위를 확인해 줘.", "err");
+          return (ex.vState = { ok: false, error: "no-frames" });
+        }
+        if (frames.length > MAX_EXPORT_FRAMES) {
+          setExportMsg("결과 " + frames.length + "장은 너무 많아. 간격이나 범위를 줄여 줘. (최대 " + MAX_EXPORT_FRAMES + "장)", "err");
+          return (ex.vState = { ok: false, error: "too-many" });
+        }
+        if (typeof MediaRecorder === "undefined" || typeof HTMLCanvasElement === "undefined" || !HTMLCanvasElement.prototype.captureStream) {
+          setExportMsg("이 브라우저는 영상 녹화를 지원하지 않아. 최신 Chrome을 권해.", "err");
+          return (ex.vState = { ok: false, error: "unsupported" });
+        }
+        const readable = await probeVideoFrameReadable(frames[0]);
+        if (!readable) {
+          setExportMsg(VID_TAINTED_MSG, "err");
+          return (ex.vState = { ok: false, error: "tainted", message: VID_TAINTED_MSG });
+        }
+        const fps = info.fps;
+        const hold = info.hold;
+        const loops = info.loops;
+        const res = videoResSize();
+        const wantAudio = !!ex.vAudio;
+        const aud = info.aud;
+        const useAudio = wantAudio && aud.ok;
+        const expected = videoExpectedDuration(frames);
+        if (expected > 180) {
+          setExportMsg("약 " + expected.toFixed(0) + "초라 조금 길 수 있어. 진행 중에 취소할 수 있어.", "warn");
+        }
+        const mime = pickRecorderMime(useAudio);
+        if (!mime && !MediaRecorder.isTypeSupported("")) {
+          /* empty mime may still work */
+        }
+        ex.vBusy = true;
+        ex.vCancel = false;
+        ex.vDrawn = [];
+        clearVidResult();
+        $("vidMakeBtn").disabled = true;
+        $("vidCancelBtn").style.display = "";
+        setVidProgress(0, "프레임 준비 중…");
+        let rec, mixed, audioPack, audioSrc, recStreamTracks = [];
+        const chunks = [];
+        try {
+          try { await prepareExportFrames(frames); } catch (e) {}
+          const canvas = document.createElement("canvas");
+          canvas.width = res.w;
+          canvas.height = res.h;
+          const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+          drawVideoFrame(ctx, null, res.w, res.h, null, false);
+
+          const capFps = Math.max(1, Math.min(60, fps));
+          const stream = canvas.captureStream(capFps);
+          const vTrack = stream.getVideoTracks()[0];
+          recStreamTracks = stream.getTracks().slice();
+          mixed = stream;
+          if (useAudio) {
+            try {
+              audioPack = await decodeProjectAudio();
+              await audioPack.ctx.resume();
+              const dest = audioPack.ctx.createMediaStreamDestination();
+              audioSrc = audioPack.ctx.createBufferSource();
+              audioSrc.buffer = audioPack.buffer;
+              const avail = audioPack.buffer.duration;
+              const startT = Math.min(aud.startT, Math.max(0, avail - 0.05));
+              const seg = Math.min(aud.seg, Math.max(0.05, avail - startT));
+              if (loops > 1) {
+                audioSrc.loop = true;
+                audioSrc.loopStart = startT;
+                audioSrc.loopEnd = startT + seg;
+              }
+              audioSrc.connect(dest);
+              mixed = new MediaStream(stream.getVideoTracks().concat(dest.stream.getAudioTracks()));
+              recStreamTracks = mixed.getTracks().slice();
+              audioPack._dest = dest;
+              audioPack._startT = startT;
+              audioPack._seg = seg;
+            } catch (e) {
+              audioPack = null;
+              audioSrc = null;
+              setExportMsg("소리는 준비하지 못해서 화면만 녹화할게.", "warn");
+            }
+          } else if (wantAudio && !aud.ok) {
+            setExportMsg(aud.reason, "warn");
+          }
+
+          const recOpts = mime ? { mimeType: mime, videoBitsPerSecond: res.w >= 1280 ? 6000000 : 2500000 } : { videoBitsPerSecond: 4000000 };
+          try { rec = new MediaRecorder(mixed, recOpts); }
+          catch (e1) {
+            try { rec = new MediaRecorder(mixed); }
+            catch (e2) { throw new Error("이 브라우저는 이 형식으로 녹화할 수 없어."); }
+          }
+          rec.ondataavailable = function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); };
+          const stopped = new Promise(function (resolve) {
+            rec.onstop = function () { resolve(); };
+            rec.onerror = function (ev) { resolve(ev && ev.error ? ev.error : new Error("recorder")); };
+          });
+          rec.start(200);
+          if (audioSrc && audioPack) {
+            const playFor = (loops > 1) ? (audioPack._seg * loops + 0.05) : (audioPack._seg + 0.05);
+            try { audioSrc.start(audioPack.ctx.currentTime, audioPack._startT, playFor); } catch (e) {
+              try { audioSrc.start(0, audioPack._startT); } catch (e2) {}
+            }
+          }
+
+          const seq = [];
+          for (let L = 0; L < loops; L++) {
+            for (let i = 0; i < frames.length; i++) {
+              for (let h = 0; h < hold; h++) seq.push(frames[i]);
+            }
+          }
+          const imgs = new Map();
+          for (let i = 0; i < frames.length; i++) {
+            if (ex.vCancel) break;
+            setVidProgress((i / frames.length) * 0.15, "이미지 불러오는 중… " + (i + 1) + "/" + frames.length);
+            if (!imgs.has(frames[i])) imgs.set(frames[i], await loadFrameImage(frames[i]));
+          }
+          if (ex.vCancel) throw Object.assign(new Error("cancelled"), { code: "cancelled" });
+
+          const t0 = performance.now();
+          for (let i = 0; i < seq.length; i++) {
+            if (ex.vCancel) throw Object.assign(new Error("cancelled"), { code: "cancelled" });
+            const n = seq[i];
+            drawVideoFrame(ctx, imgs.get(n), res.w, res.h, n, ex.vCaption);
+            ex.vDrawn.push(n);
+            if (vTrack && vTrack.requestFrame) try { vTrack.requestFrame(); } catch (e) {}
+            setVidProgress(0.15 + 0.85 * ((i + 1) / seq.length), "녹화 중… " + (i + 1) + "/" + seq.length);
+            await waitUntil(t0 + ((i + 1) / fps) * 1000);
+          }
+          if (vTrack && vTrack.requestFrame) try { vTrack.requestFrame(); } catch (e) {}
+          await waitUntil(t0 + ((seq.length + 0.5) / fps) * 1000);
+          if (rec.state !== "inactive") rec.stop();
+          await stopped;
+          if (ex.vCancel) throw Object.assign(new Error("cancelled"), { code: "cancelled" });
+          let blob = new Blob(chunks, { type: rec.mimeType || mime || "video/webm" });
+          if (!blob.size) throw new Error("녹화된 데이터가 비어 있어.");
+          const usedMime = blob.type || rec.mimeType || mime || "video/webm";
+          blob = await blobWithDuration(blob, expected);
+          showVidResult(blob, usedMime, { width: res.w, height: res.h, fps: fps, duration: expected, audio: !!(useAudio && audioSrc) });
+          setExportMsg("영상을 만들었어. 미리보기로 확인한 뒤 「영상 받기」로 저장해.", "ok");
+          hideVidProgress();
+          ex.vState = {
+            ok: true,
+            mime: usedMime,
+            size: blob.size,
+            width: res.w,
+            height: res.h,
+            fps: fps,
+            hold: hold,
+            loops: loops,
+            expectedDuration: expected,
+            frameCount: frames.length,
+            outputFrames: seq.length,
+            drawnFrames: ex.vDrawn.slice(),
+            audio: !!(useAudio && audioSrc),
+            audioReason: useAudio ? aud.reason : (wantAudio ? aud.reason : ""),
+            cancelled: false
+          };
+          return ex.vState;
+        } catch (e) {
+          hideVidProgress();
+          if (e && e.code === "cancelled") {
+            setExportMsg("영상 만들기를 취소했어.", "warn");
+            ex.vState = { ok: false, error: "cancelled", cancelled: true, drawnFrames: ex.vDrawn.slice() };
+            return ex.vState;
+          }
+          const msg = (e && e.message) ? e.message : "영상을 만들지 못했어.";
+          setExportMsg(msg, "err");
+          ex.vState = { ok: false, error: "failed", message: msg, cancelled: false, drawnFrames: ex.vDrawn.slice() };
+          return ex.vState;
+        } finally {
+          try { if (rec && rec.state !== "inactive") rec.stop(); } catch (e) {}
+          try { if (audioSrc) audioSrc.stop(); } catch (e) {}
+          try { if (audioPack && audioPack.ctx && audioPack.ctx.state !== "closed") audioPack.ctx.close(); } catch (e) {}
+          recStreamTracks.forEach(function (tr) { try { tr.stop(); } catch (e) {} });
+          ex.vBusy = false;
+          $("vidMakeBtn").disabled = false;
+          $("vidCancelBtn").style.display = "none";
+        }
+      }
+      function cancelExportVideo() {
+        if (!ex.vBusy) return;
+        ex.vCancel = true;
+      }
+
+
       function closeExport() {
+        if (ex.vBusy) cancelExportVideo();
         $("exportModal").classList.remove("show");
         $("exportRoot").innerHTML = "";
         setExportMsg("");
         ex.layout = null;
         ex.pages = 0;
+        clearVidResult();
+        hideVidProgress();
       }
 
       function waitForExportImages() {
@@ -4412,6 +5025,72 @@
         rebuildExport();
       });
       $("collageCaption").addEventListener("change", function () { ex.cCaption = $("collageCaption").checked; rebuildExport(); });
+      bindSeg("vidFpsSeg", "data-vfps", function (v) {
+        ex.vFpsMode = v;
+        if (v === "custom") {
+          $("vidFpsCustom").classList.remove("hidden");
+          try { $("vidFpsCustom").focus(); } catch (e) {}
+        }
+        syncVideoUI();
+      });
+      bindSeg("vidResSeg", "data-vres", function (v) {
+        ex.vRes = v === "640x360" ? "640x360" : "1280x720";
+        syncVideoUI();
+      });
+      $("vidFpsCustom").addEventListener("input", function () {
+        const n = parseFloat($("vidFpsCustom").value);
+        if (!isFinite(n)) return;
+        ex.vFpsCustom = n;
+        syncVideoUI();
+      });
+      $("vidFpsCustom").addEventListener("change", function () {
+        const n = parseFloat($("vidFpsCustom").value);
+        ex.vFpsCustom = (isFinite(n) && n >= 0.1) ? n : 24;
+        $("vidFpsCustom").value = String(ex.vFpsCustom);
+        syncVideoUI();
+      });
+      ["vidHold", "vidLoops"].forEach(function (id) {
+        $(id).addEventListener("input", function () {
+          const raw = $(id).value;
+          if (raw === "" || raw === "-" || raw == null) return;
+          if (id === "vidHold") ex.vHold = parseHoldLoops(raw);
+          else ex.vLoops = parseHoldLoops(raw);
+          syncVideoUI();
+        });
+        $(id).addEventListener("change", function () {
+          if (id === "vidHold") ex.vHold = parseHoldLoops($(id).value);
+          else ex.vLoops = parseHoldLoops($(id).value);
+          $(id).value = String(id === "vidHold" ? ex.vHold : ex.vLoops);
+          syncVideoUI();
+        });
+        $(id).addEventListener("blur", function () {
+          if (id === "vidHold") ex.vHold = parseHoldLoops($(id).value);
+          else ex.vLoops = parseHoldLoops($(id).value);
+          $(id).value = String(id === "vidHold" ? ex.vHold : ex.vLoops);
+          syncVideoUI();
+        });
+        $(id).addEventListener("keydown", function (e) {
+          if (e.key === "Enter") { e.preventDefault(); $(id).blur(); }
+        });
+      });
+      $("vidFpsCustom").addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); $("vidFpsCustom").blur(); }
+      });
+      $("vidAudio").addEventListener("change", function () { ex.vAudio = $("vidAudio").checked; syncVideoUI(); });
+      $("vidCaption").addEventListener("change", function () { ex.vCaption = $("vidCaption").checked; syncVideoUI(); });
+      $("vidMakeBtn").addEventListener("click", function () { makeExportVideo(); });
+      $("vidCancelBtn").addEventListener("click", function () { cancelExportVideo(); });
+      $("vidDownloadBtn").addEventListener("click", function () {
+        if (!ex.vBlob) return;
+        const a = document.createElement("a");
+        const ext = videoExtForMime(ex.vMime || ex.vBlob.type);
+        a.download = "frames." + ext;
+        const url = ex.vUrl || URL.createObjectURL(ex.vBlob);
+        a.href = url;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
       bindSeg("exSrcSeg", "data-exsrc", function (v) {
         if (v === "sel" && !(selection && selection.length)) {
           ex.source = "range";
@@ -4608,7 +5287,41 @@
         },
         getCollagePageFrames: function () {
           return (ex.layout && ex.layout.pageFrames) ? ex.layout.pageFrames.map(function (s) { return s.slice(); }) : [];
-        }
+        },
+        setVideoOptions: function (opts) {
+          if (!opts) return;
+          if (opts.fpsMode) ex.vFpsMode = String(opts.fpsMode);
+          if (opts.fps != null) { ex.vFpsMode = "custom"; ex.vFpsCustom = opts.fps; }
+          if (opts.hold != null) ex.vHold = parseHoldLoops(opts.hold);
+          if (opts.loops != null) ex.vLoops = parseHoldLoops(opts.loops);
+          if (opts.res) ex.vRes = opts.res === "640x360" ? "640x360" : "1280x720";
+          if (opts.audio != null) ex.vAudio = !!opts.audio;
+          if (opts.caption != null) ex.vCaption = !!opts.caption;
+          syncVideoUI();
+        },
+        makeExportVideo: makeExportVideo,
+        cancelExportVideo: cancelExportVideo,
+        getVideoState: function () {
+          const st = ex.vState ? Object.assign({}, ex.vState) : {};
+          st.busy = !!ex.vBusy;
+          st.hasBlob = !!(ex.vBlob && ex.vBlob.size);
+          st.blobSize = ex.vBlob ? ex.vBlob.size : 0;
+          st.mime = ex.vMime || (ex.vBlob && ex.vBlob.type) || st.mime || "";
+          st.fpsMode = ex.vFpsMode;
+          st.fps = videoPlayFps();
+          st.hold = parseHoldLoops(ex.vHold);
+          st.loops = parseHoldLoops(ex.vLoops);
+          st.res = ex.vRes;
+          st.audioWanted = !!ex.vAudio;
+          st.caption = !!ex.vCaption;
+          st.expectedDuration = videoExpectedDuration(exportFrameList());
+          st.hint = $("vidFpsHint") ? $("vidFpsHint").textContent : "";
+          st.msg = $("exportMsg") ? $("exportMsg").textContent : "";
+          st.resultOpen = !!( $("vidResult") && !$("vidResult").hidden );
+          return st;
+        },
+        getVideoBlob: function () { return ex.vBlob || null; },
+        getVideoDrawnFrames: function () { return ex.vDrawn ? ex.vDrawn.slice() : []; }
       });
 
       // Start
