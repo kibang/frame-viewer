@@ -480,10 +480,117 @@
     #fvToastAction { font-size: 12px; }
     #penTools, #customGuideTools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     #penTools.hidden, #customGuideTools.hidden { display: none; }
-    #customList { display: flex; flex-wrap: wrap; gap: 4px; }
-    .custom-item button { padding: 2px 6px; font-size: 11px; }
-    .custom-item.sel button:first-child { outline: 1px solid var(--accent); }
-    .custom-item .chip { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; border: 1px solid rgba(255,255,255,0.35); }
+    #customGuideTools {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+    #customGuideTools.hidden { display: none; }
+    .custom-guide-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    #customListWrap {
+      max-height: 168px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.22);
+    }
+    #customList { display: flex; flex-direction: column; gap: 0; }
+    .custom-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      width: 100%;
+      box-sizing: border-box;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .custom-item:last-child { border-bottom: 0; }
+    .custom-item.sel { background: rgba(255, 200, 80, 0.14); box-shadow: inset 2px 0 0 var(--accent); }
+    .custom-item.hid { opacity: 0.55; }
+    .custom-item .custom-num { width: 1.6em; color: var(--muted); text-align: right; flex: 0 0 auto; }
+    .custom-item-name {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .custom-kind { color: var(--muted); flex: 0 0 auto; font-size: 11px; }
+    .custom-item .chip {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+      border: 1px solid rgba(255,255,255,0.35);
+    }
+    .custom-item button[data-cd] { padding: 2px 8px; font-size: 12px; }
+    #customLineBtn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #1a1408;
+      font-weight: 700;
+      box-shadow: 0 0 0 2px rgba(255, 200, 80, 0.55), 0 0 12px rgba(255, 196, 60, 0.35);
+    }
+    .custom-line-help { position: relative; font-size: 12px; }
+    .custom-line-help summary {
+      cursor: pointer;
+      color: var(--accent);
+      list-style: none;
+      user-select: none;
+    }
+    .custom-line-help summary::-webkit-details-marker { display: none; }
+    .custom-line-help div {
+      position: absolute;
+      z-index: 20;
+      left: 0;
+      top: calc(100% + 6px);
+      width: 280px;
+      background: #1a1a22;
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 8px;
+      color: var(--muted);
+      line-height: 1.45;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    #lineGuideBanner {
+      position: absolute;
+      top: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 14;
+      pointer-events: none;
+      background: rgba(16,16,20,0.94);
+      color: #fff;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    #lineGuideBanner.hidden { display: none; }
+    #fvConfirmBar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0 2px;
+      font-size: 13px;
+    }
+    #fvConfirmBar.hidden { display: none; }
+    #toolRow { align-items: flex-start; }
     #customDefColor, #customSelColor { width: 28px; height: 24px; padding: 0; border: 0; background: none; cursor: pointer; }
     #customStyleTools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     #customStyleTools.hidden { display: none; }
@@ -1155,11 +1262,17 @@
         </div>
         <div class="meta-overlay" id="meta">—</div>
         <div id="guideHoverHint" class="hidden">우클릭으로 삭제</div>
+        <div id="lineGuideBanner" class="hidden">첫 점을 클릭하세요</div>
         <div id="dropMask">영상을 여기에 놓으면 불러와</div>
       </div>
     </div>
 
     <div id="controls">
+      <div id="fvConfirmBar" class="hidden">
+        <span id="fvConfirmMsg">삭제할까요?</span>
+        <button type="button" id="fvConfirmYes">삭제</button>
+        <button type="button" id="fvConfirmNo">취소</button>
+      </div>
       <div class="row scrub-row">
         <button type="button" id="playBtn" class="primary" title="재생/일시정지 (Space)">재생</button>
         <div class="group">
@@ -1344,12 +1457,22 @@
           <button type="button" data-toolmode="pen">펜</button>
         </div>
         <span id="customGuideTools" class="hidden">
-          <button type="button" id="customLineBtn">두 점 선</button>
+          <span class="custom-guide-bar">
+          <button type="button" id="customLineBtn" title="화면에서 첫 점을 클릭한 뒤 두 번째 점을 클릭하세요. 누른 채 끌어다 놓아도 됩니다. Shift는 15도 단위, Esc로 취소. 선을 그린 뒤에도 모드는 유지됩니다.">두 점 선</button>
+          <details class="custom-line-help">
+            <summary>사용법</summary>
+            <div>「두 점 선」을 누른 다음 화면에서 첫 점을 클릭하고, 이어서 두 번째 점을 클릭하세요. 마우스를 누른 채 끌어다 놓아도 됩니다. Shift를 누르면 15도 단위로 맞춰집니다. Esc로 취소합니다. 선을 하나 그린 뒤에도 모드는 유지되고, Esc나 버튼을 다시 누르면 끝납니다.</div>
+          </details>
           <label class="chk"><input type="checkbox" id="customLockChk"> 잠금</label>
           <span class="label" title="미리 잡은 구도 가이드 색과는 따로예요">새 가이드 색</span>
           <input type="color" id="customDefColor" value="#ff8a1a" title="새로 만드는 커스텀 가이드 기본 색">
           <span id="customDefSwatches" class="guide-swatches" title="기본 색 견본"></span>
-          <span id="customList"></span>
+          <button type="button" id="customDelSelBtn" title="선택한 가이드만 삭제 (잠긴 건 건너뜀)">선택 삭제</button>
+          <button type="button" id="customDelAllBtn" title="잠기지 않은 가이드를 모두 삭제">전체 삭제</button>
+          </span>
+          <div id="customListWrap">
+            <div id="customList"></div>
+          </div>
           <span id="customStyleTools" class="hidden">
             <span class="label">선택한 가이드</span>
             <input type="color" id="customSelColor" value="#ff8a1a" title="이 가이드 색">
@@ -1383,7 +1506,8 @@
           <span id="penOpVal">90%</span>
           <button type="button" id="penUndoBtn">되돌리기</button>
           <button type="button" id="penRedoBtn">다시 실행</button>
-          <button type="button" id="penClearBtn">지우기</button>
+          <button type="button" id="penClearBtn" title="지금 범위만 지우기">지우기</button>
+          <button type="button" id="penClearAllBtn" title="모든 프레임의 펜을 지웁니다">펜 전체 지우기</button>
           <div class="seg" id="penScopeSeg">
             <button type="button" data-penscope="all" class="active">모든 프레임</button>
             <button type="button" data-penscope="frame">이 프레임만</button>
@@ -1518,7 +1642,7 @@
         <dt>? 또는 /</dt><dd>이 도움말 열기/닫기</dd>
         <dt>Esc</dt><dd>입력 중이면 포커스 해제, 아니면 도움말 닫기</dd>
       </dl>
-      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. 「구도 가이드 (n)」 버튼을 누르면 삼분할·황금분할·황금나선·황금 삼각형·하모닉 아머처·방사형 등 14가지를 체크박스로 고를 수 있고, G 키로 표시를 켜고 끈다. 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「피사체 박스」는 주요 피사체 상자를 자동으로 잡고(근사, 직접 드래그·크기 조절 가능) 헤드룸·여백 수치를 보여 줘. 「가이드 편집」에서 소실점 드래그, 위·왼쪽 자에서 커스텀 가이드, 두 점 선을 그릴 수 있고, 가이드마다 색·굵기·투명도·실선/점선을 지정할 수 있어(미리 잡은 구도 가이드 색과는 별개, 잠가도 스타일은 유지). 뷰어에서 놓아 둔 커스텀 가이드 가까이 우클릭하면 삭제되고, 「되돌리기」나 Ctrl+Z로 되돌릴 수 있어. 잠긴 가이드는 삭제되지 않아. 「펜」으로 체크·형광·지우기를 할 수 있어(잠금·출력 옵션, 모든 프레임/이 프레임만). 폴더에서 연 기본 영상에서는 픽셀을 못 읽으니 웹사이트나 「영상 불러오기」를 쓰면 돼. 어니언 스킨은 앞(이전)·뒤(다음) 장수를 슬라이더(최대 30)나 숫자로 남은 프레임까지 따로 지정하고, 가장 먼 장 최소 투명도를 고를 수 있어. AI 분석이 503·429·500으로 바쁠 때는 자동으로 다시 시도하고, 「바쁠 때 자동으로 다른 모델로 전환」을 켜 두면 다음 모델로 넘어가. 취소로 멈출 수 있어. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
+      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. 「구도 가이드 (n)」 버튼을 누르면 삼분할·황금분할·황금나선·황금 삼각형·하모닉 아머처·방사형 등 14가지를 체크박스로 고를 수 있고, G 키로 표시를 켜고 끈다. 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「피사체 박스」는 주요 피사체 상자를 자동으로 잡고(근사, 직접 드래그·크기 조절 가능) 헤드룸·여백 수치를 보여 줘. 「가이드 편집」에서 소실점 드래그, 위·왼쪽 자에서 커스텀 가이드, 두 점 선을 그릴 수 있고, 가이드마다 색·굵기·투명도·실선/점선을 지정할 수 있어(미리 잡은 구도 가이드 색과는 별개, 잠가도 스타일은 유지). 뷰어에서 놓아 둔 커스텀 가이드 가까이 우클릭하면 삭제되고, 「되돌리기」나 Ctrl+Z로 되돌릴 수 있어. 잠긴 가이드는 삭제되지 않아. 커스텀 가이드 목록은 한 줄에 하나씩 나오고, 행을 눌러 스타일을 고치거나 잠그거나 숨기거나 지울 수 있어. 「전체 삭제」와 「선택 삭제」로 여러 개를 한 번에 지울 수 있고(잠긴 건 건너뜀), 「되돌리기」나 Ctrl+Z로 한꺼번에 되돌릴 수 있어. 「두 점 선」은 버튼을 누른 뒤 화면에서 두 점을 차례로 클릭하거나 끌어다 놓으면 되고, Shift는 15도 단위, Esc로 취소하며, 선을 그린 뒤에도 모드는 유지돼. 펜은 「펜 전체 지우기」로 모든 획을 지울 수 있어. 「펜」으로 체크·형광·지우기를 할 수 있어(잠금·출력 옵션, 모든 프레임/이 프레임만). 폴더에서 연 기본 영상에서는 픽셀을 못 읽으니 웹사이트나 「영상 불러오기」를 쓰면 돼. 어니언 스킨은 앞(이전)·뒤(다음) 장수를 슬라이더(최대 30)나 숫자로 남은 프레임까지 따로 지정하고, 가장 먼 장 최소 투명도를 고를 수 있어. AI 분석이 503·429·500으로 바쁠 때는 자동으로 다시 시도하고, 「바쁠 때 자동으로 다른 모델로 전환」을 켜 두면 다음 모델로 넘어가. 취소로 멈출 수 있어. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
     </div>
   </div>
 
@@ -3627,6 +3751,13 @@
       let customSel = -1;
       let customLineArmed = false;
       let customLineStart = null;
+      let customLinePreview = null;
+      let customLineRaw = null;
+      let customLineDragging = false;
+      let customLineDown = false;
+      let customLineMade = false;
+      let customPicked = {};
+      let fvConfirmCb = null;
       let customHover = -1;
       let customGuideUndo = [];
       let lastGuideCtxMenu = { prevented: false, hit: -1, locked: false };
@@ -3772,6 +3903,7 @@
       function drawCustomGuides(ctx, w, h, exportKind, handles) {
         for (let i = 0; i < customGuides.length; i++) {
           const g = customGuides[i];
+          if (g.hidden) continue;
           if (exportKind && g.output && g.output[exportKind] === false) continue;
           ctx.save();
           applyCustomGuideStyle(ctx, w, g);
@@ -3888,6 +4020,7 @@
 
       function setToolMode(mode) {
         toolMode = (mode === "guide" || mode === "pen") ? mode : "view";
+        if (toolMode !== "guide" && customLineArmed) setCustomLineArmed(false);
         const seg = $("toolModeSeg");
         if (seg) {
           const btns = seg.querySelectorAll("button");
@@ -3953,17 +4086,225 @@
       function cloneCustomGuide(g) {
         try { return JSON.parse(JSON.stringify(g)); } catch (e) { return Object.assign({}, g); }
       }
+      function isGuideLocked(g) {
+        return !!(customLock || (g && g.locked));
+      }
+      function customGuideLabel(g) {
+        if (!g) return "";
+        if (g.type === "h") return "가로 " + Math.round(g.a * 100) + "%";
+        if (g.type === "v") return "세로 " + Math.round(g.a * 100) + "%";
+        return "두 점 선";
+      }
+      function customGuideKind(g) {
+        if (!g) return "";
+        if (g.type === "h") return "가로";
+        if (g.type === "v") return "세로";
+        return "두 점 선";
+      }
+      function hideFvConfirm() {
+        fvConfirmCb = null;
+        const bar = $("fvConfirmBar");
+        if (bar) bar.classList.add("hidden");
+      }
+      function showFvConfirm(msg, onYes, yesLabel) {
+        fvConfirmCb = onYes;
+        const bar = $("fvConfirmBar");
+        const m = $("fvConfirmMsg");
+        const yes = $("fvConfirmYes");
+        if (m) m.textContent = msg;
+        if (yes) yes.textContent = yesLabel || "삭제";
+        if (bar) bar.classList.remove("hidden");
+      }
+      function guidesToBulkDelete(kind) {
+        const items = [];
+        let skipped = 0;
+        customGuides.forEach(function (g, i) {
+          const want = kind === "all" || (g.id && customPicked[g.id]);
+          if (!want) return;
+          if (isGuideLocked(g)) skipped++;
+          else items.push({ i: i, guide: cloneCustomGuide(g) });
+        });
+        return { items: items, skipped: skipped };
+      }
+      function commitBulkDelete(kind) {
+        const r = guidesToBulkDelete(kind);
+        hideFvConfirm();
+        if (!r.items.length) {
+          if (r.skipped) showToast("잠긴 가이드 " + r.skipped + "개는 건너뛰었어.");
+          else showToast(kind === "sel" ? "선택한 가이드가 없어." : "삭제할 가이드가 없어.");
+          return 0;
+        }
+        customGuideUndo.push({
+          typ: "batch-remove",
+          items: r.items,
+          sel: customSel,
+          picked: Object.assign({}, customPicked)
+        });
+        if (customGuideUndo.length > 40) customGuideUndo.shift();
+        r.items.slice().sort(function (a, b) { return b.i - a.i; }).forEach(function (it) {
+          customGuides.splice(it.i, 1);
+        });
+        customHover = -1;
+        if (customSel >= customGuides.length) customSel = customGuides.length - 1;
+        r.items.forEach(function (it) {
+          if (it.guide && it.guide.id) delete customPicked[it.guide.id];
+        });
+        schedulePersist();
+        syncCustomList();
+        redrawGuides();
+        let msg = "가이드 " + r.items.length + "개를 삭제했어.";
+        if (r.skipped) msg += " 잠긴 가이드 " + r.skipped + "개는 건너뛰었어.";
+        showToast(msg, { label: "되돌리기", onClick: undoLastCustomGuide });
+        return r.items.length;
+      }
+      function requestDeleteAllCustomGuides() {
+        const r = guidesToBulkDelete("all");
+        if (!r.items.length) { commitBulkDelete("all"); return; }
+        let msg = "잠기지 않은 가이드 " + r.items.length + "개를 삭제할까요?";
+        if (r.skipped) msg += " (잠긴 " + r.skipped + "개는 남김)";
+        showFvConfirm(msg, function () { commitBulkDelete("all"); });
+      }
+      function setCustomGuideLocked(i, on) {
+        const g = customGuides[i];
+        if (!g) return g;
+        g.locked = !!on;
+        schedulePersist();
+        syncCustomList();
+        redrawGuides();
+        return g;
+      }
+      function setCustomGuideHidden(i, on) {
+        const g = customGuides[i];
+        if (!g) return g;
+        g.hidden = !!on;
+        schedulePersist();
+        syncCustomList();
+        redrawGuides();
+        return g;
+      }
+      function snapLineEnd(start, p, shift) {
+        let x = clamp01(p.x), y = clamp01(p.y);
+        if (!shift || !start) return { x: x, y: y };
+        const dx = x - start.x, dy = y - start.y;
+        const len = Math.hypot(dx, dy);
+        if (len < 1e-6) return { x: x, y: y };
+        const step = Math.PI / 12;
+        const ang = Math.round(Math.atan2(dy, dx) / step) * step;
+        return { x: clamp01(start.x + Math.cos(ang) * len), y: clamp01(start.y + Math.sin(ang) * len) };
+      }
+      function syncLineModeUI() {
+        const btn = $("customLineBtn");
+        if (btn) btn.classList.toggle("active", !!customLineArmed);
+        document.body.classList.toggle("line-armed", !!customLineArmed);
+        const ban = $("lineGuideBanner");
+        if (!ban) return;
+        if (!customLineArmed || toolMode !== "guide") {
+          ban.classList.add("hidden");
+          return;
+        }
+        ban.classList.remove("hidden");
+        if (!customLineStart) ban.textContent = "첫 점을 클릭하세요";
+        else ban.textContent = "두 번째 점을 클릭하세요 (Esc 취소)";
+      }
+      function resetCustomLineDraft() {
+        customLineStart = null;
+        customLinePreview = null;
+        customLineRaw = null;
+        customLineDragging = false;
+        customLineDown = false;
+      }
+      function setCustomLineArmed(on) {
+        customLineArmed = !!on;
+        resetCustomLineDraft();
+        if (!customLineArmed) customLineMade = false;
+        syncLineModeUI();
+        redrawGuides();
+      }
+      function updateLinePreview(p, shift) {
+        if (!customLineArmed || !customLineStart || !p) return;
+        customLineRaw = { x: p.x, y: p.y };
+        customLinePreview = snapLineEnd(customLineStart, p, shift);
+        if (customLineDown) {
+          const d = Math.hypot(customLinePreview.x - customLineStart.x, customLinePreview.y - customLineStart.y);
+          if (d > 0.012) customLineDragging = true;
+        }
+        syncLineModeUI();
+        redrawGuides();
+      }
+      function finishCustomLine(x, y, shift) {
+        if (!customLineStart) return false;
+        const p = snapLineEnd(customLineStart, { x: x, y: y }, shift);
+        const d = Math.hypot(p.x - customLineStart.x, p.y - customLineStart.y);
+        if (d < 0.008) {
+          customLineDragging = false;
+          return false;
+        }
+        addCustomGuide({ type: "line", x1: customLineStart.x, y1: customLineStart.y, x2: p.x, y2: p.y });
+        resetCustomLineDraft();
+        customLineMade = true;
+        syncLineModeUI();
+        showToast("두 점 선을 추가했어. 버튼을 다시 누르거나 Esc를 누르면 모드가 끝나요.", { ms: 3200 });
+        return true;
+      }
+      function cancelCustomLineEsc() {
+        if (!customLineArmed) return false;
+        if (customLineStart) {
+          resetCustomLineDraft();
+          syncLineModeUI();
+          redrawGuides();
+          return true;
+        }
+        setCustomLineArmed(false);
+        return true;
+      }
+      function drawCustomLinePreview(ctx, w, h) {
+        if (!customLineArmed || !customLineStart) return;
+        const x = customLineStart.x * w, y = customLineStart.y * h;
+        const col = customDefaultColor || "#ff8a1a";
+        ctx.save();
+        ctx.fillStyle = col;
+        ctx.strokeStyle = col;
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#111";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.fillStyle = "#fff";
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        if (customLinePreview) {
+          ctx.strokeStyle = col;
+          ctx.globalAlpha = 0.9;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 4]);
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(customLinePreview.x * w, customLinePreview.y * h);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.fillStyle = col;
+          ctx.arc(customLinePreview.x * w, customLinePreview.y * h, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
       function removeCustomGuide(i, opts) {
         opts = opts || {};
         if (i == null || i < 0 || i >= customGuides.length) return false;
-        if (customLock) {
+        const g = customGuides[i];
+        if (isGuideLocked(g)) {
           showToast("잠긴 가이드는 삭제할 수 없어요");
           return false;
         }
-        const g = customGuides[i];
         customGuideUndo.push({ typ: "remove", i: i, guide: cloneCustomGuide(g), sel: customSel });
         if (customGuideUndo.length > 40) customGuideUndo.shift();
         customGuides.splice(i, 1);
+        if (g && g.id) delete customPicked[g.id];
         if (customHover === i) customHover = -1;
         else if (customHover > i) customHover--;
         if (customSel === i) customSel = -1;
@@ -3983,6 +4324,13 @@
           const at = Math.max(0, Math.min(customGuides.length, u.i));
           customGuides.splice(at, 0, u.guide);
           customSel = at;
+        } else if (u.typ === "batch-remove" && u.items) {
+          u.items.slice().sort(function (a, b) { return a.i - b.i; }).forEach(function (it) {
+            customGuides.splice(Math.max(0, Math.min(customGuides.length, it.i)), 0, it.guide);
+          });
+          if (u.sel >= 0 && u.sel < customGuides.length) customSel = u.sel;
+          else if (customGuides.length) customSel = Math.min(Math.max(0, customSel), customGuides.length - 1);
+          if (u.picked) customPicked = Object.assign({}, u.picked);
         }
         schedulePersist();
         syncCustomList();
@@ -4054,12 +4402,21 @@
         if (!el) return;
         el.innerHTML = "";
         customGuides.forEach(function (g, i) {
-          const row = document.createElement("span");
-          row.className = "custom-item" + (i === customSel ? " sel" : "");
-          const name = g.type === "h" ? "가로 " + Math.round(g.a * 100) + "%" : g.type === "v" ? "세로 " + Math.round(g.a * 100) + "%" : "선";
+          const row = document.createElement("div");
+          const locked = isGuideLocked(g);
+          row.className = "custom-item" + (i === customSel ? " sel" : "") + (g.hidden ? " hid" : "") + (locked ? " locked" : "");
+          row.setAttribute("data-ci", String(i));
           const col = g.color || customDefaultColor || "#ff8a1a";
-          row.innerHTML = "<button type=\"button\" data-ci=\"" + i + "\"><span class=\"chip\" style=\"background:" + col + "\"></span>" + name + "</button>" +
-            (customLock ? "" : "<button type=\"button\" data-cd=\"" + i + "\" title=\"삭제\">×</button>");
+          const picked = !!(g.id && customPicked[g.id]);
+          row.innerHTML =
+            "<input type=\"checkbox\" data-cchk=\"" + i + "\"" + (picked ? " checked" : "") + " title=\"선택\">" +
+            "<span class=\"custom-num\">" + (i + 1) + "</span>" +
+            "<span class=\"custom-item-name\" data-ci=\"" + i + "\"><span class=\"chip\" style=\"background:" + col + "\"></span>" + customGuideLabel(g) + "</span>" +
+            "<span class=\"custom-kind\">" + customGuideKind(g) + "</span>" +
+            "<span class=\"chip custom-swatch\" style=\"background:" + col + "\" title=\"색\"></span>" +
+            "<label class=\"chk custom-lock\" title=\"잠금\"><input type=\"checkbox\" data-clock=\"" + i + "\"" + (g.locked || customLock ? " checked" : "") + (customLock ? " disabled" : "") + "></label>" +
+            "<label class=\"chk custom-vis\" title=\"표시\"><input type=\"checkbox\" data-cvis=\"" + i + "\"" + (g.hidden ? "" : " checked") + "></label>" +
+            "<button type=\"button\" data-cd=\"" + i + "\" title=\"삭제\"" + (locked ? " disabled" : "") + ">×</button>";
           el.appendChild(row);
         });
         syncCustomStyleUI();
@@ -4082,6 +4439,7 @@
         let best = -1, bd = tol;
         for (let i = 0; i < customGuides.length; i++) {
           const g = customGuides[i];
+          if (g.hidden) continue;
           let dist = 1;
           if (g.type === "h") dist = Math.abs(ny - g.a);
           else if (g.type === "v") dist = Math.abs(nx - g.a);
@@ -4168,6 +4526,9 @@
         } else if (u.typ === "clear") {
           if (u.scope === "frame") penByFrame[String(u.frame)] = u.saved || [];
           else penAll = u.saved || [];
+        } else if (u.typ === "clear-all") {
+          penAll = u.savedAll || [];
+          penByFrame = u.savedBy ? JSON.parse(JSON.stringify(u.savedBy)) : {};
         }
         penRedo.push(u);
         schedulePersist();
@@ -4185,6 +4546,9 @@
         } else if (u.typ === "clear") {
           if (u.scope === "frame") penByFrame[String(u.frame)] = [];
           else penAll = [];
+        } else if (u.typ === "clear-all") {
+          penAll = [];
+          penByFrame = {};
         }
         penUndo.push(u);
         schedulePersist();
@@ -4202,6 +4566,25 @@
         }
         schedulePersist();
         redrawGuides();
+      }
+      function penClearAllStrokes() {
+        if (penLock) { showToast("잠긴 펜은 지울 수 없어요"); return false; }
+        let n = penAll.length;
+        Object.keys(penByFrame).forEach(function (k) { n += (penByFrame[k] || []).length; });
+        if (!n) { showToast("지울 펜 획이 없어."); return false; }
+        pushPenUndo({ typ: "clear-all", savedAll: penAll.slice(), savedBy: JSON.parse(JSON.stringify(penByFrame)) });
+        penAll = [];
+        penByFrame = {};
+        schedulePersist();
+        redrawGuides();
+        showToast("펜을 모두 지웠어.", { label: "되돌리기", onClick: function () { penUndoOnce(); } });
+        return true;
+      }
+      function requestPenClearAll() {
+        let n = penAll.length;
+        Object.keys(penByFrame).forEach(function (k) { n += (penByFrame[k] || []).length; });
+        if (!n || penLock) { penClearAllStrokes(); return; }
+        showFvConfirm("모든 펜 획 " + n + "개를 지울까요?", function () { hideFvConfirm(); penClearAllStrokes(); }, "지우기");
       }
 
       function renderRulers() {
@@ -5922,10 +6305,15 @@
           return;
         }
         if (e.key === "Escape") {
+          if (cancelCustomLineEsc()) { e.preventDefault(); return; }
+          hideFvConfirm();
           showHelp(false);
           showGuideMenu(false);
           showImgExport(false);
           return;
+        }
+        if (customLineArmed && customLineStart && customLineRaw && (e.key === "Shift" || e.key === "ShiftLeft" || e.key === "ShiftRight")) {
+          updateLinePreview(customLineRaw, e.type === "keydown");
         }
         if (e.key === "?" || e.key === "/") {
           e.preventDefault();
@@ -7850,6 +8238,7 @@
         const go = guideOptions();
         if (guideOn) drawCompositionGuides(ctx, c.width, c.height, go);
         if (typeof drawCustomGuides === "function") drawCustomGuides(ctx, c.width, c.height, null, toolMode === "guide");
+        if (typeof drawCustomLinePreview === "function") drawCustomLinePreview(ctx, c.width, c.height);
         if (typeof drawPenStrokes === "function") drawPenStrokes(ctx, c.width, c.height, frame, null);
         lastFraming = (typeof effectiveFraming === "function") ? (effectiveFraming() || lastFraming) : lastFraming;
         if (guideShowBBox && lastFraming) {
@@ -8575,6 +8964,34 @@
         },
         setCustomLock: function (on) { customLock = !!on; if ($("customLockChk")) $("customLockChk").checked = customLock; schedulePersist(); syncCustomList(); },
         undoCustomGuide: undoLastCustomGuide,
+        deleteAllCustomGuides: function (opts) {
+          opts = opts || {};
+          if (opts.confirm === false) return commitBulkDelete("all");
+          requestDeleteAllCustomGuides();
+          return 0;
+        },
+        deleteSelectedCustomGuides: function () { return commitBulkDelete("sel"); },
+        setCustomGuideLocked: setCustomGuideLocked,
+        setCustomGuideHidden: setCustomGuideHidden,
+        setCustomPicked: function (ids) {
+          customPicked = {};
+          (ids || []).forEach(function (id) { customPicked[id] = true; });
+          syncCustomList();
+        },
+        setCustomLineArmed: setCustomLineArmed,
+        getCustomLineState: function () {
+          const ban = $("lineGuideBanner");
+          return {
+            armed: !!customLineArmed,
+            start: customLineStart ? { x: customLineStart.x, y: customLineStart.y } : null,
+            preview: customLinePreview ? { x: customLinePreview.x, y: customLinePreview.y } : null,
+            dragging: !!customLineDragging,
+            banner: ban ? ban.textContent : "",
+            bannerVisible: !!(ban && !ban.classList.contains("hidden"))
+          };
+        },
+        snapLineEnd: snapLineEnd,
+        penClearAll: requestPenClearAll,
         getToast: function () { return { msg: lastToast.msg, visible: !!lastToast.visible, action: lastToast.action }; },
         getLastGuideContextMenu: function () { return { prevented: !!lastGuideCtxMenu.prevented, hit: lastGuideCtxMenu.hit, locked: !!lastGuideCtxMenu.locked }; },
         getPenStrokes: function () { return { all: penAll.slice(), byFrame: JSON.parse(JSON.stringify(penByFrame)) }; },
@@ -8748,15 +9165,47 @@
       $("customLockChk").addEventListener("change", function () { customLock = $("customLockChk").checked; schedulePersist(); syncCustomList(); });
       $("customLineBtn").addEventListener("click", function () {
         if (customLock) return;
-        customLineArmed = !customLineArmed;
-        customLineStart = null;
-        $("customLineBtn").classList.toggle("active", customLineArmed);
+        setCustomLineArmed(!customLineArmed);
       });
+      if ($("customDelAllBtn")) $("customDelAllBtn").addEventListener("click", requestDeleteAllCustomGuides);
+      if ($("customDelSelBtn")) $("customDelSelBtn").addEventListener("click", function () { commitBulkDelete("sel"); });
+      if ($("fvConfirmYes")) $("fvConfirmYes").addEventListener("click", function () {
+        const cb = fvConfirmCb;
+        if (cb) cb();
+      });
+      if ($("fvConfirmNo")) $("fvConfirmNo").addEventListener("click", hideFvConfirm);
+      if ($("penClearAllBtn")) $("penClearAllBtn").addEventListener("click", requestPenClearAll);
       $("customList").addEventListener("click", function (e) {
-        const d = e.target.closest("[data-cd]");
-        const s = e.target.closest("[data-ci]");
+        const t = e.target;
+        if (t.closest("[data-cchk]") || t.closest("[data-clock]") || t.closest("[data-cvis]")) return;
+        const d = t.closest("[data-cd]");
+        const s = t.closest("[data-ci]");
         if (d) removeCustomGuide(parseInt(d.getAttribute("data-cd"), 10));
         else if (s) { customSel = parseInt(s.getAttribute("data-ci"), 10); syncCustomList(); redrawGuides(); }
+      });
+      $("customList").addEventListener("change", function (e) {
+        const t = e.target;
+        const i = parseInt(t.getAttribute("data-cchk") || t.getAttribute("data-clock") || t.getAttribute("data-cvis") || "-1", 10);
+        const g = customGuides[i];
+        if (!g) return;
+        if (t.hasAttribute("data-cchk")) {
+          if (t.checked) customPicked[g.id] = true;
+          else delete customPicked[g.id];
+          return;
+        }
+        if (t.hasAttribute("data-clock")) {
+          if (customLock) return;
+          g.locked = !!t.checked;
+          schedulePersist();
+          syncCustomList();
+          return;
+        }
+        if (t.hasAttribute("data-cvis")) {
+          g.hidden = !t.checked;
+          schedulePersist();
+          syncCustomList();
+          redrawGuides();
+        }
       });
       if ($("customDefColor")) $("customDefColor").addEventListener("input", function () {
         customDefaultColor = $("customDefColor").value;
@@ -8855,18 +9304,23 @@
             }
             if (customLineArmed && !customLock) {
               e.preventDefault();
-              if (!customLineStart) { customLineStart = { x: clamp01(p.x), y: clamp01(p.y) }; }
-              else {
-                addCustomGuide({ type: "line", x1: customLineStart.x, y1: customLineStart.y, x2: clamp01(p.x), y2: clamp01(p.y) });
-                customLineStart = null;
-                customLineArmed = false;
-                $("customLineBtn").classList.remove("active");
+              if (!customLineStart) {
+                customLineStart = { x: clamp01(p.x), y: clamp01(p.y) };
+                customLinePreview = { x: customLineStart.x, y: customLineStart.y };
+                customLineRaw = { x: customLineStart.x, y: customLineStart.y };
+                customLineDragging = false;
+                customLineDown = true;
+                tc.setPointerCapture(e.pointerId);
+                syncLineModeUI();
+                redrawGuides();
+              } else {
+                finishCustomLine(p.x, p.y, e.shiftKey);
               }
               return;
             }
             if (!customLock) {
               const gi = hitCustomGuide(p.x, p.y);
-              if (gi >= 0) {
+              if (gi >= 0 && !customGuides[gi].locked) {
                 e.preventDefault();
                 tc.setPointerCapture(e.pointerId);
                 dragGuide = gi;
@@ -8880,6 +9334,11 @@
         });
         tc.addEventListener("pointermove", function (e) {
           const p = eventToNorm(e, $("viewport"));
+          if (customLineArmed && customLineStart) {
+            updateLinePreview(p, e.shiftKey);
+            if (penStroke || bboxDrag || dragVP >= 0 || dragGuide >= 0) { /* fall through only if other drag */ }
+            else return;
+          }
           if (penStroke) {
             const pts = penStroke.pts;
             const lx = pts[pts.length - 2], ly = pts[pts.length - 1];
@@ -8912,7 +9371,12 @@
             redrawGuides();
           }
         });
-        function endPtr() {
+        function endPtr(e) {
+          if (customLineArmed && customLineStart && customLineDragging) {
+            const p = e ? eventToNorm(e, $("viewport")) : (customLinePreview || customLineStart);
+            finishCustomLine(p.x, p.y, !!(e && e.shiftKey));
+          }
+          customLineDown = false;
           if (penStroke) {
             if (penStroke.pts.length >= 4) storePenStroke(penStroke);
             penStroke = null;
@@ -9003,10 +9467,11 @@
           customHover = gi;
           redrawGuides();
         }
-        vp.classList.toggle("guide-hover-del", gi >= 0 && !customLock);
+        const hoverLocked = gi >= 0 && isGuideLocked(customGuides[gi]);
+        vp.classList.toggle("guide-hover-del", gi >= 0 && !hoverLocked);
         if (!hint) return;
         if (gi < 0) { hint.classList.add("hidden"); return; }
-        hint.textContent = customLock ? "잠긴 가이드는 삭제할 수 없어요" : "우클릭으로 삭제";
+        hint.textContent = hoverLocked ? "잠긴 가이드는 삭제할 수 없어요" : "우클릭으로 삭제";
         hint.classList.remove("hidden");
         const r = vp.getBoundingClientRect();
         let x = e.clientX - r.left + 12, y = e.clientY - r.top + 14;
@@ -9024,11 +9489,12 @@
       $("viewport").addEventListener("contextmenu", function (e) {
         const p = eventToNorm(e, $("viewport"));
         const gi = hitCustomGuide(p.x, p.y, 8);
-        lastGuideCtxMenu = { prevented: false, hit: gi, locked: !!customLock };
+        const hitLocked = gi >= 0 && isGuideLocked(customGuides[gi]);
+        lastGuideCtxMenu = { prevented: false, hit: gi, locked: hitLocked };
         if (gi >= 0) {
           lastGuideCtxMenu.prevented = true;
           e.preventDefault();
-          if (customLock) showToast("잠긴 가이드는 삭제할 수 없어요");
+          if (hitLocked) showToast("잠긴 가이드는 삭제할 수 없어요");
           else removeCustomGuide(gi);
           return;
         }
