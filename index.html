@@ -422,6 +422,37 @@
     .guide-bbox-msg a { color: var(--accent); }
     .guide-bbox-msg[hidden] { display: none !important; }
     #guideBBoxLabel { cursor: help; }
+    #toolCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 6;
+      pointer-events: none;
+    }
+    #rulerTop, #rulerLeft, #rulerCorner { display: none; }
+    body.show-rulers #rulerTop, body.show-rulers #rulerLeft, body.show-rulers #rulerCorner { display: block; }
+    #rulerTop {
+      position: absolute; top: 0; left: 16px; right: 0; height: 16px; z-index: 8;
+      cursor: ns-resize; background: #1b1c22;
+    }
+    #rulerLeft {
+      position: absolute; top: 16px; left: 0; bottom: 0; width: 16px; z-index: 8;
+      cursor: ew-resize; background: #1b1c22;
+    }
+    #rulerCorner {
+      position: absolute; top: 0; left: 0; width: 16px; height: 16px; z-index: 9;
+      background: #22232a; border-right: 1px solid #333; border-bottom: 1px solid #333;
+    }
+    body.tool-pen #viewport { cursor: crosshair; }
+    #penTools, #customGuideTools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    #penTools.hidden, #customGuideTools.hidden { display: none; }
+    #customList { display: flex; flex-wrap: wrap; gap: 4px; }
+    .custom-item button { padding: 2px 6px; font-size: 11px; }
+    .custom-item.sel button:first-child { outline: 1px solid var(--accent); }
+    #onionPrevN, #onionNextN { width: 70px; }
+    .onion-side { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
     .guide-overlay {
       position: absolute;
       inset: 0;
@@ -1067,12 +1098,16 @@
   <div id="main">
     <div class="viewport-wrap">
       <div class="viewport" id="viewport" tabindex="0">
+        <div id="rulerCorner" title="커스텀 가이드"></div>
+        <canvas id="rulerTop" class="ruler-top" title="위에서 끌어 가로 가이드"></canvas>
+        <canvas id="rulerLeft" class="ruler-left" title="왼쪽에서 끌어 세로 가이드"></canvas>
         <div class="stack" id="stack">
           <img id="currentFrame" alt="현재 프레임" draggable="false">
           <canvas id="viewCanvas"></canvas>
           <div id="onionPrev"></div>
           <div id="onionNext"></div>
           <canvas id="guideCanvas"></canvas>
+          <canvas id="toolCanvas"></canvas>
         </div>
         <div class="meta-overlay" id="meta">—</div>
         <div id="dropMask">영상을 여기에 놓으면 불러와</div>
@@ -1137,15 +1172,28 @@
       <div class="row">
         <div class="group">
           <button type="button" id="onionBtn" title="어니언 스킨 켜기/끄기 (O)">어니언 스킨 OFF</button>
-          <span class="label">앞뒤 장수</span>
-          <input type="range" class="slim" id="onionN" min="1" max="5" value="2" step="1">
-          <span id="onionNVal">2</span>
-          <span class="label">간격</span>
-          <div class="seg" id="stepSeg">
-            <button type="button" data-step="1" class="active">1</button>
-            <button type="button" data-step="2">2</button>
-            <button type="button" data-step="3">3</button>
-          </div>
+          <span class="onion-side">
+            <label class="chk"><input type="checkbox" id="onionPrevOn" checked> 앞(이전)</label>
+            <input type="range" class="slim" id="onionPrevN" min="0" max="5" value="2" step="1">
+            <span id="onionPrevNVal">2</span>
+            <span class="label">간격</span>
+            <div class="seg" id="prevStepSeg">
+              <button type="button" data-step="1" class="active">1</button>
+              <button type="button" data-step="2">2</button>
+              <button type="button" data-step="3">3</button>
+            </div>
+          </span>
+          <span class="onion-side">
+            <label class="chk"><input type="checkbox" id="onionNextOn" checked> 뒤(다음)</label>
+            <input type="range" class="slim" id="onionNextN" min="0" max="5" value="2" step="1">
+            <span id="onionNextNVal">2</span>
+            <span class="label">간격</span>
+            <div class="seg" id="nextStepSeg">
+              <button type="button" data-step="1" class="active">1</button>
+              <button type="button" data-step="2">2</button>
+              <button type="button" data-step="3">3</button>
+            </div>
+          </span>
           <span class="label">투명도</span>
           <input type="range" class="slim" id="onionOp" min="5" max="80" value="50" step="1">
           <span id="onionOpVal">50%</span>
@@ -1174,6 +1222,8 @@
             <label><input type="checkbox" data-guide="phi"><canvas data-guide-icon="phi" width="48" height="27" aria-hidden="true"></canvas> 황금분할</label>
             <label><input type="checkbox" data-guide="spiral"><canvas data-guide-icon="spiral" width="48" height="27" aria-hidden="true"></canvas> 황금나선</label>
             <label><input type="checkbox" data-guide="goldenTri"><canvas data-guide-icon="goldenTri" width="48" height="27" aria-hidden="true"></canvas> 황금 삼각형</label>
+            <label><input type="checkbox" data-guide="harmonic"><canvas data-guide-icon="harmonic" width="48" height="27" aria-hidden="true"></canvas> 하모닉 아머처</label>
+            <label><input type="checkbox" data-guide="radial"><canvas data-guide-icon="radial" width="48" height="27" aria-hidden="true"></canvas> 방사형(소실점)</label>
             <label><input type="checkbox" data-guide="diagonal"><canvas data-guide-icon="diagonal" width="48" height="27" aria-hidden="true"></canvas> 대각선·바로크</label>
             <label><input type="checkbox" data-guide="cross"><canvas data-guide-icon="cross" width="48" height="27" aria-hidden="true"></canvas> 중앙선·십자</label>
             <label><input type="checkbox" data-guide="symmetry"><canvas data-guide-icon="symmetry" width="48" height="27" aria-hidden="true"></canvas> 대칭(좌우·상하)</label>
@@ -1200,6 +1250,24 @@
                   <option value="3">방향 4</option>
                 </select>
                 <label class="chk"><input type="checkbox" id="guideSpiralFlip"> 좌우 반전</label>
+                <div class="seg" id="spiralFitSeg">
+                  <button type="button" data-sfit="fit" class="active">맞춤</button>
+                  <button type="button" data-sfit="stretch">늘이기</button>
+                </div>
+                <label class="chk"><input type="checkbox" id="guideSpiralRects" checked> 분할 사각형</label>
+              </span>
+              <span id="guideTriOpts" class="guide-extra hidden">
+                <span class="label">삼각형 대각선</span>
+                <div class="seg" id="triDiagSeg">
+                  <button type="button" data-tridiag="0" class="active">／</button>
+                  <button type="button" data-tridiag="1">＼</button>
+                </div>
+              </span>
+              <span id="guideRadialOpts" class="guide-extra hidden">
+                <span class="label">방사 줄 수</span>
+                <input type="number" id="radialCount" min="4" max="36" value="12" title="소실점으로 모이는 선 수">
+                <label class="chk"><input type="checkbox" id="radialDual"> 소실점 2개</label>
+                <span class="az-muted">가이드 편집에서 소실점을 드래그해.</span>
               </span>
               <span id="guideCustomOpts" class="guide-extra hidden">
                 <span class="label">칸</span>
@@ -1210,10 +1278,55 @@
             </div>
           </div>
         </div>
-        <label class="chk" id="guideBBoxLabel" title="현재 프레임에서 주요 피사체 상자를 자동으로 잡아, 헤드룸·네거티브 스페이스 수치를 계산할 때 씁니다.">
+        <label class="chk" id="guideBBoxLabel" title="현재 프레임에서 주요 피사체 상자를 자동으로 잡아, 헤드룸·네거티브 스페이스 수치를 계산할 때 씁니다. 자동은 근사이며, 상자를 드래그해 고칠 수 있어.">
           <input type="checkbox" id="guideBBoxChk"> 피사체 박스
         </label>
+        <button type="button" id="bboxAutoBtn" title="자동으로 다시 잡기">자동 다시 잡기</button>
+        <label class="chk" title="이 상자를 다른 프레임에도 유지"><input type="checkbox" id="bboxKeepChk"> 프레임 간 유지</label>
+        <label class="chk" title="얼굴·중심이 있는 덩어리를 더 선호"><input type="checkbox" id="bboxFaceChk" checked> 얼굴 위주</label>
+        <button type="button" id="bboxAiBtn" title="AI 분석이 준 상자를 적용">AI 박스 적용</button>
+        <span class="az-muted">자동 상자는 대략값이야. 핸들로 직접 맞춰.</span>
         <span id="guideBBoxMsg" class="guide-bbox-msg" hidden></span>
+      </div>
+      <div class="row" id="toolRow">
+        <span class="label">도구</span>
+        <div class="seg" id="toolModeSeg">
+          <button type="button" data-toolmode="view" class="active">보기</button>
+          <button type="button" data-toolmode="guide">가이드 편집</button>
+          <button type="button" data-toolmode="pen">펜</button>
+        </div>
+        <span id="customGuideTools" class="hidden">
+          <button type="button" id="customLineBtn">두 점 선</button>
+          <label class="chk"><input type="checkbox" id="customLockChk"> 잠금</label>
+          <span id="customList"></span>
+        </span>
+        <span id="penTools" class="hidden">
+          <div class="seg" id="penKindSeg">
+            <button type="button" data-penkind="pen" class="active">펜</button>
+            <button type="button" data-penkind="check">체크</button>
+            <button type="button" data-penkind="high">형광</button>
+            <button type="button" data-penkind="erase">지우개</button>
+          </div>
+          <input type="color" id="penColor" value="#ff4d4d" title="펜 색">
+          <span class="label">굵기</span>
+          <input type="range" class="slim" id="penWidth" min="1" max="24" value="4">
+          <span id="penWidthVal">4</span>
+          <span class="label">투명도</span>
+          <input type="range" class="slim" id="penOp" min="15" max="100" value="90">
+          <span id="penOpVal">90%</span>
+          <button type="button" id="penUndoBtn">되돌리기</button>
+          <button type="button" id="penRedoBtn">다시 실행</button>
+          <button type="button" id="penClearBtn">지우기</button>
+          <div class="seg" id="penScopeSeg">
+            <button type="button" data-penscope="all" class="active">모든 프레임</button>
+            <button type="button" data-penscope="frame">이 프레임만</button>
+          </div>
+          <label class="chk"><input type="checkbox" id="penLockChk"> 잠금</label>
+          <label class="chk"><input type="checkbox" id="penExPrint" checked> 인쇄</label>
+          <label class="chk"><input type="checkbox" id="penExCollage" checked> 콜라주</label>
+          <label class="chk"><input type="checkbox" id="penExImage" checked> 이미지</label>
+          <label class="chk"><input type="checkbox" id="penExVideo" checked> 영상</label>
+        </span>
       </div>
 
       <div id="thumbsWrap">
@@ -1326,14 +1439,14 @@
         <dt>마우스 휠</dt><dd>프레임 넘기기 (Shift = 10프레임)</dd>
         <dt>M</dt><dd>현재 프레임 선택/해제</dd>
         <dt>[ / ]</dt><dd>여기부터 / 여기까지 (범위 추가)</dd>
-        <dt>O</dt><dd>어니언 스킨 켜기/끄기</dd>
+        <dt>O</dt><dd>어니언 스킨 켜기/끄기 (앞/뒤 장수는 따로 지정)</dd>
         <dt>V</dt><dd>음소거 / 해제</dd>
         <dt>A</dt><dd>하단 분석 패널 열고 현재 설정으로 분석</dd>
         <dt>G</dt><dd>구도 가이드 표시 켜기/끄기 (종류는 「구도 가이드 (n)」 버튼에서 고름)</dd>
         <dt>? 또는 /</dt><dd>이 도움말 열기/닫기</dd>
         <dt>Esc</dt><dd>입력 중이면 포커스 해제, 아니면 도움말 닫기</dd>
       </dl>
-      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. 「구도 가이드 (n)」 버튼을 누르면 삼분할·황금분할·황금나선 등 12가지를 체크박스로 고를 수 있고, G 키로 표시를 켜고 끈다. 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「피사체 박스」는 주요 피사체 상자를 자동으로 잡아 헤드룸·여백 수치를 보여 줘. 폴더에서 연 기본 영상에서는 픽셀을 못 읽으니 웹사이트나 「영상 불러오기」를 쓰면 돼. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
+      <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. 「구도 가이드 (n)」 버튼을 누르면 삼분할·황금분할·황금나선·황금 삼각형·하모닉 아머처·방사형 등 14가지를 체크박스로 고를 수 있고, G 키로 표시를 켜고 끈다. 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「피사체 박스」는 주요 피사체 상자를 자동으로 잡고(근사, 직접 드래그·크기 조절 가능) 헤드룸·여백 수치를 보여 줘. 「가이드 편집」에서 소실점 드래그, 위·왼쪽 자에서 커스텀 가이드, 두 점 선을 그릴 수 있고, 「펜」으로 체크·형광·지우기를 할 수 있어(잠금·출력 옵션, 모든 프레임/이 프레임만). 폴더에서 연 기본 영상에서는 픽셀을 못 읽으니 웹사이트나 「영상 불러오기」를 쓰면 돼. 어니언 스킨은 앞(이전)·뒤(다음) 장수와 간격을 따로 켠다. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
     </div>
   </div>
 
@@ -1538,6 +1651,7 @@
           </div>
         </div>
         <label class="chk"><input type="checkbox" id="imgExGuideChk"> 구도 가이드 넣기</label>
+        <span class="az-muted">커스텀 가이드·펜은 각 항목의 출력 설정이 켜져 있으면 같이 들어가요.</span>
       </div>
       <div class="row">
         <button type="button" class="primary" id="imgExSaveBtn">저장</button>
@@ -1603,6 +1717,9 @@
       let onionOpacity = 0.50;
       let onionMode = "outline";
       let onionHint = "";
+      let onionPrevOn = true, onionNextOn = true;
+      let onionPrevN = 2, onionNextN = 2;
+      let onionPrevStep = 1, onionNextStep = 1;
 
       let volume = 0.8;
       let userMuted = false;
@@ -1808,10 +1925,17 @@
           }
         }
         if (onionOn) {
-          for (let k = 1; k <= onionN; k++) {
-            const a = n - k * onionStep, b = n + k * onionStep;
-            if (a >= 1) getDrawable(a);
-            if (b <= TOTAL) getDrawable(b);
+          if (onionPrevOn) {
+            for (let k = 1; k <= onionPrevN; k++) {
+              const a = n - k * onionPrevStep;
+              if (a >= 1) getDrawable(a);
+            }
+          }
+          if (onionNextOn) {
+            for (let k = 1; k <= onionNextN; k++) {
+              const b = n + k * onionNextStep;
+              if (b <= TOTAL) getDrawable(b);
+            }
           }
         }
         if (selection) {
@@ -1897,14 +2021,14 @@
         }
       }
 
-      function alphaFor(k) {
-        const raw = 1 - (k - 1) * (0.55 / Math.max(1, onionN));
+      function alphaFor(k, nSide) {
+        const nMax = Math.max(1, nSide || 1);
+        const raw = 1 - (k - 1) * (0.55 / nMax);
         if (onionMode === "outline" || onionMode === "diff") {
           return onionOpacity * raw;
         }
-        // color/ghost: keep the current frame visible even with many layers
         let sum = 0;
-        for (let i = 1; i <= onionN; i++) sum += 1 - (i - 1) * (0.55 / Math.max(1, onionN));
+        for (let i = 1; i <= nMax; i++) sum += 1 - (i - 1) * (0.55 / nMax);
         return onionOpacity * raw / Math.max(1, sum);
       }
 
@@ -2016,7 +2140,7 @@
 
       async function drawNeighbor(ctx, curImg, n, k, side, w, h) {
         if (n < 1 || n > TOTAL) return;
-        const a = alphaFor(k);
+        const a = alphaFor(k, arguments[7] || onionPrevN || onionNextN || 1);
         if (a <= 0.02) return;
         const rgb = side === "prev" ? [255, 40, 40] : [40, 255, 90];
         if (onionMode === "outline") {
@@ -2079,13 +2203,13 @@
           setOnionHint("외곽선은 이 환경에서 픽셀을 읽을 수 없어. 영상을 불러오면 쓸 수 있고, 내장 영상은 외곽선 파일이 있으면 동작해. 지금은 컬러로 표시해.");
           const saved = onionMode;
           onionMode = "color";
-          for (let k = onionN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n - k * onionStep, k, "prev", w, h);
-          for (let k = onionN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n + k * onionStep, k, "next", w, h);
+          if (onionPrevOn) for (let k = onionPrevN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n - k * onionPrevStep, k, "prev", w, h, onionPrevN);
+          if (onionNextOn) for (let k = onionNextN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n + k * onionNextStep, k, "next", w, h, onionNextN);
           onionMode = saved;
         } else {
           setOnionHint("");
-          for (let k = onionN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n - k * onionStep, k, "prev", w, h);
-          for (let k = onionN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n + k * onionStep, k, "next", w, h);
+          if (onionPrevOn) for (let k = onionPrevN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n - k * onionPrevStep, k, "prev", w, h, onionPrevN);
+          if (onionNextOn) for (let k = onionNextN; k >= 1; k--) await drawNeighbor(viewCtx, cur, n + k * onionNextStep, k, "next", w, h, onionNextN);
         }
       }
 
@@ -2104,6 +2228,7 @@
         $("onionBtn").classList.toggle("active", onionOn);
         $("onionBtn").textContent = onionOn ? "어니언 스킨 ON" : "어니언 스킨 OFF";
         if (onionOn) preloadAround(frame);
+        if (typeof schedulePersist === "function") schedulePersist();
         renderOnion();
       }
       function toggleOnion() { setOnionOn(!onionOn); }
@@ -2284,10 +2409,16 @@
       }
 
       function syncStepSeg() {
-        const btns = $("stepSeg").querySelectorAll("button");
-        for (let i = 0; i < btns.length; i++) {
-          btns[i].classList.toggle("active", parseInt(btns[i].getAttribute("data-step"), 10) === onionStep);
+        function act(id, val) {
+          const root = $(id);
+          if (!root) return;
+          const btns = root.querySelectorAll("button");
+          for (let i = 0; i < btns.length; i++) btns[i].classList.toggle("active", parseInt(btns[i].getAttribute("data-step"), 10) === val);
         }
+        act("prevStepSeg", onionPrevStep);
+        act("nextStepSeg", onionNextStep);
+        onionStep = onionPrevStep;
+        onionN = Math.max(onionPrevN, onionNextN);
       }
       function syncOnionModeSeg() {
         const btns = $("onionModeSeg").querySelectorAll("button");
@@ -3311,6 +3442,8 @@
         { id: "phi", label: "황금분할" },
         { id: "spiral", label: "황금나선" },
         { id: "goldenTri", label: "황금 삼각형" },
+        { id: "harmonic", label: "하모닉 아머처(대각선+수선)" },
+        { id: "radial", label: "방사형(소실점)" },
         { id: "diagonal", label: "대각선·바로크" },
         { id: "cross", label: "중앙선·십자" },
         { id: "symmetry", label: "대칭(좌우·상하)" },
@@ -3323,7 +3456,7 @@
       const GUIDE_IDS = GUIDE_DEFS.map(function (d) { return d.id; });
 
       let guideOn = false;
-      let guideIds = { thirds: true, phi: false, spiral: false, goldenTri: false, diagonal: false, cross: false, symmetry: false, dynamic: false, quad: false, triangle: false, safe: false, custom: false };
+      let guideIds = { thirds: true, phi: false, spiral: false, goldenTri: false, harmonic: false, radial: false, diagonal: false, cross: false, symmetry: false, dynamic: false, quad: false, triangle: false, safe: false, custom: false };
       let guideColor = "#00e5ff";
       let guideOpacity = 0.85;
       let guideSpiralOri = 0;
@@ -3343,6 +3476,511 @@
       let collageGuides = false;
       let videoGuides = false;
       let imgExportGuides = false;
+      /* ---- t81/t82 tools: custom guides, pen, bbox edit, onion sides, persist ---- */
+      let guideSpiralFit = "fit";
+      let guideSpiralRects = true;
+      let guideTriDiag = 0;
+      let radialCount = 12;
+      let radialDual = false;
+      let radialVPs = [{ x: 0.5, y: 0.5 }, { x: 0.72, y: 0.45 }];
+      let customGuides = [];
+      let customLock = false;
+      let customSel = -1;
+      let customLineArmed = false;
+      let customLineStart = null;
+      let toolMode = "view"; /* view | guide | pen */
+      let bboxManual = null, bboxKeepManual = false, bboxFaceMode = true, bboxFrameId = 0;
+      let lastAutoFraming = null;
+      let bboxDrag = null;
+      let dragGuideStart = null;
+      let penKind = "pen", penColor = "#ff4d4d", penWidth = 4, penOpacity = 0.9;
+      let penScope = "all", penLock = false;
+      let penExport = { print: true, collage: true, image: true, video: true };
+      let customExportDefault = { print: true, collage: true, image: true, video: true };
+      let penAll = [], penByFrame = {};
+      let penUndo = [], penRedo = [];
+      let penStroke = null;
+      let persistTimer = 0;
+
+      function lsGetJson(k, fallback) {
+        try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : fallback; } catch (e) { return fallback; }
+      }
+      function lsSetJson(k, v) {
+        try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+      }
+      function schedulePersist() {
+        if (persistTimer) clearTimeout(persistTimer);
+        persistTimer = setTimeout(persistTools, 250);
+      }
+      function persistTools() {
+        persistTimer = 0;
+        lsSetJson("fv-onion", {
+          prevOn: onionPrevOn, nextOn: onionNextOn,
+          prevN: onionPrevN, nextN: onionNextN,
+          prevStep: onionPrevStep, nextStep: onionNextStep,
+          opacity: onionOpacity, mode: onionMode, on: onionOn
+        });
+        lsSetJson("fv-custom-guides", customGuides);
+        lsSetJson("fv-pen", {
+          all: penAll, byFrame: penByFrame, kind: penKind, color: penColor,
+          width: penWidth, opacity: penOpacity, scope: penScope, lock: penLock, export: penExport
+        });
+        lsSetJson("fv-tool-prefs", {
+          spiralFit: guideSpiralFit, spiralRects: guideSpiralRects, triDiag: guideTriDiag,
+          radialCount: radialCount, radialDual: radialDual, radialVPs: radialVPs,
+          customLock: customLock, bboxKeep: bboxKeepManual, bboxFace: bboxFaceMode,
+          ids: guideIds, color: guideColor, opacity: guideOpacity,
+          spiralOri: guideSpiralOri, spiralFlip: guideSpiralFlip, customC: guideCustomC, customR: guideCustomR
+        });
+      }
+      function loadToolPrefs() {
+        const o = lsGetJson("fv-onion", null);
+        if (o) {
+          if (o.prevOn != null) onionPrevOn = !!o.prevOn;
+          if (o.nextOn != null) onionNextOn = !!o.nextOn;
+          if (o.prevN != null) onionPrevN = Math.max(0, Math.min(5, o.prevN | 0));
+          if (o.nextN != null) onionNextN = Math.max(0, Math.min(5, o.nextN | 0));
+          if (o.prevStep != null) onionPrevStep = Math.max(1, o.prevStep | 0);
+          if (o.nextStep != null) onionNextStep = Math.max(1, o.nextStep | 0);
+          if (o.opacity != null) onionOpacity = o.opacity;
+          if (o.mode) onionMode = o.mode;
+        }
+        const cg = lsGetJson("fv-custom-guides", null);
+        if (Array.isArray(cg)) customGuides = cg;
+        const p = lsGetJson("fv-pen", null);
+        if (p) {
+          if (Array.isArray(p.all)) penAll = p.all;
+          if (p.byFrame && typeof p.byFrame === "object") penByFrame = p.byFrame;
+          if (p.kind) penKind = p.kind;
+          if (p.color) penColor = p.color;
+          if (p.width) penWidth = p.width;
+          if (p.opacity != null) penOpacity = p.opacity;
+          if (p.scope) penScope = p.scope;
+          if (p.lock != null) penLock = !!p.lock;
+          if (p.export) penExport = Object.assign(penExport, p.export);
+        }
+        const t = lsGetJson("fv-tool-prefs", null);
+        if (t) {
+          if (t.spiralFit) guideSpiralFit = t.spiralFit;
+          if (t.spiralRects != null) guideSpiralRects = !!t.spiralRects;
+          if (t.triDiag != null) guideTriDiag = t.triDiag | 0;
+          if (t.radialCount) radialCount = t.radialCount | 0;
+          if (t.radialDual != null) radialDual = !!t.radialDual;
+          if (Array.isArray(t.radialVPs) && t.radialVPs.length) radialVPs = t.radialVPs;
+          if (t.customLock != null) customLock = !!t.customLock;
+          if (t.bboxKeep != null) bboxKeepManual = !!t.bboxKeep;
+          if (t.bboxFace != null) bboxFaceMode = !!t.bboxFace;
+          if (t.ids) Object.keys(t.ids).forEach(function (k) { if (k in guideIds) guideIds[k] = !!t.ids[k]; });
+          if (t.color) guideColor = t.color;
+          if (t.opacity != null) guideOpacity = t.opacity;
+          if (t.spiralOri != null) guideSpiralOri = t.spiralOri | 0;
+          if (t.spiralFlip != null) guideSpiralFlip = !!t.spiralFlip;
+          if (t.customC) guideCustomC = t.customC | 0;
+          if (t.customR) guideCustomR = t.customR | 0;
+        }
+      }
+
+      function activeRadialVPs() {
+        return radialDual ? radialVPs.slice(0, 2) : radialVPs.slice(0, 1);
+      }
+
+      function drawCustomGuides(ctx, w, h, exportKind, handles) {
+        for (let i = 0; i < customGuides.length; i++) {
+          const g = customGuides[i];
+          if (exportKind && g.output && g.output[exportKind] === false) continue;
+          applyGuideStyle(ctx, w, guideOptions());
+          if (i === customSel && handles) {
+            ctx.save();
+            ctx.strokeStyle = "rgba(255,220,80,0.95)";
+            ctx.lineWidth = Math.max(2, ctx.lineWidth);
+          }
+          if (g.type === "h") gLine(ctx, 0, g.a * h, w, g.a * h);
+          else if (g.type === "v") gLine(ctx, g.a * w, 0, g.a * w, h);
+          else if (g.type === "line") gLine(ctx, g.x1 * w, g.y1 * h, g.x2 * w, g.y2 * h);
+          if (i === customSel && handles) ctx.restore();
+        }
+      }
+
+      function drawPenStrokes(ctx, w, h, frameN, exportKind) {
+        if (exportKind && penExport[exportKind] === false) return;
+        const list = (penAll || []).concat((penByFrame[String(frameN)] || []));
+        const scale = Math.min(w, h) / 720;
+        for (let i = 0; i < list.length; i++) {
+          const s = list[i];
+          if (!s || !s.pts || s.pts.length < 2) continue;
+          ctx.save();
+          const op = s.op == null ? 0.9 : s.op;
+          if (s.kind === "erase") {
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.strokeStyle = "rgba(0,0,0,1)";
+            ctx.globalAlpha = 1;
+            ctx.lineWidth = Math.max(2, (s.w || 8) * scale * 1.6);
+          } else if (s.kind === "high") {
+            ctx.globalCompositeOperation = "source-over";
+            const c = parseHexColor(s.color || "#ffe14d");
+            ctx.strokeStyle = "rgba(" + c.r + "," + c.g + "," + c.b + "," + (op * 0.45) + ")";
+            ctx.lineWidth = Math.max(6, (s.w || 12) * scale * 3);
+          } else {
+            const c = parseHexColor(s.color || "#ff4d4d");
+            ctx.strokeStyle = "rgba(" + c.r + "," + c.g + "," + c.b + "," + op + ")";
+            ctx.lineWidth = Math.max(1, (s.w || 4) * scale);
+          }
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          const pts = s.pts;
+          ctx.moveTo(pts[0] * w, pts[1] * h);
+          for (let k = 2; k < pts.length; k += 2) ctx.lineTo(pts[k] * w, pts[k + 1] * h);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      function drawCheckMark(ctx, w, h, x, y, size, color, op) {
+        const c = parseHexColor(color || "#35d46f");
+        ctx.save();
+        ctx.strokeStyle = "rgba(" + c.r + "," + c.g + "," + c.b + "," + (op == null ? 0.95 : op) + ")";
+        ctx.lineWidth = Math.max(2, size * 0.18);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.35, y + size * 0.05);
+        ctx.lineTo(x - size * 0.05, y + size * 0.35);
+        ctx.lineTo(x + size * 0.4, y - size * 0.3);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function overlayExportKind(kind) {
+        return kind || null;
+      }
+
+      function drawAllOverlays(ctx, w, h, opts) {
+        opts = opts || {};
+        const kind = opts.exportKind || null;
+        const showHandles = !!opts.handles && !kind;
+        if (opts.composition !== false) {
+          const go = guideOptions();
+          if (kind && !opts.forceGuides && !(kind === "collage" ? collageGuides : kind === "video" ? videoGuides : kind === "image" ? imgExportGuides : collageGuides)) {
+            /* composition off for this export unless forced */
+          } else if (!kind || opts.forceGuides || collageGuides || videoGuides || imgExportGuides) {
+            if (!kind || opts.forceGuides || (kind === "collage" && collageGuides) || (kind === "video" && videoGuides) || (kind === "image" && imgExportGuides) || (kind === "print" && collageGuides)) {
+              drawCompositionGuides(ctx, w, h, go);
+            }
+          }
+        }
+        /* always draw composition on screen when guideOn, caller decides */
+        if (!kind && opts.screenGuides) drawCompositionGuides(ctx, w, h, guideOptions());
+        drawCustomGuides(ctx, w, h, kind, showHandles);
+        drawPenStrokes(ctx, w, h, opts.frameN != null ? opts.frameN : frame, kind);
+        if (!kind && opts.screenBBox !== false) {
+          if (guideShowBBox && lastFraming) drawFramingOverlay(ctx, w, h, lastFraming, { color: "#ffe14d", opacity: 0.95, handles: showHandles || (toolMode !== "pen") });
+          else if (guideShowBBox && lastFramingError) drawFramingNotice(ctx, w, h, lastFramingError);
+        }
+      }
+
+      function effectiveFraming() {
+        if (bboxManual && (bboxKeepManual || bboxFrameId === frame)) {
+          return framingFromBBox(bboxManual, { manual: true, source: "manual" });
+        }
+        return lastAutoFraming;
+      }
+
+      function eventToNorm(e, el) {
+        const c = el || $("toolCanvas") || $("guideCanvas") || $("viewport");
+        const r = c.getBoundingClientRect();
+        return {
+          x: (e.clientX - r.left) / Math.max(1, r.width),
+          y: (e.clientY - r.top) / Math.max(1, r.height),
+          rect: r
+        };
+      }
+
+      function setToolMode(mode) {
+        toolMode = (mode === "guide" || mode === "pen") ? mode : "view";
+        const seg = $("toolModeSeg");
+        if (seg) {
+          const btns = seg.querySelectorAll("button");
+          for (let i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-toolmode") === toolMode);
+        }
+        const pen = $("penTools");
+        if (pen) pen.classList.toggle("hidden", toolMode !== "pen");
+        const cg = $("customGuideTools");
+        if (cg) cg.classList.toggle("hidden", toolMode !== "guide");
+        document.body.classList.toggle("tool-guide", toolMode === "guide");
+        document.body.classList.toggle("tool-pen", toolMode === "pen");
+        const tc = $("toolCanvas");
+        if (tc) {
+          const need = toolMode === "pen" || toolMode === "guide" || (guideShowBBox && !lastFramingError);
+          tc.style.pointerEvents = need ? "auto" : "none";
+        }
+        sizeGuideCanvas();
+        renderRulers();
+      }
+
+      function newCustomId() {
+        return "g" + Date.now().toString(36) + Math.floor(Math.random() * 1000);
+      }
+      function addCustomGuide(g) {
+        g.id = g.id || newCustomId();
+        if (!g.output) g.output = Object.assign({}, customExportDefault);
+        customGuides.push(g);
+        customSel = customGuides.length - 1;
+        schedulePersist();
+        syncCustomList();
+        redrawGuides();
+      }
+      function removeCustomGuide(i) {
+        if (customLock) return;
+        customGuides.splice(i, 1);
+        if (customSel >= customGuides.length) customSel = customGuides.length - 1;
+        schedulePersist();
+        syncCustomList();
+        redrawGuides();
+      }
+      function syncCustomList() {
+        const el = $("customList");
+        if (!el) return;
+        el.innerHTML = "";
+        customGuides.forEach(function (g, i) {
+          const row = document.createElement("span");
+          row.className = "custom-item" + (i === customSel ? " sel" : "");
+          const name = g.type === "h" ? "가로 " + Math.round(g.a * 100) + "%" : g.type === "v" ? "세로 " + Math.round(g.a * 100) + "%" : "선";
+          row.innerHTML = "<button type=\"button\" data-ci=\"" + i + "\">" + name + "</button>" +
+            (customLock ? "" : "<button type=\"button\" data-cd=\"" + i + "\" title=\"삭제\">×</button>");
+          el.appendChild(row);
+        });
+      }
+
+      function hitRadialVP(nx, ny) {
+        const vps = activeRadialVPs();
+        const c = $("guideCanvas") || $("toolCanvas");
+        if (!c) return -1;
+        const tol = 14 / Math.min(c.getBoundingClientRect().width, 800);
+        for (let i = 0; i < vps.length; i++) {
+          if (Math.hypot(nx - vps[i].x, ny - vps[i].y) <= Math.max(0.018, tol)) return i;
+        }
+        return -1;
+      }
+      function hitCustomGuide(nx, ny) {
+        const c = $("guideCanvas") || $("toolCanvas");
+        const r = c ? c.getBoundingClientRect() : { width: 800, height: 450 };
+        const tol = 6 / Math.min(r.height, r.width);
+        let best = -1, bd = tol;
+        for (let i = 0; i < customGuides.length; i++) {
+          const g = customGuides[i];
+          let dist = 1;
+          if (g.type === "h") dist = Math.abs(ny - g.a);
+          else if (g.type === "v") dist = Math.abs(nx - g.a);
+          else {
+            const x1 = g.x1, y1 = g.y1, x2 = g.x2, y2 = g.y2;
+            const dx = x2 - x1, dy = y2 - y1, len2 = dx * dx + dy * dy || 1e-8;
+            let t = ((nx - x1) * dx + (ny - y1) * dy) / len2;
+            t = Math.max(0, Math.min(1, t));
+            dist = Math.hypot(nx - (x1 + t * dx), ny - (y1 + t * dy));
+          }
+          if (dist < bd) { bd = dist; best = i; }
+        }
+        return best;
+      }
+      function hitBBoxHandle(nx, ny, box) {
+        if (!box) return null;
+        const hs = [
+          { k: "nw", x: box.x, y: box.y }, { k: "n", x: box.x + box.w / 2, y: box.y }, { k: "ne", x: box.x + box.w, y: box.y },
+          { k: "w", x: box.x, y: box.y + box.h / 2 }, { k: "e", x: box.x + box.w, y: box.y + box.h / 2 },
+          { k: "sw", x: box.x, y: box.y + box.h }, { k: "s", x: box.x + box.w / 2, y: box.y + box.h }, { k: "se", x: box.x + box.w, y: box.y + box.h }
+        ];
+        const c = $("guideCanvas") || $("toolCanvas");
+        const r = c ? c.getBoundingClientRect() : { width: 800, height: 450 };
+        const tol = 10 / Math.min(r.width, r.height);
+        for (let i = 0; i < hs.length; i++) {
+          if (Math.hypot(nx - hs[i].x, ny - hs[i].y) <= Math.max(0.016, tol)) return hs[i].k;
+        }
+        if (nx >= box.x && nx <= box.x + box.w && ny >= box.y && ny <= box.y + box.h) return "move";
+        return null;
+      }
+
+      function applyBBoxDrag(nx, ny) {
+        if (!bboxDrag) return;
+        const b = bboxDrag.start;
+        let x = b.x, y = b.y, w = b.w, h = b.h;
+        const dx = nx - bboxDrag.x0, dy = ny - bboxDrag.y0;
+        const k = bboxDrag.handle;
+        if (k === "move") { x = b.x + dx; y = b.y + dy; }
+        else {
+          if (k.indexOf("w") >= 0) { x = b.x + dx; w = b.w - dx; }
+          if (k.indexOf("e") >= 0) { w = b.w + dx; }
+          if (k.indexOf("n") >= 0) { y = b.y + dy; h = b.h - dy; }
+          if (k.indexOf("s") >= 0) { h = b.h + dy; }
+        }
+        if (w < 0) { x += w; w = -w; }
+        if (h < 0) { y += h; h = -h; }
+        x = clamp01(x); y = clamp01(y);
+        w = Math.max(0.02, Math.min(1 - x, w));
+        h = Math.max(0.02, Math.min(1 - y, h));
+        bboxManual = { x: x, y: y, w: w, h: h };
+        bboxFrameId = frame;
+        lastFraming = framingFromBBox(bboxManual, { manual: true, source: "manual" });
+        lastFramingError = null;
+        syncBBoxMsg();
+        redrawGuides();
+        renderSpaceTab(lastFraming);
+      }
+
+      function pushPenUndo(entry) {
+        penUndo.push(entry);
+        if (penUndo.length > 80) penUndo.shift();
+        penRedo = [];
+      }
+      function storePenStroke(stroke) {
+        if (penScope === "frame") {
+          const k = String(frame);
+          if (!penByFrame[k]) penByFrame[k] = [];
+          penByFrame[k].push(stroke);
+        } else penAll.push(stroke);
+        pushPenUndo({ typ: "add", scope: penScope, frame: frame, stroke: stroke });
+        schedulePersist();
+        redrawGuides();
+      }
+      function penUndoOnce() {
+        const u = penUndo.pop();
+        if (!u) return;
+        if (u.typ === "add") {
+          const arr = u.scope === "frame" ? (penByFrame[String(u.frame)] || []) : penAll;
+          const i = arr.lastIndexOf(u.stroke);
+          if (i >= 0) arr.splice(i, 1);
+        } else if (u.typ === "clear") {
+          if (u.scope === "frame") penByFrame[String(u.frame)] = u.saved || [];
+          else penAll = u.saved || [];
+        }
+        penRedo.push(u);
+        schedulePersist();
+        redrawGuides();
+      }
+      function penRedoOnce() {
+        const u = penRedo.pop();
+        if (!u) return;
+        if (u.typ === "add") {
+          if (u.scope === "frame") {
+            const k = String(u.frame);
+            if (!penByFrame[k]) penByFrame[k] = [];
+            penByFrame[k].push(u.stroke);
+          } else penAll.push(u.stroke);
+        } else if (u.typ === "clear") {
+          if (u.scope === "frame") penByFrame[String(u.frame)] = [];
+          else penAll = [];
+        }
+        penUndo.push(u);
+        schedulePersist();
+        redrawGuides();
+      }
+      function penClearCurrent() {
+        if (penLock) return;
+        if (penScope === "frame") {
+          const k = String(frame);
+          pushPenUndo({ typ: "clear", scope: "frame", frame: frame, saved: (penByFrame[k] || []).slice() });
+          penByFrame[k] = [];
+        } else {
+          pushPenUndo({ typ: "clear", scope: "all", saved: penAll.slice() });
+          penAll = [];
+        }
+        schedulePersist();
+        redrawGuides();
+      }
+
+      function renderRulers() {
+        const top = $("rulerTop"), left = $("rulerLeft");
+        if (!top || !left) return;
+        const show = toolMode === "guide";
+        top.style.display = left.style.display = $("rulerCorner") ? "" : "";
+        document.body.classList.toggle("show-rulers", show);
+        if (!show) return;
+        const vp = $("viewport");
+        const r = vp.getBoundingClientRect();
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        top.width = Math.max(1, Math.round(r.width * dpr));
+        top.height = Math.max(1, Math.round(16 * dpr));
+        left.width = Math.max(1, Math.round(16 * dpr));
+        left.height = Math.max(1, Math.round(r.height * dpr));
+        const tc = top.getContext("2d"), lc = left.getContext("2d");
+        tc.setTransform(dpr, 0, 0, dpr, 0, 0);
+        lc.setTransform(dpr, 0, 0, dpr, 0, 0);
+        tc.fillStyle = lc.fillStyle = "#1b1c22";
+        tc.fillRect(0, 0, r.width, 16);
+        lc.fillRect(0, 0, 16, r.height);
+        tc.strokeStyle = lc.strokeStyle = "#8a8f9c";
+        tc.fillStyle = lc.fillStyle = "#b4b8c2";
+        tc.font = lc.font = "9px ui-sans-serif, sans-serif";
+        tc.beginPath(); lc.beginPath();
+        for (let i = 0; i <= 10; i++) {
+          const x = (i / 10) * r.width, y = (i / 10) * r.height;
+          tc.moveTo(x, 16); tc.lineTo(x, i % 2 === 0 ? 0 : 6);
+          lc.moveTo(16, y); lc.lineTo(i % 2 === 0 ? 0 : 6, y);
+          if (i > 0 && i < 10 && i % 2 === 0) {
+            tc.fillText(String(i * 10), x + 2, 10);
+            lc.save(); lc.translate(10, y + 2); lc.rotate(-Math.PI / 2); lc.fillText(String(i * 10), 0, 0); lc.restore();
+          }
+        }
+        tc.stroke(); lc.stroke();
+      }
+
+      function onionSideCount(side) {
+        if (side === "prev") return (onionPrevOn ? onionPrevN : 0);
+        return (onionNextOn ? onionNextN : 0);
+      }
+      function syncOnionUI() {
+        const map = [
+          ["onionPrevOn", onionPrevOn], ["onionNextOn", onionNextOn]
+        ];
+        if ($("onionPrevOn")) $("onionPrevOn").checked = onionPrevOn;
+        if ($("onionNextOn")) $("onionNextOn").checked = onionNextOn;
+        if ($("onionPrevN")) { $("onionPrevN").value = String(onionPrevN); }
+        if ($("onionNextN")) { $("onionNextN").value = String(onionNextN); }
+        if ($("onionPrevNVal")) $("onionPrevNVal").textContent = String(onionPrevN);
+        if ($("onionNextNVal")) $("onionNextNVal").textContent = String(onionNextN);
+        if ($("onionOp")) { $("onionOp").value = String(Math.round(onionOpacity * 100)); }
+        if ($("onionOpVal")) $("onionOpVal").textContent = Math.round(onionOpacity * 100) + "%";
+        function act(id, attr, val) {
+          const root = $(id); if (!root) return;
+          const btns = root.querySelectorAll("button");
+          for (let i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute(attr) === String(val));
+        }
+        act("prevStepSeg", "data-step", onionPrevStep);
+        act("nextStepSeg", "data-step", onionNextStep);
+        if (typeof syncOnionModeSeg === "function") syncOnionModeSeg();
+      }
+      function setOnionPrev(n, on) {
+        if (on != null) onionPrevOn = !!on;
+        if (n != null) onionPrevN = Math.max(0, Math.min(5, n | 0));
+        syncOnionUI();
+        schedulePersist();
+        ensureOnionOn();
+      }
+      function setOnionNext(n, on) {
+        if (on != null) onionNextOn = !!on;
+        if (n != null) onionNextN = Math.max(0, Math.min(5, n | 0));
+        syncOnionUI();
+        schedulePersist();
+        ensureOnionOn();
+      }
+      function applyAiBBox() {
+        const raw = lastAzJson && (lastAzJson.subjectBBox || lastAzJson.subject_bbox || lastAzJson.bbox);
+        if (!raw) return false;
+        const box = Array.isArray(raw) ? { x: +raw[0], y: +raw[1], w: +raw[2], h: +raw[3] } : { x: +raw.x, y: +raw.y, w: +raw.w, h: +raw.h };
+        if (![box.x, box.y, box.w, box.h].every(function (v) { return isFinite(v); })) return false;
+        bboxManual = box;
+        bboxFrameId = frame;
+        lastFraming = framingFromBBox(bboxManual, { manual: true, source: "ai" });
+        lastFramingError = null;
+        guideShowBBox = true;
+        if ($("guideBBoxChk")) $("guideBBoxChk").checked = true;
+        syncBBoxMsg();
+        setToolMode(toolMode);
+        redrawGuides();
+        renderSpaceTab(lastFraming);
+        return true;
+      }
+
 
       function guideOptions() {
         return {
@@ -3351,8 +3989,15 @@
           opacity: guideOpacity,
           spiralOri: guideSpiralOri,
           spiralFlip: guideSpiralFlip,
+          spiralFit: guideSpiralFit,
+          spiralRects: guideSpiralRects,
+          triDiag: guideTriDiag,
           customC: guideCustomC,
-          customR: guideCustomR
+          customR: guideCustomR,
+          radialCount: radialCount,
+          radialDual: radialDual,
+          radialVPs: (typeof activeRadialVPs === "function") ? activeRadialVPs() : [{ x: 0.5, y: 0.5 }],
+          handles: (typeof toolMode !== "undefined" && toolMode === "guide")
         };
       }
 
@@ -3399,46 +4044,194 @@
         return { x: x1 + t * dx, y: y1 + t * dy };
       }
 
-      function drawGoldenSpiral(ctx, W, H, ori, flip) {
-        ctx.save();
-        ctx.translate(W / 2, H / 2);
-        ctx.rotate((ori % 4) * Math.PI / 2);
-        if (flip) ctx.scale(-1, 1);
-        const rw = (ori % 2 === 0) ? W : H;
-        const rh = (ori % 2 === 0) ? H : W;
-        ctx.translate(-rw / 2, -rh / 2);
-        let x = 0, y = 0, w = rw, h = rh;
-        let dir = 0;
-        ctx.beginPath();
-        for (let i = 0; i < 16 && w > 1.5 && h > 1.5; i++) {
-          if (w >= h) {
-            const s = h;
-            if (dir === 0) {
-              ctx.moveTo(x, y + s);
-              ctx.arc(x + s, y + s, s, Math.PI, 1.5 * Math.PI, false);
-              x += s; w -= s;
-            } else {
-              ctx.moveTo(x + w, y);
-              ctx.arc(x + w - s, y + s, s, 0, 0.5 * Math.PI, false);
-              w -= s;
-            }
-            dir = 1 - dir;
+      function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+      function goldenSpiralGeometry(W, H, opts) {
+        opts = opts || {};
+        const ori = ((opts.spiralOri | 0) % 4 + 4) % 4;
+        const flip = !!opts.spiralFlip;
+        const fitMode = opts.spiralFit === "stretch" ? "stretch" : "fit";
+        const squares0 = [];
+        const arcs0 = [];
+        let x = 0, y = 0, w = PHI, h = 1;
+        const dirs = ["L", "T", "R", "B"];
+        for (let i = 0; i < 14 && w > 1e-4 && h > 1e-4; i++) {
+          const d = dirs[i % 4];
+          let s, sq, cx, cy, r, a0, a1;
+          if (d === "L") {
+            s = h; sq = { x: x, y: y, w: s, h: s };
+            cx = x + s; cy = y + s; r = s; a0 = Math.PI; a1 = 1.5 * Math.PI;
+            x += s; w -= s;
+          } else if (d === "T") {
+            s = w; sq = { x: x, y: y, w: s, h: s };
+            cx = x; cy = y + s; r = s; a0 = 1.5 * Math.PI; a1 = 2 * Math.PI;
+            y += s; h -= s;
+          } else if (d === "R") {
+            s = h; sq = { x: x + w - s, y: y, w: s, h: s };
+            cx = x + w - s; cy = y; r = s; a0 = 0; a1 = 0.5 * Math.PI;
+            w -= s;
           } else {
-            const s = w;
-            if (dir === 0) {
-              ctx.moveTo(x, y);
-              ctx.arc(x + s, y + s, s, 1.5 * Math.PI, 2 * Math.PI, false);
-              y += s; h -= s;
-            } else {
-              ctx.moveTo(x + s, y + h);
-              ctx.arc(x, y + h - s, s, 0.5 * Math.PI, Math.PI, false);
-              h -= s;
-            }
-            dir = 1 - dir;
+            s = w; sq = { x: x, y: y + h - s, w: s, h: s };
+            cx = x + s; cy = y + h - s; r = s; a0 = 0.5 * Math.PI; a1 = Math.PI;
+            h -= s;
           }
+          squares0.push(sq);
+          arcs0.push({
+            cx: cx, cy: cy, r: r, a0: a0, a1: a1,
+            x0: cx + r * Math.cos(a0), y0: cy + r * Math.sin(a0),
+            x1: cx + r * Math.cos(a1), y1: cy + r * Math.sin(a1)
+          });
         }
+        const gcx = PHI / 2, gcy = 0.5;
+        function xf(px, py) {
+          let lx = px - gcx, ly = py - gcy;
+          if (flip) lx = -lx;
+          for (let k = 0; k < ori; k++) { const nx = -ly; ly = lx; lx = nx; }
+          return { x: lx + gcx, y: ly + gcy };
+        }
+        const rc = [{ x: 0, y: 0 }, { x: PHI, y: 0 }, { x: PHI, y: 1 }, { x: 0, y: 1 }].map(function (p) { return xf(p.x, p.y); });
+        let minx = rc[0].x, maxx = rc[0].x, miny = rc[0].y, maxy = rc[0].y;
+        for (let i = 1; i < 4; i++) {
+          if (rc[i].x < minx) minx = rc[i].x; if (rc[i].x > maxx) maxx = rc[i].x;
+          if (rc[i].y < miny) miny = rc[i].y; if (rc[i].y > maxy) maxy = rc[i].y;
+        }
+        const bw = maxx - minx, bh = maxy - miny;
+        let sx, sy, ox, oy;
+        if (fitMode === "stretch") { sx = W / bw; sy = H / bh; ox = 0; oy = 0; }
+        else {
+          const s = Math.min(W / bw, H / bh);
+          sx = sy = s; ox = (W - bw * s) / 2; oy = (H - bh * s) / 2;
+        }
+        function map(px, py) {
+          const p = xf(px, py);
+          return { x: ox + (p.x - minx) * sx, y: oy + (p.y - miny) * sy };
+        }
+        const squares = squares0.map(function (sq) {
+          const p = map(sq.x, sq.y), q = map(sq.x + sq.w, sq.y + sq.h);
+          return { x: Math.min(p.x, q.x), y: Math.min(p.y, q.y), w: Math.abs(q.x - p.x), h: Math.abs(q.y - p.y) };
+        });
+        const arcs = arcs0.map(function (a) {
+          const c = map(a.cx, a.cy), p0 = map(a.x0, a.y0), p1 = map(a.x1, a.y1);
+          const rx = Math.hypot(p0.x - c.x, p0.y - c.y);
+          return { cx: c.x, cy: c.y, r: rx, a0: Math.atan2(p0.y - c.y, p0.x - c.x), a1: Math.atan2(p1.y - c.y, p1.x - c.x), x0: p0.x, y0: p0.y, x1: p1.x, y1: p1.y };
+        });
+        return { squares: squares, arcs: arcs, fitMode: fitMode, ori: ori, flip: flip };
+      }
+
+      function drawGoldenSpiral(ctx, W, H, ori, flip, fitMode, showRects) {
+        const g = goldenSpiralGeometry(W, H, { spiralOri: ori, spiralFlip: flip, spiralFit: fitMode });
+        const oriN = ((ori | 0) % 4 + 4) % 4;
+        const gcx = PHI / 2, gcy = 0.5;
+        const rc = [{ x: 0, y: 0 }, { x: PHI, y: 0 }, { x: PHI, y: 1 }, { x: 0, y: 1 }].map(function (p) {
+          let lx = p.x - gcx, ly = p.y - gcy;
+          if (flip) lx = -lx;
+          for (let k = 0; k < oriN; k++) { const nx = -ly; ly = lx; lx = nx; }
+          return { x: lx + gcx, y: ly + gcy };
+        });
+        let minx = rc[0].x, maxx = rc[0].x, miny = rc[0].y, maxy = rc[0].y;
+        for (let i = 1; i < 4; i++) {
+          if (rc[i].x < minx) minx = rc[i].x; if (rc[i].x > maxx) maxx = rc[i].x;
+          if (rc[i].y < miny) miny = rc[i].y; if (rc[i].y > maxy) maxy = rc[i].y;
+        }
+        const bw = maxx - minx, bh = maxy - miny;
+        let sx, sy, ox, oy;
+        if (fitMode === "stretch") { sx = W / bw; sy = H / bh; ox = 0; oy = 0; }
+        else { const s = Math.min(W / bw, H / bh); sx = sy = s; ox = (W - bw * s) / 2; oy = (H - bh * s) / 2; }
+        ctx.save();
+        ctx.translate(ox, oy);
+        ctx.scale(sx, sy);
+        ctx.translate(-minx, -miny);
+        ctx.translate(gcx, gcy);
+        ctx.rotate(oriN * Math.PI / 2);
+        if (flip) ctx.scale(-1, 1);
+        ctx.translate(-gcx, -gcy);
+        if (showRects) {
+          ctx.save();
+          ctx.globalAlpha *= 0.55;
+          ctx.lineWidth = (ctx.lineWidth || 1) / Math.max(sx, sy);
+          let x = 0, y = 0, w = PHI, h = 1;
+          const dirs = ["L", "T", "R", "B"];
+          for (let i = 0; i < 14 && w > 1e-4 && h > 1e-4; i++) {
+            const d = dirs[i % 4];
+            let s;
+            if (d === "L") { s = h; ctx.strokeRect(x, y, s, s); x += s; w -= s; }
+            else if (d === "T") { s = w; ctx.strokeRect(x, y, s, s); y += s; h -= s; }
+            else if (d === "R") { s = h; ctx.strokeRect(x + w - s, y, s, s); w -= s; }
+            else { s = w; ctx.strokeRect(x, y + h - s, s, s); h -= s; }
+          }
+          ctx.restore();
+        }
+        ctx.lineWidth = (ctx.lineWidth || 1) / Math.max(sx, sy);
+        ctx.beginPath();
+        (function () {
+          let x = 0, y = 0, w = PHI, h = 1;
+          const dirs = ["L", "T", "R", "B"];
+          let first = true;
+          for (let i = 0; i < 14 && w > 1e-4 && h > 1e-4; i++) {
+            const d = dirs[i % 4];
+            let s, cx, cy, r, a0, a1;
+            if (d === "L") { s = h; cx = x + s; cy = y + s; r = s; a0 = Math.PI; a1 = 1.5 * Math.PI; x += s; w -= s; }
+            else if (d === "T") { s = w; cx = x; cy = y + s; r = s; a0 = 1.5 * Math.PI; a1 = 2 * Math.PI; y += s; h -= s; }
+            else if (d === "R") { s = h; cx = x + w - s; cy = y; r = s; a0 = 0; a1 = 0.5 * Math.PI; w -= s; }
+            else { s = w; cx = x + s; cy = y + h - s; r = s; a0 = 0.5 * Math.PI; a1 = Math.PI; h -= s; }
+            if (first) { ctx.moveTo(cx + r * Math.cos(a0), cy + r * Math.sin(a0)); first = false; }
+            ctx.arc(cx, cy, r, a0, a1, false);
+          }
+        })();
         ctx.stroke();
         ctx.restore();
+        return g;
+      }
+
+      function drawGoldenTriangle(ctx, w, h, diag) {
+        const diags = [[0, h, w, 0], [0, 0, w, h]];
+        const d = diags[(diag | 0) % 2];
+        const x1 = d[0], y1 = d[1], x2 = d[2], y2 = d[3];
+        gLine(ctx, x1, y1, x2, y2);
+        const corners = (diag | 0) % 2 === 0 ? [[0, 0], [w, h]] : [[0, h], [w, 0]];
+        for (let c = 0; c < corners.length; c++) {
+          const p = closestPointOnSeg(corners[c][0], corners[c][1], x1, y1, x2, y2);
+          gLine(ctx, corners[c][0], corners[c][1], p.x, p.y);
+        }
+      }
+
+      function drawHarmonicArmature(ctx, w, h) {
+        const diags = [[0, h, w, 0], [0, 0, w, h]];
+        for (let d = 0; d < 2; d++) {
+          gLine(ctx, diags[d][0], diags[d][1], diags[d][2], diags[d][3]);
+          const corners = d === 0 ? [[0, 0], [w, h]] : [[0, h], [w, 0]];
+          for (let c = 0; c < corners.length; c++) {
+            const p = closestPointOnSeg(corners[c][0], corners[c][1], diags[d][0], diags[d][1], diags[d][2], diags[d][3]);
+            gLine(ctx, corners[c][0], corners[c][1], p.x, p.y);
+          }
+        }
+      }
+
+      function drawRadialGuides(ctx, w, h, vps, count, opts) {
+        const n = Math.max(4, Math.min(36, count || 12));
+        const pts = vps && vps.length ? vps : [{ x: 0.5, y: 0.5 }];
+        const L = Math.hypot(w, h) * 1.2;
+        for (let v = 0; v < pts.length; v++) {
+          const cx = pts[v].x * w, cy = pts[v].y * h;
+          ctx.beginPath();
+          for (let k = 0; k < n; k++) {
+            const a = (Math.PI * 2 * k) / n;
+            ctx.moveTo(cx - Math.cos(a) * L, cy - Math.sin(a) * L);
+            ctx.lineTo(cx + Math.cos(a) * L, cy + Math.sin(a) * L);
+          }
+          ctx.stroke();
+          if (opts && opts.handles) {
+            ctx.save();
+            ctx.fillStyle = "rgba(255,220,80,0.95)";
+            ctx.strokeStyle = "rgba(0,0,0,0.65)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, Math.max(6, Math.min(w, h) / 70), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
       }
 
       function drawCompositionGuides(ctx, w, h, opts) {
@@ -3455,19 +4248,16 @@
           gLines(ctx, [xs[0], 0, xs[0], h, xs[1], 0, xs[1], h, 0, ys[0], w, ys[0], 0, ys[1], w, ys[1]]);
         }
         if (ids.spiral) {
-          drawGoldenSpiral(ctx, w, h, opts.spiralOri || 0, !!opts.spiralFlip);
+          drawGoldenSpiral(ctx, w, h, opts.spiralOri || 0, !!opts.spiralFlip, opts.spiralFit || "fit", opts.spiralRects !== false);
         }
         if (ids.goldenTri) {
-          const diags = [[0, h, w, 0], [0, 0, w, h]];
-          for (let d = 0; d < diags.length; d++) {
-            const x1 = diags[d][0], y1 = diags[d][1], x2 = diags[d][2], y2 = diags[d][3];
-            gLine(ctx, x1, y1, x2, y2);
-            const corners = d === 0 ? [[0, 0], [w, h]] : [[0, h], [w, 0]];
-            for (let c = 0; c < corners.length; c++) {
-              const p = closestPointOnSeg(corners[c][0], corners[c][1], x1, y1, x2, y2);
-              gLine(ctx, corners[c][0], corners[c][1], p.x, p.y);
-            }
-          }
+          drawGoldenTriangle(ctx, w, h, opts.triDiag || 0);
+        }
+        if (ids.harmonic) {
+          drawHarmonicArmature(ctx, w, h);
+        }
+        if (ids.radial) {
+          drawRadialGuides(ctx, w, h, opts.radialVPs, opts.radialCount || 12, { handles: !!opts.handles });
         }
         if (ids.diagonal) {
           gLines(ctx, [0, 0, w, h, 0, h, w, 0]);
@@ -3880,9 +4670,31 @@
         return analyzeColorsFromImageData(img);
       }
 
-      function analyzeFraming(canvas) {
-        const src = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
-        const W = 160, H = Math.max(1, Math.round(160 * canvas.height / canvas.width));
+      function framingFromBBox(bbox, extra) {
+        extra = extra || {};
+        let x = clamp01(bbox.x), y = clamp01(bbox.y);
+        let w = Math.max(0.015, Number(bbox.w) || 0.05), h = Math.max(0.015, Number(bbox.h) || 0.05);
+        if (x + w > 1) w = 1 - x;
+        if (y + h > 1) h = 1 - y;
+        const pos = extra.positivePct != null ? extra.positivePct : (w * h * 100);
+        return {
+          bbox: { x: x, y: y, w: w, h: h },
+          headroomPct: y * 100,
+          leftGapPct: x * 100,
+          rightGapPct: (1 - x - w) * 100,
+          negativePct: 100 - pos,
+          positivePct: pos,
+          weak: !!extra.weak,
+          manual: !!extra.manual,
+          source: extra.source || (extra.manual ? "manual" : "auto")
+        };
+      }
+
+      function analyzeFraming(canvas, opts) {
+        opts = opts || {};
+        const faceMode = opts.faceMode != null ? !!opts.faceMode : true;
+        const srcW = canvas.width, srcH = canvas.height;
+        const W = 160, H = Math.max(1, Math.round(160 * srcH / srcW));
         const tmp = document.createElement("canvas");
         tmp.width = W; tmp.height = H;
         const tctx = tmp.getContext("2d");
@@ -3893,23 +4705,40 @@
           const i = (y * W + x) * 4;
           return 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
         }
-        /* border mean color (background hint) */
         let br = 0, bg = 0, bb = 0, bn = 0;
         for (let x = 0; x < W; x++) {
-          for (let y of [0, 1, H - 2, H - 1]) {
-            const i = (y * W + x) * 4;
-            br += d[i]; bg += d[i + 1]; bb += d[i + 2]; bn++;
+          for (let yi = 0; yi < 2; yi++) {
+            const ys = [yi, H - 1 - yi];
+            for (let k = 0; k < 2; k++) {
+              const i = (ys[k] * W + x) * 4;
+              br += d[i]; bg += d[i + 1]; bb += d[i + 2]; bn++;
+            }
           }
         }
         for (let y = 0; y < H; y++) {
-          for (let x of [0, 1, W - 2, W - 1]) {
-            const i = (y * W + x) * 4;
-            br += d[i]; bg += d[i + 1]; bb += d[i + 2]; bn++;
+          for (let xi = 0; xi < 2; xi++) {
+            const xs = [xi, W - 1 - xi];
+            for (let k = 0; k < 2; k++) {
+              const i = (y * W + xs[k]) * 4;
+              br += d[i]; bg += d[i + 1]; bb += d[i + 2]; bn++;
+            }
           }
         }
         br /= bn; bg /= bn; bb /= bn;
+        /* 8x downsample blur for local distinctness */
+        const bw = Math.max(1, (W / 8) | 0), bh = Math.max(1, (H / 8) | 0);
+        const tiny = document.createElement("canvas");
+        tiny.width = bw; tiny.height = bh;
+        tiny.getContext("2d").drawImage(tmp, 0, 0, bw, bh);
+        const blurC = document.createElement("canvas");
+        blurC.width = W; blurC.height = H;
+        const bctx = blurC.getContext("2d");
+        bctx.imageSmoothingEnabled = true;
+        bctx.drawImage(tiny, 0, 0, W, H);
+        const bd = bctx.getImageData(0, 0, W, H).data;
         const sal = new Float32Array(W * H);
-        let ssum = 0, ssum2 = 0;
+        const vals = [];
+        const margin = Math.max(3, Math.round(Math.min(W, H) * 0.08));
         for (let y = 1; y < H - 1; y++) {
           for (let x = 1; x < W - 1; x++) {
             const tl = lumAt(x - 1, y - 1), tc = lumAt(x, y - 1), tr = lumAt(x + 1, y - 1);
@@ -3919,70 +4748,97 @@
             const gy = -tl - 2 * tc - tr + bl + 2 * bc + brl;
             const edge = Math.sqrt(gx * gx + gy * gy) / 1020;
             const i = (y * W + x) * 4;
-            const dr = d[i] - br, dg = d[i + 1] - bg, db = d[i + 2] - bb;
-            const distinct = Math.min(1, Math.sqrt(dr * dr + dg * dg + db * db) / 255);
-            const cx = (x + 0.5) / W - 0.5, cy = (y + 0.5) / H - 0.45;
-            const center = Math.exp(-(cx * cx * 4 + cy * cy * 4));
-            const v = 0.4 * edge + 0.4 * distinct + 0.2 * center;
+            const r = d[i], g = d[i + 1], b = d[i + 2];
+            const distinct = Math.min(1, Math.sqrt((r - br) * (r - br) + (g - bg) * (g - bg) + (b - bb) * (b - bb)) / 255);
+            const localD = Math.min(1, Math.sqrt((r - bd[i]) * (r - bd[i]) + (g - bd[i + 1]) * (g - bd[i + 1]) + (b - bd[i + 2]) * (b - bd[i + 2])) / 255);
+            const cx = (x + 0.5) / W - 0.5, cy = (y + 0.5) / H - 0.42;
+            const center = Math.exp(-(cx * cx * (faceMode ? 8 : 5) + cy * cy * (faceMode ? 8 : 5)));
+            const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+            const sat = mx ? (mx - mn) / mx : 0, val = mx / 255;
+            const skin = (r > g && g >= b * 0.8 && r > 80 && sat > 0.08 && sat < 0.7 && val > 0.2 && val < 0.98) ? 1 : 0;
+            let edgePen = 1;
+            const dx = Math.min(x, W - 1 - x), dy = Math.min(y, H - 1 - y);
+            const dm = Math.min(dx, dy);
+            if (dm < margin) edgePen = dm / margin;
+            const skinW = faceMode ? 0.4 : 0.2;
+            const v = (0.12 * edge + 0.28 * localD + 0.18 * distinct) * edgePen + 0.2 * center + skinW * skin * center;
             sal[y * W + x] = v;
-            ssum += v; ssum2 += v * v;
+            vals.push(v);
           }
         }
-        const nn = (W - 2) * (H - 2) || 1;
-        const mean = ssum / nn;
-        const std = Math.sqrt(Math.max(0, ssum2 / nn - mean * mean));
-        const thr = mean + 0.35 * std;
+        vals.sort(function (a, b) { return a - b; });
+        const pct = faceMode ? 0.88 : 0.85;
+        const thr = vals.length ? vals[Math.min(vals.length - 1, Math.floor(vals.length * pct))] : 1;
         const mask = new Uint8Array(W * H);
-        let mcount = 0;
-        for (let i = 0; i < sal.length; i++) {
-          if (sal[i] >= thr) { mask[i] = 1; mcount++; }
-        }
-        /* blur/dilate 1px to fill holes */
-        const mask2 = new Uint8Array(W * H);
-        for (let y = 1; y < H - 1; y++) {
-          for (let x = 1; x < W - 1; x++) {
-            let s = 0;
-            for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) s += mask[(y + dy) * W + (x + dx)];
-            if (s >= 3) mask2[y * W + x] = 1;
-          }
-        }
-        let minX = W, minY = H, maxX = 0, maxY = 0, area = 0;
+        for (let i = 0; i < sal.length; i++) if (sal[i] >= thr) mask[i] = 1;
+        /* 4-connected blobs */
+        const lab = new Int32Array(W * H);
+        let best = null, bestScore = -1, bid = 0;
+        const stack = [];
         for (let y = 0; y < H; y++) {
           for (let x = 0; x < W; x++) {
-            if (!mask2[y * W + x]) continue;
-            area++;
-            if (x < minX) minX = x;
-            if (y < minY) minY = y;
-            if (x > maxX) maxX = x;
-            if (y > maxY) maxY = y;
+            const i0 = y * W + x;
+            if (!mask[i0] || lab[i0]) continue;
+            bid++;
+            stack.length = 0;
+            stack.push(i0);
+            lab[i0] = bid;
+            let minX = x, maxX = x, minY = y, maxY = y, area = 0, sumS = 0, sx = 0, sy = 0;
+            const ptsX = [], ptsY = [], ptsW = [];
+            while (stack.length) {
+              const p = stack.pop();
+              const px = p % W, py = (p / W) | 0;
+              ptsX.push(px); ptsY.push(py); ptsW.push(sal[p]);
+              area++; sumS += sal[p]; sx += px; sy += py;
+              if (px < minX) minX = px; if (px > maxX) maxX = px;
+              if (py < minY) minY = py; if (py > maxY) maxY = py;
+              const nbs = [p - 1, p + 1, p - W, p + W];
+              for (let n = 0; n < 4; n++) {
+                const q = nbs[n], qx = q % W, qy = (q / W) | 0;
+                if (q < 0 || q >= W * H) continue;
+                if (n < 2 && qy !== py) continue;
+                if (!mask[q] || lab[q]) continue;
+                lab[q] = bid;
+                stack.push(q);
+              }
+            }
+            if (area < 8) continue;
+            const bwBox = maxX - minX + 1, bhBox = maxY - minY + 1;
+            const compact = area / (bwBox * bhBox + 1);
+            const touch = (minX <= 1 || minY <= 1 || maxX >= W - 2 || maxY >= H - 2);
+            const cxb = (sx / area + 0.5) / W - 0.5, cyb = (sy / area + 0.5) / H - 0.42;
+            const cent = Math.exp(-(cxb * cxb * 6 + cyb * cyb * 6));
+            const score = area * compact * cent * (touch ? 0.22 : 1) * (sumS / area);
+            if (score > bestScore) {
+              bestScore = score;
+              best = { ptsX: ptsX, ptsY: ptsY, ptsW: ptsW, area: area, minX: minX, maxX: maxX, minY: minY, maxY: maxY };
+            }
           }
         }
-        if (area < 4) {
-          return {
-            bbox: { x: 0.25, y: 0.25, w: 0.5, h: 0.5 },
-            headroomPct: 25, leftGapPct: 25, rightGapPct: 25,
-            negativePct: 100, positivePct: 0,
-            weak: true
-          };
+        if (!best) {
+          return framingFromBBox({ x: 0.3, y: 0.25, w: 0.4, h: 0.5 }, { weak: true, positivePct: 0, source: "auto" });
         }
-        /* add 1px pad */
-        minX = Math.max(0, minX); minY = Math.max(0, minY);
-        const bw = (maxX - minX + 1) / W, bh = (maxY - minY + 1) / H;
-        const bx = minX / W, by = minY / H;
-        const headroomPct = by * 100;
-        const leftGapPct = bx * 100;
-        const rightGapPct = (1 - bx - bw) * 100;
-        const positivePct = area / (W * H) * 100;
-        const negativePct = 100 - positivePct;
-        return {
-          bbox: { x: bx, y: by, w: bw, h: bh },
-          headroomPct: headroomPct,
-          leftGapPct: leftGapPct,
-          rightGapPct: rightGapPct,
-          negativePct: negativePct,
-          positivePct: positivePct,
-          weak: false
-        };
+        function weightedQuantile(vals, wts, q) {
+          const idx = vals.map(function (v, i) { return i; }).sort(function (a, b) { return vals[a] - vals[b]; });
+          let tot = 0;
+          for (let i = 0; i < wts.length; i++) tot += wts[i];
+          let acc = 0, target = q * tot;
+          for (let i = 0; i < idx.length; i++) {
+            acc += wts[idx[i]];
+            if (acc >= target) return vals[idx[i]];
+          }
+          return vals[idx[idx.length - 1]];
+        }
+        let x0 = weightedQuantile(best.ptsX, best.ptsW, 0.05);
+        let x1 = weightedQuantile(best.ptsX, best.ptsW, 0.95);
+        let y0 = weightedQuantile(best.ptsY, best.ptsW, 0.05);
+        let y1 = weightedQuantile(best.ptsY, best.ptsW, 0.95);
+        let bw2 = Math.max(2, x1 - x0 + 1), bh2 = Math.max(2, y1 - y0 + 1);
+        const padX = bw2 * 0.1, padY = bh2 * 0.12;
+        x0 = Math.max(0, x0 - padX); y0 = Math.max(0, y0 - padY);
+        x1 = Math.min(W - 1, x1 + padX); y1 = Math.min(H - 1, y1 + padY);
+        const bbox = { x: x0 / W, y: y0 / H, w: (x1 - x0 + 1) / W, h: (y1 - y0 + 1) / H };
+        return framingFromBBox(bbox, { weak: false, positivePct: best.area / (W * H) * 100, source: "auto" });
       }
 
       function detectHolds(canvases, fps) {
@@ -4046,6 +4902,7 @@
         ["noseroom", "노즈룸"],
         ["leadroom", "리드룸"],
         ["negativeSpace", "네거티브 스페이스"],
+        ["subjectBBox", "피사체 상자"],
         ["notes", "메모"]
       ];
 
@@ -4198,8 +5055,8 @@
         }
         head += azLocalPromptNotes();
         head += "\n분석 마지막에 아래 키를 가진 JSON을 ```json 코드블록으로 반드시 붙여. 값은 한국어로 짧게:\n";
-        head += '{"shotSize":"","shotType":"","cameraAngle":"","lens":"","composition":"","colorHarmony":"","animationTechnique":"","subjectPosition":"","facingDirection":"","motionDirection":"","headroom":"","noseroom":"","leadroom":"","negativeSpace":"","notes":""}\n';
-        head += "shotType은 해당하면 ECU, CU, MCU, MS, MLS, LS, ELS, OTS, POV, insert, two-shot, establishing 등을 쓰고, animationTechnique은 위에서 보인 기법만 적어.\n";
+        head += '{"shotSize":"","shotType":"","cameraAngle":"","lens":"","composition":"","colorHarmony":"","animationTechnique":"","subjectPosition":"","facingDirection":"","motionDirection":"","headroom":"","noseroom":"","leadroom":"","negativeSpace":"","subjectBBox":{"x":0,"y":0,"w":0,"h":0},"notes":""}\n';
+        head += "shotType은 해당하면 ECU, CU, MCU, MS, MLS, LS, ELS, OTS, POV, insert, two-shot, establishing 등을 쓰고, animationTechnique은 위에서 보인 기법만 적어. subjectBBox는 주 피사체(얼굴·몸)를 담는 정규화 상자 {x,y,w,h} (0~1, x·y는 좌상단)로, 배경 패턴을 넓게 넣지 마.\n";
         return head;
       }
 
@@ -4385,9 +5242,12 @@
         toggleOnion: toggleOnion,
         setOnionOn: setOnionOn,
         setOnionMode: function (m) { onionMode = m; syncOnionModeSeg(); ensureOnionOn(); },
-        setOnionN: function (n) { onionN = n; $("onionN").value = String(n); $("onionNVal").textContent = String(n); ensureOnionOn(); },
-        setOnionOpacity: function (o) { onionOpacity = o; $("onionOp").value = String(Math.round(o * 100)); $("onionOpVal").textContent = Math.round(o * 100) + "%"; ensureOnionOn(); },
-        setOnionStep: function (s) { onionStep = s; syncStepSeg(); ensureOnionOn(); },
+        setOnionN: function (n) { setOnionPrev(n, true); setOnionNext(n, true); },
+        setOnionPrev: setOnionPrev,
+        setOnionNext: setOnionNext,
+        setOnionOpacity: function (o) { onionOpacity = o; if ($("onionOp")) { $("onionOp").value = String(Math.round(o * 100)); $("onionOpVal").textContent = Math.round(o * 100) + "%"; } schedulePersist(); ensureOnionOn(); },
+        setOnionStep: function (s) { onionPrevStep = onionNextStep = s; onionStep = s; syncStepSeg(); schedulePersist(); ensureOnionOn(); },
+        getOnion: function () { return { on: onionOn, prevOn: onionPrevOn, nextOn: onionNextOn, prevN: onionPrevN, nextN: onionNextN, prevStep: onionPrevStep, nextStep: onionNextStep, opacity: onionOpacity, mode: onionMode }; },
         play: play,
         pause: pause,
         timecode: timecode,
@@ -4424,13 +5284,7 @@
           }
         }
       });
-      $("stepSeg").addEventListener("click", function (e) {
-        const b = e.target.closest("button");
-        if (!b) return;
-        onionStep = parseInt(b.getAttribute("data-step"), 10);
-        syncStepSeg();
-        ensureOnionOn();
-      });
+      /* step segs bound on prevStepSeg / nextStepSeg */
       $("onionModeSeg").addEventListener("click", function (e) {
         const b = e.target.closest("button");
         if (!b) return;
@@ -4505,14 +5359,40 @@
       });
 
       $("onionBtn").addEventListener("click", toggleOnion);
-      $("onionN").addEventListener("input", function () {
-        onionN = parseInt($("onionN").value, 10);
-        $("onionNVal").textContent = String(onionN);
+      $("onionPrevOn").addEventListener("change", function () { onionPrevOn = $("onionPrevOn").checked; schedulePersist(); ensureOnionOn(); });
+      $("onionNextOn").addEventListener("change", function () { onionNextOn = $("onionNextOn").checked; schedulePersist(); ensureOnionOn(); });
+      $("onionPrevN").addEventListener("input", function () {
+        onionPrevN = parseInt($("onionPrevN").value, 10) || 0;
+        $("onionPrevNVal").textContent = String(onionPrevN);
+        schedulePersist();
+        ensureOnionOn();
+      });
+      $("onionNextN").addEventListener("input", function () {
+        onionNextN = parseInt($("onionNextN").value, 10) || 0;
+        $("onionNextNVal").textContent = String(onionNextN);
+        schedulePersist();
+        ensureOnionOn();
+      });
+      $("prevStepSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        onionPrevStep = parseInt(b.getAttribute("data-step"), 10);
+        syncStepSeg();
+        schedulePersist();
+        ensureOnionOn();
+      });
+      $("nextStepSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        onionNextStep = parseInt(b.getAttribute("data-step"), 10);
+        syncStepSeg();
+        schedulePersist();
         ensureOnionOn();
       });
       $("onionOp").addEventListener("input", function () {
         onionOpacity = parseInt($("onionOp").value, 10) / 100;
         $("onionOpVal").textContent = $("onionOp").value + "%";
+        schedulePersist();
         ensureOnionOn();
       });
       $("muteBtn").addEventListener("click", toggleMute);
@@ -5027,7 +5907,7 @@
         img.src = src(n);
         img.draggable = false;
         ibox.appendChild(img);
-        if (collageGuides) attachGuideOverlay(ibox);
+        if (collageGuides || (typeof customGuides !== "undefined" && customGuides.length) || (typeof penAll !== "undefined" && (penAll.length || (penByFrame && penByFrame[String(n)])))) attachGuideOverlay(ibox, n);
         const capEl = caption ? document.createElement("figcaption") : null;
         if (capEl) capEl.textContent = captionText(n);
         if (fit === "cover") {
@@ -5553,6 +6433,11 @@
             drawCompositionGuides(ctx, dw, dh, guideOptions());
             ctx.restore();
           }
+          ctx.save();
+          ctx.translate((w - dw) / 2, (h - dh) / 2);
+          if (typeof drawCustomGuides === "function") drawCustomGuides(ctx, dw, dh, "video", false);
+          if (typeof drawPenStrokes === "function") drawPenStrokes(ctx, dw, dh, n, "video");
+          ctx.restore();
         }
         if (caption && n != null) {
           const text = captionText(n);
@@ -5920,6 +6805,19 @@
               const dx = x + (w - dw) / 2, dy = y + (imgBoxH - dh) / 2;
               ctx.translate(dx, dy);
               drawCompositionGuides(ctx, dw, dh, guideOptions());
+            }
+            ctx.restore();
+          }
+          if (typeof drawCustomGuides === "function") {
+            ctx.save();
+            if (it.fit === "cover") { ctx.translate(x, y); drawCustomGuides(ctx, w, h, "collage", false); drawPenStrokes(ctx, w, h, it.n, "collage"); }
+            else {
+              const s = Math.min(w / im.naturalWidth, imgBoxH / im.naturalHeight);
+              const dw = im.naturalWidth * s, dh = im.naturalHeight * s;
+              const dx = x + (w - dw) / 2, dy = y + (imgBoxH - dh) / 2;
+              ctx.translate(dx, dy);
+              drawCustomGuides(ctx, dw, dh, "collage", false);
+              drawPenStrokes(ctx, dw, dh, it.n, "collage");
             }
             ctx.restore();
           }
@@ -6373,7 +7271,10 @@
 
       async function frameCanvasForExport(n, withGuides) {
         const c = await fullFrameCanvas(n);
-        if (withGuides) drawCompositionGuides(c.getContext("2d"), c.width, c.height, guideOptions());
+        const ctx = c.getContext("2d");
+        if (withGuides) drawCompositionGuides(ctx, c.width, c.height, guideOptions());
+        if (typeof drawCustomGuides === "function") drawCustomGuides(ctx, c.width, c.height, "image", false);
+        if (typeof drawPenStrokes === "function") drawPenStrokes(ctx, c.width, c.height, n, "image");
         return c;
       }
 
@@ -6410,7 +7311,9 @@
           for (let i = 0; i < list.length; i++) {
             const n = list[i];
             const name = exportFileStem(n) + (format === "png" ? ".png" : ".jpg");
-            if (!withGuides && format === "jpg" && project.type === "builtin" && framesAreFetchable()) {
+            const bakeInk = (typeof customGuides !== "undefined" && customGuides.some(function (g) { return !g.output || g.output.image !== false; }))
+              || (typeof penExport !== "undefined" && penExport.image && (penAll.length || (penByFrame && Object.keys(penByFrame).length)));
+            if (!withGuides && !bakeInk && format === "jpg" && project.type === "builtin" && framesAreFetchable()) {
               const res = await fetch(src(n));
               if (!res.ok) throw new Error("프레임을 불러오지 못했습니다.");
               const blob = await res.blob();
@@ -6455,9 +7358,43 @@
         const ctx = c.getContext("2d");
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, c.width, c.height);
-        if (guideOn) drawCompositionGuides(ctx, c.width, c.height, guideOptions());
-        if (guideShowBBox && lastFraming) drawFramingOverlay(ctx, c.width, c.height, lastFraming, { color: "#ffe14d", opacity: 0.95 });
-        else if (guideShowBBox && lastFramingError) drawFramingNotice(ctx, c.width, c.height, lastFramingError);
+        const go = guideOptions();
+        if (guideOn) drawCompositionGuides(ctx, c.width, c.height, go);
+        if (typeof drawCustomGuides === "function") drawCustomGuides(ctx, c.width, c.height, null, toolMode === "guide");
+        if (typeof drawPenStrokes === "function") drawPenStrokes(ctx, c.width, c.height, frame, null);
+        lastFraming = (typeof effectiveFraming === "function") ? (effectiveFraming() || lastFraming) : lastFraming;
+        if (guideShowBBox && lastFraming) {
+          drawFramingOverlay(ctx, c.width, c.height, lastFraming, { color: "#ffe14d", opacity: 0.95 });
+          if (toolMode !== "pen") drawBBoxHandles(ctx, c.width, c.height, lastFraming.bbox);
+        } else if (guideShowBBox && lastFramingError) drawFramingNotice(ctx, c.width, c.height, lastFramingError);
+        const tc = $("toolCanvas");
+        if (tc) {
+          if (tc.width !== c.width || tc.height !== c.height) { tc.width = c.width; tc.height = c.height; }
+          else tc.getContext("2d").clearRect(0, 0, tc.width, tc.height);
+        }
+        if (typeof renderRulers === "function") renderRulers();
+      }
+
+      function drawBBoxHandles(ctx, w, h, box) {
+        if (!box) return;
+        const hs = [
+          [box.x, box.y], [box.x + box.w / 2, box.y], [box.x + box.w, box.y],
+          [box.x, box.y + box.h / 2], [box.x + box.w, box.y + box.h / 2],
+          [box.x, box.y + box.h], [box.x + box.w / 2, box.y + box.h], [box.x + box.w, box.y + box.h]
+        ];
+        const r = Math.max(4, Math.min(w, h) / 80);
+        ctx.save();
+        ctx.fillStyle = "#ffe14d";
+        ctx.strokeStyle = "rgba(0,0,0,0.7)";
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < hs.length; i++) {
+          const x = hs[i][0] * w, y = hs[i][1] * h;
+          ctx.beginPath();
+          ctx.rect(x - r, y - r, r * 2, r * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.restore();
       }
 
       function drawFramingNotice(ctx, w, h, msg) {
@@ -6584,8 +7521,12 @@
       function syncGuideOptsVisibility() {
         const sp = $("guideSpiralOpts");
         const cu = $("guideCustomOpts");
+        const tr = $("guideTriOpts");
+        const rd = $("guideRadialOpts");
         if (sp) sp.classList.toggle("hidden", !guideIds.spiral);
         if (cu) cu.classList.toggle("hidden", !guideIds.custom);
+        if (tr) tr.classList.toggle("hidden", !guideIds.goldenTri);
+        if (rd) rd.classList.toggle("hidden", !guideIds.radial);
       }
 
       function setGuides(opts) {
@@ -6658,13 +7599,16 @@
         }
       }
 
-      function attachGuideOverlay(host) {
+      function attachGuideOverlay(host, n) {
         const c = document.createElement("canvas");
         c.className = "guide-overlay";
         c.width = 640;
         c.height = 360;
         c.setAttribute("aria-hidden", "true");
-        drawCompositionGuides(c.getContext("2d"), c.width, c.height, guideOptions());
+        const ctx = c.getContext("2d");
+        if (collageGuides) drawCompositionGuides(ctx, c.width, c.height, guideOptions());
+        if (typeof drawCustomGuides === "function") drawCustomGuides(ctx, c.width, c.height, "collage", false);
+        if (typeof drawPenStrokes === "function") drawPenStrokes(ctx, c.width, c.height, n, "collage");
         host.appendChild(c);
         return c;
       }
@@ -6872,14 +7816,24 @@
         }
       }
 
-      async function refreshFraming() {
+      async function refreshFraming(opts) {
+        opts = opts || {};
         try {
           const cap = await captureFrameForAnalysis(frame);
-          lastFraming = analyzeFraming(cap.canvas);
+          lastAutoFraming = analyzeFraming(cap.canvas, { faceMode: bboxFaceMode });
           lastFramingError = null;
+          if (opts.forceAuto) { bboxManual = null; }
+          if (bboxManual && (bboxKeepManual || bboxFrameId === frame) && !opts.forceAuto) {
+            lastFraming = framingFromBBox(bboxManual, { manual: true, source: "manual" });
+          } else {
+            lastFraming = lastAutoFraming;
+          }
         } catch (e) {
-          lastFraming = null;
-          lastFramingError = (e && e.code === "TAINTED") ? BBOX_TAINTED_MSG : ((e && e.message) || BBOX_TAINTED_MSG);
+          lastAutoFraming = null;
+          if (!(bboxManual && (bboxKeepManual || bboxFrameId === frame) && !opts.forceAuto)) {
+            lastFraming = null;
+            lastFramingError = (e && e.code === "TAINTED") ? BBOX_TAINTED_MSG : ((e && e.message) || BBOX_TAINTED_MSG);
+          }
         }
         syncBBoxMsg();
         redrawGuides();
@@ -6899,7 +7853,8 @@
         try {
           const cap = await captureFrameForAnalysis(frame);
           lastColors = analyzeColors(cap.canvas);
-          lastFraming = analyzeFraming(cap.canvas);
+          lastAutoFraming = analyzeFraming(cap.canvas, { faceMode: bboxFaceMode });
+          lastFraming = (bboxManual && (bboxKeepManual || bboxFrameId === frame)) ? framingFromBBox(bboxManual, { manual: true, source: "manual" }) : lastAutoFraming;
           lastFramingError = null;
           renderColorTab(lastColors);
           renderSpaceTab(lastFraming);
@@ -7096,6 +8051,28 @@
         },
         showGuideMenu: showGuideMenu,
         BBOX_TAINTED_MSG: BBOX_TAINTED_MSG,
+        goldenSpiralGeometry: goldenSpiralGeometry,
+        setToolMode: setToolMode,
+        getToolMode: function () { return toolMode; },
+        addCustomGuide: addCustomGuide,
+        getCustomGuides: function () { return customGuides.slice(); },
+        setCustomLock: function (on) { customLock = !!on; if ($("customLockChk")) $("customLockChk").checked = customLock; schedulePersist(); },
+        getPenStrokes: function () { return { all: penAll.slice(), byFrame: JSON.parse(JSON.stringify(penByFrame)) }; },
+        addPenStroke: storePenStroke,
+        setPenExport: function (k, v) { penExport[k] = !!v; schedulePersist(); },
+        setRadialVPs: function (vps) { radialVPs = vps; schedulePersist(); redrawGuides(); },
+        getRadialVPs: function () { return activeRadialVPs().map(function (p) { return { x: p.x, y: p.y }; }); },
+        applyAiBBox: applyAiBBox,
+        framingFromBBox: framingFromBBox,
+        setBBoxManual: function (box, keep) {
+          bboxManual = box;
+          bboxFrameId = frame;
+          if (keep != null) bboxKeepManual = !!keep;
+          lastFraming = framingFromBBox(box, { manual: true, source: "manual" });
+          guideShowBBox = true;
+          if ($("guideBBoxChk")) $("guideBBoxChk").checked = true;
+          redrawGuides();
+        },
         sizeGuideCanvas: sizeGuideCanvas,
         IMG_TAINTED_MSG: IMG_TAINTED_MSG
       });
@@ -7154,6 +8131,7 @@
         guideShowBBox = $("guideBBoxChk").checked;
         if (guideShowBBox) refreshFraming();
         else { syncBBoxMsg(); redrawGuides(); }
+        setToolMode(toolMode);
       });
       window.addEventListener("resize", function () { sizeGuideCanvas(); positionGuideMenu(); });
       window.addEventListener("scroll", function () { positionGuideMenu(); }, true);
@@ -7201,6 +8179,260 @@
           $("imgExMsg").textContent = res.error || "저장에 실패했습니다.";
         }
       });
+
+      $("toolModeSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        setToolMode(b.getAttribute("data-toolmode"));
+      });
+      if ($("spiralFitSeg")) $("spiralFitSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        guideSpiralFit = b.getAttribute("data-sfit") === "stretch" ? "stretch" : "fit";
+        const btns = $("spiralFitSeg").querySelectorAll("button");
+        for (let i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-sfit") === guideSpiralFit);
+        schedulePersist();
+        if (guideOn) redrawGuides();
+      });
+      if ($("guideSpiralRects")) $("guideSpiralRects").addEventListener("change", function () {
+        guideSpiralRects = $("guideSpiralRects").checked;
+        schedulePersist();
+        if (guideOn) redrawGuides();
+      });
+      if ($("triDiagSeg")) $("triDiagSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        guideTriDiag = parseInt(b.getAttribute("data-tridiag"), 10) || 0;
+        const btns = $("triDiagSeg").querySelectorAll("button");
+        for (let i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-tridiag") === String(guideTriDiag));
+        schedulePersist();
+        if (guideOn) redrawGuides();
+      });
+      if ($("radialCount")) $("radialCount").addEventListener("change", function () {
+        radialCount = Math.max(4, Math.min(36, parseInt($("radialCount").value, 10) || 12));
+        $("radialCount").value = String(radialCount);
+        schedulePersist();
+        if (guideOn) redrawGuides();
+      });
+      if ($("radialDual")) $("radialDual").addEventListener("change", function () {
+        radialDual = $("radialDual").checked;
+        schedulePersist();
+        if (guideOn) redrawGuides();
+      });
+      $("bboxAutoBtn").addEventListener("click", function () { refreshFraming({ forceAuto: true }); });
+      $("bboxKeepChk").addEventListener("change", function () { bboxKeepManual = $("bboxKeepChk").checked; schedulePersist(); });
+      $("bboxFaceChk").addEventListener("change", function () { bboxFaceMode = $("bboxFaceChk").checked; schedulePersist(); if (guideShowBBox) refreshFraming({ forceAuto: true }); });
+      $("bboxAiBtn").addEventListener("click", function () {
+        if (!applyAiBBox()) { $("guideBBoxMsg").hidden = false; $("guideBBoxMsg").textContent = "AI 분석 결과에 subjectBBox가 없어. 먼저 AI 분석을 실행해 줘."; }
+      });
+      $("customLockChk").addEventListener("change", function () { customLock = $("customLockChk").checked; schedulePersist(); syncCustomList(); });
+      $("customLineBtn").addEventListener("click", function () {
+        if (customLock) return;
+        customLineArmed = !customLineArmed;
+        customLineStart = null;
+        $("customLineBtn").classList.toggle("active", customLineArmed);
+      });
+      $("customList").addEventListener("click", function (e) {
+        const d = e.target.closest("[data-cd]");
+        const s = e.target.closest("[data-ci]");
+        if (d) removeCustomGuide(parseInt(d.getAttribute("data-cd"), 10));
+        else if (s) { customSel = parseInt(s.getAttribute("data-ci"), 10); syncCustomList(); redrawGuides(); }
+      });
+      $("penKindSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        penKind = b.getAttribute("data-penkind");
+        const btns = $("penKindSeg").querySelectorAll("button");
+        for (let i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-penkind") === penKind);
+      });
+      $("penColor").addEventListener("input", function () { penColor = $("penColor").value; schedulePersist(); });
+      $("penWidth").addEventListener("input", function () { penWidth = parseInt($("penWidth").value, 10) || 4; $("penWidthVal").textContent = String(penWidth); schedulePersist(); });
+      $("penOp").addEventListener("input", function () { penOpacity = parseInt($("penOp").value, 10) / 100; $("penOpVal").textContent = Math.round(penOpacity * 100) + "%"; schedulePersist(); });
+      $("penUndoBtn").addEventListener("click", penUndoOnce);
+      $("penRedoBtn").addEventListener("click", penRedoOnce);
+      $("penClearBtn").addEventListener("click", penClearCurrent);
+      $("penScopeSeg").addEventListener("click", function (e) {
+        const b = e.target.closest("button");
+        if (!b) return;
+        penScope = b.getAttribute("data-penscope") === "frame" ? "frame" : "all";
+        const btns = $("penScopeSeg").querySelectorAll("button");
+        for (let i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-penscope") === penScope);
+        schedulePersist();
+      });
+      $("penLockChk").addEventListener("change", function () { penLock = $("penLockChk").checked; schedulePersist(); });
+      function bindPenEx(id, key) {
+        $(id).addEventListener("change", function () { penExport[key] = $(id).checked; schedulePersist(); });
+      }
+      bindPenEx("penExPrint", "print"); bindPenEx("penExCollage", "collage");
+      bindPenEx("penExImage", "image"); bindPenEx("penExVideo", "video");
+
+      /* pointer tools on toolCanvas + rulers */
+      (function bindToolPointers() {
+        const tc = $("toolCanvas");
+        let dragVP = -1, dragGuide = -1, rulerDrag = null;
+        function ptsOfStroke() { return penStroke && penStroke.pts; }
+        tc.addEventListener("pointerdown", function (e) {
+          if (e.button !== 0) return;
+          const p = eventToNorm(e, $("viewport"));
+          if (toolMode === "pen") {
+            if (penLock) return;
+            e.preventDefault();
+            tc.setPointerCapture(e.pointerId);
+            if (penKind === "check") {
+              const s = Math.max(0.03, penWidth / 400);
+              const pts = [
+                p.x - s * 0.35, p.y + s * 0.05,
+                p.x - s * 0.05, p.y + s * 0.35,
+                p.x + s * 0.4, p.y - s * 0.3
+              ];
+              storePenStroke({ kind: "pen", color: penColor, w: penWidth, op: penOpacity, pts: pts });
+              return;
+            }
+            penStroke = { kind: penKind === "high" ? "high" : (penKind === "erase" ? "erase" : "pen"), color: penColor, w: penWidth, op: penOpacity, pts: [p.x, p.y] };
+            return;
+          }
+          if (guideShowBBox && lastFraming && lastFraming.bbox && toolMode !== "pen") {
+            const h = hitBBoxHandle(p.x, p.y, lastFraming.bbox);
+            if (h) {
+              e.preventDefault();
+              tc.setPointerCapture(e.pointerId);
+              bboxDrag = { handle: h, x0: p.x, y0: p.y, start: Object.assign({}, lastFraming.bbox) };
+              return;
+            }
+          }
+          if (toolMode === "guide") {
+            if (guideOn && guideIds.radial) {
+              const vi = hitRadialVP(p.x, p.y);
+              if (vi >= 0) {
+                e.preventDefault();
+                tc.setPointerCapture(e.pointerId);
+                dragVP = vi;
+                return;
+              }
+            }
+            if (customLineArmed && !customLock) {
+              e.preventDefault();
+              if (!customLineStart) { customLineStart = { x: clamp01(p.x), y: clamp01(p.y) }; }
+              else {
+                addCustomGuide({ type: "line", x1: customLineStart.x, y1: customLineStart.y, x2: clamp01(p.x), y2: clamp01(p.y) });
+                customLineStart = null;
+                customLineArmed = false;
+                $("customLineBtn").classList.remove("active");
+              }
+              return;
+            }
+            if (!customLock) {
+              const gi = hitCustomGuide(p.x, p.y);
+              if (gi >= 0) {
+                e.preventDefault();
+                tc.setPointerCapture(e.pointerId);
+                dragGuide = gi;
+                dragGuideStart = { x: p.x, y: p.y, g: Object.assign({}, customGuides[gi]) };
+                customSel = gi;
+                syncCustomList();
+                return;
+              }
+            }
+          }
+        });
+        tc.addEventListener("pointermove", function (e) {
+          const p = eventToNorm(e, $("viewport"));
+          if (penStroke) {
+            const pts = penStroke.pts;
+            const lx = pts[pts.length - 2], ly = pts[pts.length - 1];
+            if (Math.hypot(p.x - lx, p.y - ly) >= 0.002) { pts.push(p.x, p.y); redrawGuides(); }
+            return;
+          }
+          if (bboxDrag) { applyBBoxDrag(p.x, p.y); return; }
+          if (dragVP >= 0) {
+            const arr = activeRadialVPs();
+            arr[dragVP].x = clamp01(p.x);
+            arr[dragVP].y = clamp01(p.y);
+            schedulePersist();
+            redrawGuides();
+            return;
+          }
+          if (dragGuide >= 0 && !customLock) {
+            const g = customGuides[dragGuide];
+            if (g.type === "h") g.a = clamp01(p.y);
+            else if (g.type === "v") g.a = clamp01(p.x);
+            else if (g.type === "line" && dragGuideStart && dragGuideStart.g) {
+              const s = dragGuideStart.g;
+              const dx = p.x - dragGuideStart.x, dy = p.y - dragGuideStart.y;
+              g.x1 = clamp01((s.x1 || 0) + dx);
+              g.y1 = clamp01((s.y1 || 0) + dy);
+              g.x2 = clamp01((s.x2 || 0) + dx);
+              g.y2 = clamp01((s.y2 || 0) + dy);
+            }
+            schedulePersist();
+            syncCustomList();
+            redrawGuides();
+          }
+        });
+        function endPtr() {
+          if (penStroke) {
+            if (penStroke.pts.length >= 4) storePenStroke(penStroke);
+            penStroke = null;
+          }
+          bboxDrag = null;
+          dragVP = -1;
+          dragGuide = -1;
+          dragGuideStart = null;
+        }
+        tc.addEventListener("pointerup", endPtr);
+        tc.addEventListener("pointercancel", endPtr);
+        function startRuler(kind, e) {
+          if (toolMode !== "guide" || customLock) return;
+          e.preventDefault();
+          rulerDrag = { kind: kind };
+          (kind === "h" ? $("rulerTop") : $("rulerLeft")).setPointerCapture(e.pointerId);
+        }
+        $("rulerTop").addEventListener("pointerdown", function (e) { startRuler("h", e); });
+        $("rulerLeft").addEventListener("pointerdown", function (e) { startRuler("v", e); });
+        function moveRuler(e) {
+          if (!rulerDrag) return;
+          const p = eventToNorm(e, $("viewport"));
+          rulerDrag.a = rulerDrag.kind === "h" ? clamp01(p.y) : clamp01(p.x);
+        }
+        function endRuler(e) {
+          if (!rulerDrag) return;
+          const p = eventToNorm(e, $("viewport"));
+          const a = rulerDrag.kind === "h" ? clamp01(p.y) : clamp01(p.x);
+          if (a > 0.005 && a < 0.995) addCustomGuide({ type: rulerDrag.kind, a: a });
+          rulerDrag = null;
+        }
+        ["rulerTop", "rulerLeft"].forEach(function (id) {
+          $(id).addEventListener("pointermove", moveRuler);
+          $(id).addEventListener("pointerup", endRuler);
+          $(id).addEventListener("pointercancel", function () { rulerDrag = null; });
+        });
+      })();
+      document.addEventListener("keydown", function (e) {
+        if (isEditable(e.target)) return;
+        if ((e.key === "Delete" || e.key === "Backspace") && toolMode === "guide" && customSel >= 0 && !customLock) {
+          e.preventDefault();
+          removeCustomGuide(customSel);
+        }
+      });
+
+      loadToolPrefs();
+      if ($("onionPrevOn")) syncOnionUI();
+      if ($("customLockChk")) $("customLockChk").checked = customLock;
+      if ($("bboxKeepChk")) $("bboxKeepChk").checked = bboxKeepManual;
+      if ($("bboxFaceChk")) $("bboxFaceChk").checked = bboxFaceMode;
+      if ($("guideSpiralRects")) $("guideSpiralRects").checked = guideSpiralRects;
+      if ($("radialCount")) $("radialCount").value = String(radialCount);
+      if ($("radialDual")) $("radialDual").checked = radialDual;
+      if ($("penColor")) $("penColor").value = penColor;
+      if ($("penWidth")) { $("penWidth").value = String(penWidth); $("penWidthVal").textContent = String(penWidth); }
+      if ($("penOp")) { $("penOp").value = String(Math.round(penOpacity * 100)); $("penOpVal").textContent = Math.round(penOpacity * 100) + "%"; }
+      if ($("penLockChk")) $("penLockChk").checked = penLock;
+      if ($("penExPrint")) $("penExPrint").checked = !!penExport.print;
+      if ($("penExCollage")) $("penExCollage").checked = !!penExport.collage;
+      if ($("penExImage")) $("penExImage").checked = !!penExport.image;
+      if ($("penExVideo")) $("penExVideo").checked = !!penExport.video;
+      if (typeof updateGuideChrome === "function") updateGuideChrome();
+      syncCustomList();
 
       // Start
       scrub.max = String(TOTAL);
