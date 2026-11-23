@@ -118,6 +118,31 @@
       pointer-events: none;
     }
     body.dragover #dropMask { display: flex; }
+    #emptyState {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 7;
+      background: rgba(8,8,12,0.94);
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 28px 20px;
+    }
+    body.empty-project #emptyState { display: flex; }
+    .empty-card { max-width: 420px; }
+    .empty-card p { margin: 0 0 14px; color: var(--text); font-size: 16px; line-height: 1.5; }
+    .empty-card .empty-hint { margin: 14px 0 0; color: var(--muted); font-size: 13px; }
+    .empty-card button {
+      font-size: 16px;
+      font-weight: 700;
+      padding: 10px 18px;
+      background: var(--accent);
+      color: #1a1408;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
     #extractBar {
       display: none;
       align-items: center;
@@ -1212,12 +1237,12 @@
 <body>
   <header>
     <div class="header-left">
-      <h1>프레임 뷰어 <span id="projectSub">로컬 프레임 ·  · 2700장 · 29.97fps</span></h1>
+      <h1>프레임 뷰어 <span id="projectSub">영상을 불러오세요</span></h1>
     </div>
     <div class="header-right">
       <span class="label">프로젝트</span>
       <select id="projectSel" title="프로젝트">
-        <option value="builtin">로컬 프레임</option>
+        <option value="builtin" hidden>로컬 프레임</option>
       </select>
       <button type="button" id="loadBtn" title="로컬 영상 열기 (mp4, webm, mov)">영상 불러오기</button>
       <div class="group" id="fpsGroup" style="display:none">
@@ -1242,7 +1267,7 @@
     <button type="button" id="extractCancel">취소</button>
   </div>
   <input type="file" id="fileInput" accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mp4,.webm,.mov,.m4v,.mkv">
-  <audio id="srcAudio" src="audio.m4a" preload="auto" playsinline></audio>
+  <audio id="srcAudio" preload="auto" playsinline></audio>
   <video id="videoPlay" playsinline preload="auto"></video>
   <video id="videoSeek" playsinline preload="auto" muted></video>
 
@@ -1263,6 +1288,13 @@
         <div class="meta-overlay" id="meta">—</div>
         <div id="guideHoverHint" class="hidden">우클릭으로 삭제</div>
         <div id="lineGuideBanner" class="hidden">첫 점을 클릭하세요</div>
+        <div id="emptyState">
+          <div class="empty-card">
+            <p>아직 열린 영상이 없어요.</p>
+            <button type="button" id="emptyLoadBtn">영상 불러오기</button>
+            <p class="empty-hint">또는 영상 파일(mp4 / webm / mov)을 여기에 놓으세요.</p>
+          </div>
+        </div>
         <div id="dropMask">영상을 여기에 놓으면 불러와</div>
       </div>
     </div>
@@ -1625,6 +1657,7 @@
 
   <div id="help">
     <div class="card">
+      <p>「영상 불러오기」를 누르거나 영상 파일을 화면에 놓으면 됩니다. 같은 폴더에 frames/가 있으면 자동으로 열립니다.</p>
       <h2>단축키</h2>
       <dl>
         <dt>← / →</dt><dd>이전 / 다음 프레임</dd>
@@ -1865,9 +1898,9 @@
   </div>
   <script>
     (function () {
-      let TOTAL = 2700;
-      let FPS = 30000 / 1001; // 29.970...
-      const AUDIO_OFFSET = 0; // ffprobe: video + audio both start_time=0
+      let TOTAL = 0;
+      let FPS = 30;
+      const AUDIO_OFFSET = 0;
       const AUDIO_FILE = "audio.m4a";
       const SEEK_BIAS = 0.5; // currentTime = (n - SEEK_BIAS) / fps
 
@@ -1930,21 +1963,25 @@
       let scrubTimer = 0;
       let displaySeq = 0;
 
-      const builtinProject = {
-        id: "builtin",
-        type: "builtin",
-        name: "로컬 프레임",
-        title: "",
-        total: 2700,
-        fps: 30000 / 1001,
-        audioOffset: AUDIO_OFFSET,
-        duration: 90.090,
-        selection: null,
-        selText: "",
-        selViewOnly: false
-      };
-      let project = builtinProject;
+      function makeEmptyProject() {
+        return {
+          id: "empty",
+          type: "empty",
+          name: "",
+          title: "",
+          total: 0,
+          fps: 30,
+          audioOffset: 0,
+          duration: 0,
+          selection: null,
+          selText: "",
+          selViewOnly: false
+        };
+      }
+      let builtinProject = null;
+      let project = makeEmptyProject();
       let loadedProject = null;
+      let bootPromise = Promise.resolve();
       let extractAbort = false;
       let extracting = false;
 
@@ -2180,6 +2217,14 @@
 
       function setFrame(n, opts) {
         opts = opts || {};
+        if (!hasMediaProject()) {
+          frame = 1;
+          if (currentImg) { currentImg.removeAttribute("src"); currentImg.alt = ""; }
+          try { viewCtx.clearRect(0, 0, viewCanvas.width, viewCanvas.height); } catch (e) {}
+          if (meta) meta.textContent = "—";
+          if (scrub) { scrub.min = "1"; scrub.max = "1"; scrub.value = "1"; }
+          return;
+        }
         n = clampToMode(n | 0);
         frame = n;
         if (!opts.skipPreload) preloadAround(n);
@@ -2543,7 +2588,7 @@
       }
 
       function play() {
-        if (playing) return;
+        if (playing || !hasMediaProject()) return;
         if (frame >= maxFrame() && indexOfFrame(frame) === frameCount() - 1) {
           setFrame(minFrame(), { silent: true });
         }
@@ -3063,11 +3108,27 @@
         return (Math.round(fps * 1000) / 1000).toString();
       }
 
+      function hasMediaProject() {
+        return !!(project && project.type !== "empty" && TOTAL >= 1);
+      }
+      function setEmptyMode(on) {
+        document.body.classList.toggle("empty-project", !!on);
+      }
       function updateProjectChrome() {
-        const sub = project.type === "builtin"
-          ? (project.name + " · " + project.title + " · " + TOTAL + "장 · " + fpsLabel(FPS) + "fps")
-          : (project.name + " · " + TOTAL + "장 · " + fpsLabel(FPS) + "fps");
+        let sub;
+        if (!hasMediaProject()) sub = "영상을 불러오세요";
+        else if (project.type === "builtin") {
+          sub = [project.name, project.title, TOTAL + "장", fpsLabel(FPS) + "fps"].filter(Boolean).join(" · ");
+        } else {
+          sub = project.name + " · " + TOTAL + "장 · " + fpsLabel(FPS) + "fps";
+        }
         $("projectSub").textContent = sub;
+        setEmptyMode(!hasMediaProject());
+        const builtinOpt = $("projectSel") && $("projectSel").querySelector('option[value="builtin"]');
+        if (builtinOpt) {
+          builtinOpt.hidden = !(builtinProject && builtinProject.total >= 1);
+          if (builtinProject && builtinProject.name) builtinOpt.textContent = builtinProject.name;
+        }
         $("fpsGroup").style.display = project.type === "video" ? "flex" : "none";
         $("extractBtn").style.display = project.type === "video" ? "" : "none";
         const sel = $("projectSel");
@@ -3081,7 +3142,8 @@
           }
           opt.textContent = loadedProject.name;
         } else if (opt) opt.remove();
-        sel.value = project.type === "builtin" ? "builtin" : "loaded";
+        if (project.type === "builtin") sel.value = "builtin";
+        else if (loadedProject) sel.value = "loaded";
         const opts = $("fpsSel").options;
         let matched = false;
         for (let i = 0; i < opts.length; i++) {
@@ -6064,6 +6126,9 @@
       window.__flipbook = {
         get frame() { return frame; },
         get total() { return TOTAL; },
+        get projectType() { return project.type; },
+        get projectName() { return project && project.name; },
+        get ready() { return bootPromise; },
         get fps() { return FPS; },
         get selection() { return selection ? selection.slice() : null; },
         get selViewOnly() { return selViewOnly; },
@@ -6265,6 +6330,7 @@
       $("scrubSoundChk").addEventListener("change", function () { scrubSoundOn = $("scrubSoundChk").checked; });
 
       $("loadBtn").addEventListener("click", function () { $("fileInput").click(); });
+      if ($("emptyLoadBtn")) $("emptyLoadBtn").addEventListener("click", function () { $("fileInput").click(); });
       $("fileInput").addEventListener("change", function () {
         const f = $("fileInput").files && $("fileInput").files[0];
         if (f) loadVideoFile(f);
@@ -8102,7 +8168,7 @@
       }
 
       function exportFileStem(n) {
-        const name = (project && project.id === "builtin") ? "frame" : "frame";
+        const name = "frame";
         return name + "_f" + pad(n);
       }
 
@@ -8213,7 +8279,7 @@
         }
         const zip = makeStoreZip(files);
         const blob = new Blob([zip], { type: "application/zip" });
-        const zipName = (project && project.id === "builtin" ? "frame" : "frames") + "_frames.zip";
+        const zipName = "frames.zip";
         return { ok: true, files: files, blob: blob, filename: zipName, zip: zip, count: files.length };
       }
 
@@ -9540,9 +9606,121 @@
       if (typeof updateGuideChrome === "function") updateGuideChrome();
       syncCustomList();
 
+      function urlExists(url) {
+        return new Promise(function (resolve) {
+          if (/\.(m4a|mp3|wav)(\?|$)/i.test(url)) {
+            const a = document.createElement("audio");
+            let settled = false;
+            const done = function (ok) {
+              if (settled) return;
+              settled = true;
+              a.onloadedmetadata = a.onerror = null;
+              try { a.removeAttribute("src"); a.load(); } catch (e) {}
+              resolve(!!ok);
+            };
+            a.preload = "metadata";
+            a.onloadedmetadata = function () { done(true); };
+            a.onerror = function () { done(false); };
+            setTimeout(function () { done(false); }, 4000);
+            a.src = url;
+            return;
+          }
+          const img = new Image();
+          img.onload = function () { resolve(true); };
+          img.onerror = function () { resolve(false); };
+          img.src = url;
+        });
+      }
+      function audioDuration(url) {
+        return new Promise(function (resolve) {
+          const a = document.createElement("audio");
+          let settled = false;
+          const done = function (d) {
+            if (settled) return;
+            settled = true;
+            a.onloadedmetadata = a.onerror = null;
+            try { a.removeAttribute("src"); a.load(); } catch (e) {}
+            resolve(d || 0);
+          };
+          a.preload = "metadata";
+          a.onloadedmetadata = function () { done(a.duration); };
+          a.onerror = function () { done(0); };
+          setTimeout(function () { done(0); }, 4000);
+          a.src = url;
+        });
+      }
+      async function countSequentialFrames(prefix, suffix) {
+        const name = function (n) { return prefix + pad(n) + suffix; };
+        if (!(await urlExists(name(1)))) return 0;
+        let lo = 1, hi = 1;
+        while (hi < 100000) {
+          const next = Math.min(100000, hi * 2);
+          if (next === hi) break;
+          if (await urlExists(name(next))) { lo = hi = next; }
+          else break;
+        }
+        if (hi === 100000 && await urlExists(name(100000))) return 100000;
+        let L = lo, R = Math.min(100000, Math.max(lo + 1, lo * 2));
+        if (await urlExists(name(R))) return R;
+        while (L + 1 < R) {
+          const mid = (L + R) >> 1;
+          if (await urlExists(name(mid))) L = mid;
+          else R = mid;
+        }
+        return L;
+      }
+      async function detectBuiltinProject() {
+        const total = await countSequentialFrames("frames/f", ".jpg");
+        if (!total) return null;
+        const audioOk = await urlExists(AUDIO_FILE);
+        let duration = 0, fps = 30;
+        if (audioOk) duration = await audioDuration(AUDIO_FILE);
+        if (duration > 0) fps = total / duration;
+        if (total === 2700 && duration > 89.5 && duration < 90.7) {
+          fps = 30000 / 1001;
+          duration = 90.090;
+        }
+        return {
+          id: "builtin",
+          type: "builtin",
+          name: "로컬 프레임",
+          title: "",
+          total: total,
+          fps: fps,
+          audioOffset: AUDIO_OFFSET,
+          duration: duration || (total / fps),
+          selection: null,
+          selText: "",
+          selViewOnly: false,
+          hasAudio: audioOk
+        };
+      }
+      async function boot() {
+        setEmptyMode(true);
+        updateProjectChrome();
+        const detected = await detectBuiltinProject();
+        if (detected) {
+          builtinProject = detected;
+          const audioEl = $("srcAudio");
+          if (audioEl && detected.hasAudio) audioEl.src = AUDIO_FILE;
+          else if (audioEl) {
+            audioEl.removeAttribute("src");
+            try { audioEl.load(); } catch (e) {}
+          }
+          activateProject(detected);
+        } else {
+          builtinProject = null;
+          const audioEl = $("srcAudio");
+          if (audioEl) {
+            audioEl.removeAttribute("src");
+            try { audioEl.load(); } catch (e) {}
+          }
+          activateProject(makeEmptyProject());
+        }
+      }
+
       // Start
-      scrub.max = String(TOTAL);
-      setFrame(1, { silent: true });
+      bootPromise = boot();
     })();
   </script>
 </body>
