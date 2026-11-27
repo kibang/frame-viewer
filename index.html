@@ -86,7 +86,10 @@
     .icon-btn { padding: 5px 9px; }
     header { gap: 10px; flex-wrap: wrap; }
     .header-left { min-width: 0; flex: 1; }
-    .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .header-right { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    @media (max-width: 720px) {
+      .ctrl-cluster { flex-wrap: wrap; }
+    }
     #onionBtn.active {
       background: var(--accent);
       color: #1a1404;
@@ -256,7 +259,116 @@
       flex-shrink: 0;
       background: var(--panel);
       border-top: 1px solid var(--border);
-      padding: 8px 14px 10px;
+      padding: 8px 12px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ctrl-section {
+      background: #141418;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px 8px;
+    }
+    .ctrl-section,
+    details.ctrl-section {
+      min-width: 0;
+    }
+    .sec-label,
+    details.ctrl-section > summary.sec-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      margin: 0 0 4px;
+      line-height: 1.3;
+    }
+    details.ctrl-section > summary.sec-label {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+    details.ctrl-section > summary.sec-label::-webkit-details-marker { display: none; }
+    details.ctrl-section > summary.sec-label::before {
+      content: "▾";
+      font-size: 10px;
+      color: var(--accent);
+      width: 1em;
+    }
+    details.ctrl-section:not([open]) > summary.sec-label::before { content: "▸"; }
+    details.ctrl-section:not([open]) { padding-bottom: 6px; }
+    .sec-body {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      width: 100%;
+      min-width: 0;
+    }
+    .sec-body > .row { margin-top: 0; width: 100%; }
+    .ctrl-cluster {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 6px;
+      flex: 0 1 auto;
+    }
+    .header-sec {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 8px;
+    }
+    .header-sec .sec-label {
+      flex: 0 0 auto;
+      margin: 0;
+    }
+    button.danger {
+      background: #3a1618;
+      border-color: #8a3338;
+      color: #ffc4c4;
+    }
+    button.danger:hover {
+      background: #4a1c20;
+      border-color: var(--red);
+    }
+    #fvConfirmYes {
+      background: #3a1618;
+      border-color: #8a3338;
+      color: #ffc4c4;
+    }
+    button { min-height: 28px; }
+    .seg button { min-height: 0; }
+    #azCloseBar {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: var(--panel);
+      padding: 4px 0 8px;
+      margin: -2px 0 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    #azCloseBar strong { font-size: 13px; margin-right: 4px; }
+    #azBackBtn { font-weight: 700; }
+    #toolViewBackBtn.hidden { display: none; }
+    #seqChrome .seq-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: var(--panel);
+      padding: 0 0 8px;
     }
     #analyzePanel {
       display: none;
@@ -269,6 +381,11 @@
     }
     #analyzePanel.show { display: block; }
     #analyzeBtn.active, #azRunBtn.primary { font-weight: 650; }
+    #analyzeBtn.active {
+      background: var(--accent);
+      color: #1a1404;
+      border-color: var(--accent);
+    }
     #azKey { width: 220px; }
     #azModel { width: 260px; min-width: 180px; }
     #azModelCustom { width: 220px; min-width: 140px; }
@@ -848,9 +965,9 @@
     }
     #thumbsWrap {
       display: none;
-      margin-top: 8px;
-      border-top: 1px solid var(--border);
-      padding-top: 8px;
+      margin-top: 0;
+      border-top: 0;
+      padding-top: 6px;
     }
     #thumbsWrap.show { display: block; }
     #thumbs {
@@ -1249,7 +1366,7 @@
       background: var(--panel);
       padding: 10px 14px 14px;
     }
-    #seqChrome h2 { margin: 0 0 10px; font-size: 16px; font-weight: 700; }
+    #seqChrome h2 { margin: 0; font-size: 16px; font-weight: 700; }
     #seqDropHint {
       border: 1.5px dashed var(--border);
       border-radius: 8px;
@@ -1338,13 +1455,20 @@
       <h1>프레임 뷰어 <span id="projectSub">영상을 불러오세요</span></h1>
     </div>
     <div class="header-right">
+      <div class="ctrl-section header-sec" data-sec="file">
+        <span class="sec-label">파일</span>
+        <div class="ctrl-cluster">
       <span class="label">프로젝트</span>
       <select id="projectSel" title="프로젝트">
         <option value="builtin" hidden>로컬 프레임</option>
       </select>
       <button type="button" id="loadBtn" title="로컬 영상 열기 (mp4, webm, mov)">영상 불러오기</button>
-      <button type="button" id="seqBtn" title="여러 이미지를 이어 붙여 영상으로 만들기">이미지로 영상</button>
-      <div class="group" id="fpsGroup" style="display:none">
+      <button type="button" id="seqBtn" title="여러 이미지를 이어 붙여 영상으로 만들기. 창이 열려 있으면 다시 눌러 닫기">이미지로 영상</button>
+        </div>
+      </div>
+      <div class="ctrl-section header-sec group" id="fpsGroup" style="display:none">
+        <span class="sec-label">프레임레이트</span>
+        <div class="ctrl-cluster">
         <span class="label">FPS</span>
         <select id="fpsSel" title="프레임레이트">
           <option value="23.976023976023978">23.976</option>
@@ -1355,6 +1479,7 @@
           <option value="50">50</option>
           <option value="60">60</option>
         </select>
+        </div>
       </div>
       <button type="button" id="extractBtn" style="display:none" title="모든 프레임을 미리 뽑아 스크럽을 빠르게">전체 프레임 미리 추출</button>
       <button type="button" class="icon-btn" id="helpBtn" title="단축키 (?)">단축키 ?</button>
@@ -1407,6 +1532,9 @@
         <button type="button" id="fvConfirmYes">삭제</button>
         <button type="button" id="fvConfirmNo">취소</button>
       </div>
+      <section class="ctrl-section" data-sec="playback" aria-label="재생·이동">
+        <div class="sec-label">재생·이동</div>
+        <div class="sec-body">
       <div class="row scrub-row">
         <button type="button" id="playBtn" class="primary" title="재생/일시정지 (Space)">재생</button>
         <div class="group">
@@ -1433,6 +1561,12 @@
         </div>
       </div>
 
+        </div>
+      </section>
+
+      <section class="ctrl-section" data-sec="sel" aria-label="선택">
+        <div class="sec-label">선택</div>
+        <div class="sec-body">
       <div class="row sel-row">
         <div class="group sel-input-group">
           <span class="label">선택 프레임</span>
@@ -1449,18 +1583,31 @@
         <button type="button" id="selAdd" title="현재 프레임 선택/해제 (M)">현재 프레임 선택/해제</button>
         <button type="button" id="selFrom" title="여기부터 ([)">여기부터</button>
         <button type="button" id="selTo" title="여기까지 (])">여기까지</button>
-        <button type="button" id="selClear">전체 비우기</button>
-        <button type="button" id="printBtn" title="선택한 프레임 인쇄">인쇄</button>
-        <button type="button" id="collageBtn" title="선택한 프레임 콜라주">콜라주</button>
-        <button type="button" id="imgExportBtn" title="선택한 프레임을 JPG/PNG로 저장">이미지 저장</button>
-        <button type="button" id="analyzeBtn" title="프레임 분석 (A)">분석</button>
+        <button type="button" id="selClear" class="danger">전체 비우기</button>
         <span class="sel-status" id="selRangeHint"></span>
       </div>
       <div class="row sel-err-row">
         <span id="selErr" class="sel-err"></span>
         <span id="err"></span>
       </div>
+        </div>
+      </section>
 
+      <section class="ctrl-section" data-sec="export" aria-label="내보내기">
+        <div class="sec-label">내보내기</div>
+        <div class="sec-body">
+          <div class="ctrl-cluster">
+        <button type="button" id="printBtn" title="선택한 프레임 인쇄">인쇄</button>
+        <button type="button" id="collageBtn" title="선택한 프레임 콜라주">콜라주</button>
+        <button type="button" id="imgExportBtn" title="선택한 프레임을 JPG/PNG로 저장">이미지 저장</button>
+        <button type="button" id="analyzeBtn" title="프레임 분석 열기/닫기 (A). 다시 누르거나 Esc로 닫기">분석</button>
+          </div>
+        </div>
+      </section>
+
+      <details class="ctrl-section" data-sec="onion" open>
+        <summary class="sec-label">어니언 스킨</summary>
+        <div class="sec-body">
       <div class="row">
         <div class="group">
           <button type="button" id="onionBtn" title="어니언 스킨 켜기/끄기 (O)">어니언 스킨 OFF</button>
@@ -1502,6 +1649,11 @@
           <span id="onionHint"></span>
         </div>
       </div>
+        </div>
+      </details>
+      <details class="ctrl-section" data-sec="guides" open>
+        <summary class="sec-label">구도 가이드</summary>
+        <div class="sec-body">
       <div class="row" id="guideRow">
         <div class="guide-drop" id="guideDrop">
           <button type="button" id="guideBtn" title="구도 가이드 종류를 고르고 켜기 (G로 표시 전환)">구도 가이드 (1)</button>
@@ -1510,7 +1662,7 @@
               <strong>구도 가이드</strong>
               <label class="chk"><input type="checkbox" id="guideOnChk"> 표시 (G)</label>
               <button type="button" id="guideDefaultBtn">기본</button>
-              <button type="button" id="guideClearBtn">전체 해제</button>
+              <button type="button" id="guideClearBtn" class="danger">전체 해제</button>
             </div>
             <div class="guide-menu-list" id="guideMenuList">
             <label><input type="checkbox" data-guide="thirds" checked><canvas data-guide-icon="thirds" width="48" height="27" aria-hidden="true"></canvas> 삼분할</label>
@@ -1583,6 +1735,11 @@
         <span class="az-muted">자동 상자는 대략값이야. 핸들로 직접 맞춰.</span>
         <span id="guideBBoxMsg" class="guide-bbox-msg" hidden></span>
       </div>
+        </div>
+      </details>
+      <section class="ctrl-section" data-sec="tools" aria-label="도구">
+        <div class="sec-label">도구</div>
+        <div class="sec-body">
       <div class="row" id="toolRow">
         <span class="label">도구</span>
         <div class="seg" id="toolModeSeg">
@@ -1590,6 +1747,7 @@
           <button type="button" data-toolmode="guide">가이드 편집</button>
           <button type="button" data-toolmode="pen">펜</button>
         </div>
+          <button type="button" id="toolViewBackBtn" class="primary hidden" title="보기 모드로 돌아가기 (Esc)">← 보기 모드로</button>
         <span id="customGuideTools" class="hidden">
           <span class="custom-guide-bar">
           <button type="button" id="customLineBtn" title="화면에서 첫 점을 클릭한 뒤 두 번째 점을 클릭하세요. 누른 채 끌어다 놓아도 됩니다. Shift는 15도 단위, Esc로 취소. 선을 그린 뒤에도 모드는 유지됩니다.">두 점 선</button>
@@ -1601,8 +1759,8 @@
           <span class="label" title="미리 잡은 구도 가이드 색과는 따로예요">새 가이드 색</span>
           <input type="color" id="customDefColor" value="#ff8a1a" title="새로 만드는 커스텀 가이드 기본 색">
           <span id="customDefSwatches" class="guide-swatches" title="기본 색 견본"></span>
-          <button type="button" id="customDelSelBtn" title="선택한 가이드만 삭제 (잠긴 건 건너뜀)">선택 삭제</button>
-          <button type="button" id="customDelAllBtn" title="잠기지 않은 가이드를 모두 삭제">전체 삭제</button>
+          <button type="button" id="customDelSelBtn" class="danger" title="선택한 가이드만 삭제 (잠긴 건 건너뜀)">선택 삭제</button>
+          <button type="button" id="customDelAllBtn" class="danger" title="잠기지 않은 가이드를 모두 삭제">전체 삭제</button>
           </span>
           <div id="customListWrap">
             <div id="customList"></div>
@@ -1621,7 +1779,7 @@
               <button type="button" data-dash="solid" class="active">실선</button>
               <button type="button" data-dash="dashed">점선</button>
             </div>
-            <button type="button" id="customSelDel" title="선택한 가이드 삭제">삭제</button>
+            <button type="button" id="customSelDel" class="danger" title="선택한 가이드 삭제">삭제</button>
           </span>
         </span>
         <span id="penTools" class="hidden">
@@ -1640,8 +1798,8 @@
           <span id="penOpVal">90%</span>
           <button type="button" id="penUndoBtn">되돌리기</button>
           <button type="button" id="penRedoBtn">다시 실행</button>
-          <button type="button" id="penClearBtn" title="지금 범위만 지우기">지우기</button>
-          <button type="button" id="penClearAllBtn" title="모든 프레임의 펜을 지웁니다">펜 전체 지우기</button>
+          <button type="button" id="penClearBtn" class="danger" title="지금 범위만 지우기">지우기</button>
+          <button type="button" id="penClearAllBtn" class="danger" title="모든 프레임의 펜을 지웁니다">펜 전체 지우기</button>
           <div class="seg" id="penScopeSeg">
             <button type="button" data-penscope="all" class="active">모든 프레임</button>
             <button type="button" data-penscope="frame">이 프레임만</button>
@@ -1653,15 +1811,22 @@
           <label class="chk"><input type="checkbox" id="penExVideo" checked> 영상</label>
         </span>
       </div>
+        </div>
+      </section>
 
-      <div id="thumbsWrap">
-        <div class="label">선택 썸네일 · 클릭해서 이동 · Shift+클릭으로 범위 추가 · 드래그해서 순서 변경 · ×로 제거</div>
+      <div id="thumbsWrap" class="ctrl-section" data-sec="thumbs">
+        <div class="sec-label">선택 썸네일</div>
+        <div class="label">클릭해서 이동 · Shift+클릭으로 범위 추가 · 드래그해서 순서 변경 · ×로 제거</div>
         <div id="thumbs"></div>
       </div>
     </div>
     <div id="analyzePanel">
+      <div id="azCloseBar">
+        <strong>분석</strong>
+        <button type="button" class="primary" id="azBackBtn" title="분석 패널을 닫고 뷰어로 돌아가기 (Esc)">← 뷰어로 돌아가기</button>
+        <button type="button" id="azCloseBtn" title="분석 패널 닫기 (Esc)">분석 닫기 ✕</button>
+      </div>
       <div class="row">
-        <strong style="font-size:13px">분석</strong>
         <div class="group">
           <span class="label">대상</span>
           <div class="seg" id="azModeSeg">
@@ -1772,10 +1937,10 @@
         <dt>O</dt><dd>어니언 스킨 켜기/끄기 (앞/뒤 장수는 따로 지정)</dd>
         <dt>Ctrl+Z</dt><dd>삭제한 커스텀 가이드 되돌리기</dd>
         <dt>V</dt><dd>음소거 / 해제</dd>
-        <dt>A</dt><dd>하단 분석 패널 열고 현재 설정으로 분석</dd>
+        <dt>A</dt><dd>하단 분석 패널 열기/닫기. 열려 있을 때 다시 누르면 닫고 뷰어로 돌아감</dd>
         <dt>G</dt><dd>구도 가이드 표시 켜기/끄기 (종류는 「구도 가이드 (n)」 버튼에서 고름)</dd>
         <dt>? 또는 /</dt><dd>이 도움말 열기/닫기</dd>
-        <dt>Esc</dt><dd>입력 중이면 포커스 해제, 아니면 도움말 닫기</dd>
+        <dt>Esc</dt><dd>입력 중이면 포커스 해제. 아니면 도움말·메뉴·분석 패널을 닫고, 가이드 편집·펜 모드면 보기 모드로 돌아감</dd>
       </dl>
       <p class="hint">슬라이더를 드래그하면 스케치북처럼 빠르게 넘길 수 있어. 「선택만 보기」를 켜면 고른 프레임만 재생·이동돼. 입력창에 포커스가 있으면 단축키는 동작하지 않고 Enter는 적용, Esc는 포커스를 풀어. 연속된 선택은 그 구간의 소리를 이어서 재생하고, 떨어진 프레임으로 넘어갈 때 오디오가 그 시점으로 점프해. 인쇄·콜라주로 고른 프레임을 출력하거나 한 장으로 모을 수 있고, 콜라주 패널의 「영상으로 만들기」로 같은 목록을 웹 브라우저에서 영상으로 저장할 수 있어. 「이미지 저장」으로 현재·선택·범위 프레임을 JPG/PNG(여러 장이면 ZIP)로 받을 수 있고, 구도 가이드를 구워 넣을 수도 있어. 「구도 가이드 (n)」 버튼을 누르면 삼분할·황금분할·황금나선·황금 삼각형·하모닉 아머처·방사형 등 14가지를 체크박스로 고를 수 있고, G 키로 표시를 켜고 끈다. 콜라주·영상·이미지 저장에도 따로 켤 수 있어. 「피사체 박스」는 주요 피사체 상자를 자동으로 잡고(근사, 직접 드래그·크기 조절 가능) 헤드룸·여백 수치를 보여 줘. 「가이드 편집」에서 소실점 드래그, 위·왼쪽 자에서 커스텀 가이드, 두 점 선을 그릴 수 있고, 가이드마다 색·굵기·투명도·실선/점선을 지정할 수 있어(미리 잡은 구도 가이드 색과는 별개, 잠가도 스타일은 유지). 뷰어에서 놓아 둔 커스텀 가이드 가까이 우클릭하면 삭제되고, 「되돌리기」나 Ctrl+Z로 되돌릴 수 있어. 잠긴 가이드는 삭제되지 않아. 커스텀 가이드 목록은 한 줄에 하나씩 나오고, 행을 눌러 스타일을 고치거나 잠그거나 숨기거나 지울 수 있어. 「전체 삭제」와 「선택 삭제」로 여러 개를 한 번에 지울 수 있고(잠긴 건 건너뜀), 「되돌리기」나 Ctrl+Z로 한꺼번에 되돌릴 수 있어. 「두 점 선」은 버튼을 누른 뒤 화면에서 두 점을 차례로 클릭하거나 끌어다 놓으면 되고, Shift는 15도 단위, Esc로 취소하며, 선을 그린 뒤에도 모드는 유지돼. 펜은 「펜 전체 지우기」로 모든 획을 지울 수 있어. 「펜」으로 체크·형광·지우기를 할 수 있어(잠금·출력 옵션, 모든 프레임/이 프레임만). 폴더에서 연 기본 영상에서는 픽셀을 못 읽으니 웹사이트나 「영상 불러오기」를 쓰면 돼. 어니언 스킨은 앞(이전)·뒤(다음) 장수를 슬라이더(최대 30)나 숫자로 남은 프레임까지 따로 지정하고, 가장 먼 장 최소 투명도를 고를 수 있어. AI 분석이 503·429·500으로 바쁠 때는 자동으로 다시 시도하고, 「바쁠 때 자동으로 다른 모델로 전환」을 켜 두면 다음 모델로 넘어가. 취소로 멈출 수 있어. 「분석」의 AI 분석은 고른 제공 업체의 비전 모델로 카메라 각도·샷 타입·애니메이션 기법·색·여백(노즈룸·헤드룸·리드룸)을 설명해 줘. 색채·여백·구도·기법 탭의 로컬 분석은 API 키 없이 웹 버전이나 불러온 영상에서 동작해. API 키는 이 브라우저에만 저장돼.</p>
     </div>
@@ -1953,13 +2118,16 @@
   </div>
   <div id="seqModal">
     <div id="seqChrome">
-      <h2>이미지로 영상 만들기</h2>
+      <div class="seq-head">
+        <h2>이미지로 영상 만들기</h2>
+        <button type="button" id="seqCloseTopBtn" title="닫기 (Esc)">닫기 ✕</button>
+      </div>
       <div class="seq-row">
         <button type="button" id="seqAddBtn">이미지 추가</button>
         <button type="button" id="seqAddDirBtn">폴더 추가</button>
         <button type="button" id="seqSortBtn">이름순 정렬</button>
         <button type="button" id="seqRevBtn">순서 뒤집기</button>
-        <button type="button" id="seqClearBtn">목록 비우기</button>
+        <button type="button" id="seqClearBtn" class="danger">목록 비우기</button>
       </div>
       <div id="seqDropHint">이미지를 여기에 놓거나 「이미지 추가」를 누르세요. 여러 장을 한꺼번에 고를 수 있습니다.</div>
       <div id="seqStrip"></div>
@@ -3807,6 +3975,30 @@
         syncAzUI();
         scheduleLocalAnalysis();
       }
+      function hideAnalyzePanel() {
+        const panel = $("analyzePanel");
+        if (panel) panel.classList.remove("show");
+        if ($("analyzeBtn")) $("analyzeBtn").classList.remove("active");
+        const vp = $("viewport") || $("main");
+        try { if (vp) vp.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {}
+      }
+      function isAnalyzePanelOpen() {
+        const panel = $("analyzePanel");
+        return !!(panel && panel.classList.contains("show"));
+      }
+      function toggleAnalyzePanel(opts) {
+        opts = opts || {};
+        if (isAnalyzePanelOpen()) {
+          hideAnalyzePanel();
+          return false;
+        }
+        showAnalyzePanel();
+        if (opts.runIfKey) {
+          if (azKey()) runAnalysis();
+          else if (opts.warnIfNoKey) azSetStatus("API 키를 입력한 뒤 「분석 실행」을 눌러 줘.", "warn");
+        }
+        return true;
+      }
 
       function sampleIndices(arr, cap) {
         if (!arr || !arr.length) return [];
@@ -4322,6 +4514,8 @@
         if (cg) cg.classList.toggle("hidden", toolMode !== "guide");
         document.body.classList.toggle("tool-guide", toolMode === "guide");
         document.body.classList.toggle("tool-pen", toolMode === "pen");
+        const back = $("toolViewBackBtn");
+        if (back) back.classList.toggle("hidden", toolMode === "view");
         const tc = $("toolCanvas");
         if (tc) {
           const need = toolMode === "pen" || toolMode === "guide" || (guideShowBBox && !lastFramingError);
@@ -6614,6 +6808,14 @@
         }
         if (e.key === "Escape") {
           if (cancelCustomLineEsc()) { e.preventDefault(); return; }
+          let closed = false;
+          if ($("fvConfirmBar") && !$("fvConfirmBar").classList.contains("hidden")) { hideFvConfirm(); closed = true; }
+          if ($("help") && $("help").classList.contains("show")) { showHelp(false); closed = true; }
+          if ($("guideMenu") && !$("guideMenu").classList.contains("hidden")) { showGuideMenu(false); closed = true; }
+          if ($("imgExportModal") && $("imgExportModal").classList.contains("show")) { showImgExport(false); closed = true; }
+          if (closed) { e.preventDefault(); return; }
+          if (isAnalyzePanelOpen()) { e.preventDefault(); hideAnalyzePanel(); return; }
+          if (toolMode === "guide" || toolMode === "pen") { e.preventDefault(); setToolMode("view"); return; }
           hideFvConfirm();
           showHelp(false);
           showGuideMenu(false);
@@ -6660,9 +6862,7 @@
           markRangeTo();
         } else if (e.key === "a" || e.key === "A") {
           e.preventDefault();
-          showAnalyzePanel();
-          if (azKey()) runAnalysis();
-          else azSetStatus("API 키를 입력한 뒤 「분석 실행」을 눌러 줘.", "warn");
+          toggleAnalyzePanel({ runIfKey: true, warnIfNoKey: true });
         } else if (e.key === "g" || e.key === "G") {
           e.preventDefault();
           setGuideOn(!guideOn);
@@ -8339,10 +8539,14 @@
       syncAzUI();
 
       $("analyzeBtn").addEventListener("click", function () {
-        showAnalyzePanel();
-        if (azKey()) runAnalysis();
-        else azSetStatus("API 키를 입력한 뒤 「분석 실행」을 눌러 줘.", "warn");
+        toggleAnalyzePanel({ runIfKey: true, warnIfNoKey: true });
       });
+      function bindAzClose(id) {
+        const el = $(id);
+        if (el) el.addEventListener("click", function () { hideAnalyzePanel(); });
+      }
+      bindAzClose("azBackBtn");
+      bindAzClose("azCloseBtn");
       $("azRunBtn").addEventListener("click", function () { runAnalysis(); });
       $("azCancelBtn").addEventListener("click", function () { cancelAnalysis(); });
       $("azAutoFallback").addEventListener("change", function () {
@@ -9118,6 +9322,9 @@
         downloadCollagePng: downloadCollagePng,
         paperSizeMm: paperSizeMm,
         showAnalyzePanel: showAnalyzePanel,
+        hideAnalyzePanel: hideAnalyzePanel,
+        toggleAnalyzePanel: toggleAnalyzePanel,
+        isAnalyzePanelOpen: isAnalyzePanelOpen,
         runAnalysis: runAnalysis,
         captureFrameForAnalysis: captureFrameForAnalysis,
         computePalette: function (canvases, k) { return kmeansPalette(canvases, k || 6); },
@@ -9438,6 +9645,7 @@
         if (!b) return;
         setToolMode(b.getAttribute("data-toolmode"));
       });
+      if ($("toolViewBackBtn")) $("toolViewBackBtn").addEventListener("click", function () { setToolMode("view"); });
       if ($("spiralFitSeg")) $("spiralFitSeg").addEventListener("click", function (e) {
         const b = e.target.closest("button");
         if (!b) return;
@@ -11202,9 +11410,15 @@
           const el = $(id);
           if (el) el.addEventListener("click", fn);
         }
-        click("seqBtn", openSeqModal);
+        function toggleSeqModal() {
+          const m = $("seqModal");
+          if (m && m.classList.contains("show")) closeSeqModal();
+          else openSeqModal();
+        }
+        click("seqBtn", toggleSeqModal);
         click("emptySeqBtn", openSeqModal);
         click("seqCloseBtn", closeSeqModal);
+        click("seqCloseTopBtn", closeSeqModal);
         click("seqAddBtn", function () { $("seqFileInput").click(); });
         click("seqAddDirBtn", function () { $("seqDirInput").click(); });
         click("seqSortBtn", seqSortItems);
