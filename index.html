@@ -1231,7 +1231,105 @@
         break-after: auto !important;
         page-break-after: auto !important;
       }
+
     }
+    #seqModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 62;
+      background: rgba(0,0,0,0.78);
+      flex-direction: column;
+    }
+    #seqModal.show { display: flex; }
+    #seqChrome {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      background: var(--panel);
+      padding: 10px 14px 14px;
+    }
+    #seqChrome h2 { margin: 0 0 10px; font-size: 16px; font-weight: 700; }
+    #seqDropHint {
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      padding: 12px 10px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    #seqModal.drag #seqDropHint { border-color: var(--accent); color: var(--accent); }
+    #seqStrip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 6px 0 10px;
+      min-height: 128px;
+      scrollbar-color: #444 var(--panel);
+    }
+    .seq-item {
+      flex: 0 0 118px;
+      background: #15151b;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px;
+      cursor: grab;
+      user-select: none;
+    }
+    .seq-item.sel { box-shadow: inset 0 0 0 1px var(--accent); border-color: var(--accent); }
+    .seq-item.drag-over { border-color: var(--accent); }
+    .seq-item img, .seq-item canvas {
+      width: 100%;
+      height: 66px;
+      object-fit: cover;
+      border-radius: 4px;
+      display: block;
+      background: #000;
+    }
+    .seq-item .seq-name {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .seq-item .seq-meta { font-size: 11px; color: var(--muted); margin: 2px 0 4px; }
+    .seq-item .seq-hold { width: 100%; box-sizing: border-box; }
+    .seq-item-top { display: flex; justify-content: space-between; align-items: center; gap: 4px; margin-bottom: 4px; }
+    .seq-item-top button { padding: 1px 6px; font-size: 11px; }
+    #seqTotals {
+      font-size: 14px;
+      font-weight: 650;
+      color: var(--accent);
+      margin: 6px 0 10px;
+    }
+    #seqProgressWrap { display: none; align-items: center; gap: 8px; margin-top: 8px; }
+    #seqProgressWrap.show { display: flex; }
+    #seqMsg { min-height: 1.2em; margin-top: 8px; font-size: 13px; color: var(--muted); }
+    #seqMsg.ok { color: #8f8; }
+    #seqMsg.err { color: var(--red); }
+    #seqMsg.warn { color: var(--accent); }
+    #seqResult { display: none; margin-top: 10px; gap: 10px; align-items: flex-start; }
+    #seqResult.show { display: flex; flex-wrap: wrap; }
+    #seqResult video { max-width: 360px; max-height: 200px; background: #000; }
+    .seq-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+    .seq-row .label { color: var(--muted); font-size: 12px; }
+    #seqFitW, #seqFitH, #seqFpsCustom, #seqHoldAll, #seqSecAll, #seqFitDur, #seqLoops, #seqFade, #seqCustomW, #seqCustomH {
+      width: 72px;
+    }
+    #seqChrome.dragover #seqDropHint, #seqModal.drag #seqDropHint { border-color: var(--accent); color: var(--accent); }
+    .seq-item.dragging { opacity: 0.6; }
+    .seq-item .seq-sec { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
+    .seq-item .seq-hold { display: block; font-size: 11px; color: var(--muted); }
+    .seq-item input[type="number"] { width: 58px; padding: 1px 4px; font-size: 11px; }
+    .seq-acts { display: flex; gap: 4px; margin-top: 4px; }
+    .seq-acts button { padding: 1px 6px; font-size: 11px; }
+    .seq-empty { color: var(--muted); font-size: 13px; padding: 20px 8px; }
+    #seqPreviewVid { background: #000; }
+    button:disabled { opacity: 0.55; cursor: default; }
   </style>
 </head>
 <body>
@@ -1245,6 +1343,7 @@
         <option value="builtin" hidden>로컬 프레임</option>
       </select>
       <button type="button" id="loadBtn" title="로컬 영상 열기 (mp4, webm, mov)">영상 불러오기</button>
+      <button type="button" id="seqBtn" title="여러 이미지를 이어 붙여 영상으로 만들기">이미지로 영상</button>
       <div class="group" id="fpsGroup" style="display:none">
         <span class="label">FPS</span>
         <select id="fpsSel" title="프레임레이트">
@@ -1267,6 +1366,8 @@
     <button type="button" id="extractCancel">취소</button>
   </div>
   <input type="file" id="fileInput" accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mp4,.webm,.mov,.m4v,.mkv">
+  <input type="file" id="seqFileInput" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif,.png,.jpg,.jpeg,.webp,.gif,.bmp,.avif" multiple hidden>
+  <input type="file" id="seqDirInput" webkitdirectory multiple hidden>
   <audio id="srcAudio" preload="auto" playsinline></audio>
   <video id="videoPlay" playsinline preload="auto"></video>
   <video id="videoSeek" playsinline preload="auto" muted></video>
@@ -1292,7 +1393,8 @@
           <div class="empty-card">
             <p>아직 열린 영상이 없어요.</p>
             <button type="button" id="emptyLoadBtn">영상 불러오기</button>
-            <p class="empty-hint">또는 영상 파일(mp4 / webm / mov)을 여기에 놓으세요.</p>
+            <button type="button" id="emptySeqBtn">이미지로 영상</button>
+            <p class="empty-hint">영상 파일(mp4 / webm / mov)이나 이미지 여러 장을 여기에 놓으세요.</p>
           </div>
         </div>
         <div id="dropMask">영상을 여기에 놓으면 불러와</div>
@@ -1657,7 +1759,7 @@
 
   <div id="help">
     <div class="card">
-      <p>「영상 불러오기」를 누르거나 영상 파일을 화면에 놓으면 됩니다. 같은 폴더에 frames/가 있으면 자동으로 열립니다.</p>
+      <p>「영상 불러오기」를 누르거나 영상 파일을 화면에 놓으면 됩니다. 같은 폴더에 frames/가 있으면 자동으로 열립니다. 「이미지로 영상」으로 여러 장의 이미지를 이어 붙여 영상으로 만들 수 있고, 이미지마다 유지 프레임(또는 초)과 초당 프레임을 정할 수 있습니다.</p>
       <h2>단축키</h2>
       <dl>
         <dt>← / →</dt><dd>이전 / 다음 프레임</dd>
@@ -1849,6 +1951,110 @@
       </div>
     </div>
   </div>
+  <div id="seqModal">
+    <div id="seqChrome">
+      <h2>이미지로 영상 만들기</h2>
+      <div class="seq-row">
+        <button type="button" id="seqAddBtn">이미지 추가</button>
+        <button type="button" id="seqAddDirBtn">폴더 추가</button>
+        <button type="button" id="seqSortBtn">이름순 정렬</button>
+        <button type="button" id="seqRevBtn">순서 뒤집기</button>
+        <button type="button" id="seqClearBtn">목록 비우기</button>
+      </div>
+      <div id="seqDropHint">이미지를 여기에 놓거나 「이미지 추가」를 누르세요. 여러 장을 한꺼번에 고를 수 있습니다.</div>
+      <div id="seqStrip"></div>
+      <div class="seq-row">
+        <span class="label">유지(프레임)</span>
+        <input type="number" id="seqHoldAll" min="1" step="1" value="1" inputmode="numeric" title="선택 또는 전체에 적용할 프레임 수">
+        <span class="label">또는 초</span>
+        <input type="number" id="seqSecAll" min="0.01" step="0.01" value="1" inputmode="decimal" title="프레임 수와 서로 바뀜">
+        <button type="button" id="seqApplySelBtn">선택에 적용</button>
+        <button type="button" id="seqApplyAllBtn">전체에 적용</button>
+      </div>
+      <div class="seq-row">
+        <span class="label">FPS</span>
+        <div class="seg" id="seqFpsSeg">
+          <button type="button" data-seqfps="12">12</button>
+          <button type="button" data-seqfps="24" class="active">24</button>
+          <button type="button" data-seqfps="25">25</button>
+          <button type="button" data-seqfps="30">30</button>
+          <button type="button" data-seqfps="60">60</button>
+          <button type="button" data-seqfps="custom">직접</button>
+        </div>
+        <input type="number" id="seqFpsCustom" class="hidden" min="0.1" step="0.001" value="24" inputmode="decimal" title="직접 입력할 초당 프레임">
+      </div>
+      <div id="seqTotals">0프레임 = 0.00초 @24fps</div>
+      <div class="seq-row">
+        <span class="label">전체 길이를</span>
+        <input type="number" id="seqFitDur" min="0.1" step="0.1" value="2" inputmode="decimal">
+        <span class="label">초에 맞추기</span>
+        <button type="button" id="seqFitBtn">맞추기</button>
+      </div>
+      <div class="seq-row">
+        <span class="label">해상도</span>
+        <div class="seg" id="seqResSeg">
+          <button type="button" data-seqres="first" class="active">첫 이미지</button>
+          <button type="button" data-seqres="1280x720">1280×720</button>
+          <button type="button" data-seqres="1920x1080">1920×1080</button>
+          <button type="button" data-seqres="custom">직접</button>
+        </div>
+        <input type="number" id="seqCustomW" class="hidden" min="16" step="2" value="1280" title="너비">
+        <span id="seqResX" class="hidden">×</span>
+        <input type="number" id="seqCustomH" class="hidden" min="16" step="2" value="720" title="높이">
+      </div>
+      <div class="seq-row">
+        <span class="label">맞춤</span>
+        <div class="seg" id="seqFitSeg">
+          <button type="button" data-seqfit="contain" class="active">안에 맞추기</button>
+          <button type="button" data-seqfit="cover">채워 자르기</button>
+          <button type="button" data-seqfit="stretch">늘이기</button>
+        </div>
+        <span class="label">배경</span>
+        <input type="color" id="seqBg" value="#000000" title="여백 배경색">
+      </div>
+      <div class="seq-row">
+        <span class="label">반복</span>
+        <input type="number" id="seqLoops" min="1" step="1" value="1" inputmode="numeric">
+        <label class="chk"><input type="checkbox" id="seqPingpong"> 왕복(핑퐁)</label>
+        <span class="label">크로스페이드</span>
+        <input type="number" id="seqFade" min="0" step="1" value="0" inputmode="numeric" title="이미지 사이 전환 프레임 수">
+        <span class="label">프레임</span>
+      </div>
+      <div class="seq-row">
+        <span class="label">품질</span>
+        <div class="seg" id="seqQualSeg">
+          <button type="button" data-seqqual="low">낮음</button>
+          <button type="button" data-seqqual="mid" class="active">보통</button>
+          <button type="button" data-seqqual="high">높음</button>
+        </div>
+        <span class="label">형식</span>
+        <div class="seg" id="seqFmtSeg">
+          <button type="button" data-seqfmt="webm" class="active">WebM</button>
+          <button type="button" data-seqfmt="mp4" id="seqFmtMp4Btn">MP4</button>
+        </div>
+      </div>
+      <div class="seq-row">
+        <button type="button" class="primary" id="seqExportBtn">영상 만들기</button>
+        <button type="button" id="seqZipBtn">PNG 시퀀스 ZIP</button>
+        <button type="button" id="seqPreviewBtn">뷰어에서 미리보기</button>
+        <button type="button" id="seqCancelBtn" style="display:none">취소</button>
+        <button type="button" id="seqCloseBtn">닫기</button>
+      </div>
+      <div id="seqProgressWrap">
+        <progress id="seqProgress" max="1000" value="0"></progress>
+        <span id="seqProgressLabel"></span>
+      </div>
+      <div id="seqMsg"></div>
+      <div id="seqResult">
+        <video id="seqPreviewVid" controls playsinline></video>
+        <div>
+          <button type="button" id="seqDownloadBtn">영상 받기</button>
+          <button type="button" id="seqOpenViewerBtn">뷰어에서 열기</button>
+          <div id="seqVidMeta"></div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div id="imgExportModal">
     <div class="card">
       <h2>이미지 저장</h2>
@@ -1997,7 +2203,11 @@
       function pad(n) {
         return String(n).padStart(5, "0");
       }
+      function isStillProject() {
+        return !!(project && (project.type === "builtin" || project.type === "images"));
+      }
       function src(n) {
+        if (project.type === "images") return (project.frameUrls && project.frameUrls[n]) || urlCache.get(n) || "";
         if (project.type === "builtin") return "frames/f" + pad(n) + ".jpg";
         return urlCache.get(n) || "";
       }
@@ -2041,7 +2251,7 @@
 
       function getImage(n) {
         if (n < 1 || n > TOTAL) return null;
-        if (project.type !== "builtin") return null;
+        if (!isStillProject()) return null;
         let img = imgCache.get(n);
         if (img) {
           imgCache.delete(n);
@@ -2142,7 +2352,7 @@
 
       async function getDrawable(n) {
         if (n < 1 || n > TOTAL) return null;
-        if (project.type === "builtin") return whenImg(getImage(n));
+        if (isStillProject()) return whenImg(getImage(n));
         return captureVideoFrame(n);
       }
 
@@ -2157,7 +2367,7 @@
         radius = radius == null ? 24 : radius;
         const lo = Math.max(1, n - radius);
         const hi = Math.min(TOTAL, n + radius);
-        if (project.type === "builtin") {
+        if (isStillProject()) {
           for (let i = lo; i <= hi; i++) getImage(i);
         } else {
           for (let i = lo; i <= hi; i++) {
@@ -2987,7 +3197,7 @@
             const img = document.createElement("img");
             img.alt = "프레임 " + n;
             img.draggable = false;
-            if (project.type === "builtin") {
+            if (isStillProject()) {
               if (selection.length > 400 && Math.abs(n - frame) > 80) img.dataset.src = src(n);
               else img.src = src(n);
             } else {
@@ -3143,7 +3353,16 @@
           opt.textContent = loadedProject.name;
         } else if (opt) opt.remove();
         if (project.type === "builtin") sel.value = "builtin";
-        else if (loadedProject) sel.value = "loaded";
+        else if (project.type === "images") {
+          let io = sel.querySelector('option[value="images"]');
+          if (!io) {
+            io = document.createElement("option");
+            io.value = "images";
+            sel.appendChild(io);
+          }
+          io.textContent = project.name || "이미지 시퀀스";
+          sel.value = "images";
+        } else if (loadedProject) sel.value = "loaded";
         const opts = $("fpsSel").options;
         let matched = false;
         for (let i = 0; i < opts.length; i++) {
@@ -3186,7 +3405,7 @@
           thumbsWrap.classList.remove("show");
           thumbs.innerHTML = "";
         }
-        if (p.type === "builtin") {
+        if (p.type === "builtin" || p.type === "images") {
           try { videoPlay.removeAttribute("src"); videoPlay.load(); } catch (e) {}
           try { videoSeek.removeAttribute("src"); videoSeek.load(); } catch (e) {}
         }
@@ -3257,8 +3476,9 @@
         });
       }
 
-      async function loadVideoFile(file) {
+      async function loadVideoFile(file, hints) {
         if (!file) return;
+        hints = hints || {};
         setError("");
         pause();
         const url = URL.createObjectURL(file);
@@ -3272,9 +3492,9 @@
           return;
         }
         const duration = videoPlay.duration;
-        const fps = await measureFps(videoPlay);
+        let fps = (hints.fps && isFinite(hints.fps) && hints.fps > 0) ? hints.fps : await measureFps(videoPlay);
         try { videoPlay.pause(); videoPlay.currentTime = 0; } catch (e) {}
-        const total = Math.max(1, Math.round(duration * fps));
+        const total = (hints.total && hints.total > 0) ? hints.total : Math.max(1, Math.round(duration * fps));
         if (loadedProject && loadedProject.url) {
           try { URL.revokeObjectURL(loadedProject.url); } catch (e) {}
         }
@@ -3305,6 +3525,14 @@
       }
 
       function setProjectFps(fps) {
+        if (project.type === "images") {
+          FPS = fps;
+          project.fps = fps;
+          project.duration = TOTAL / Math.max(0.1, fps);
+          updateProjectChrome();
+          setFrame(frame, { silent: true });
+          return;
+        }
         if (project.type !== "video") return;
         FPS = fps;
         project.fps = fps;
@@ -3352,7 +3580,7 @@
         urlCache.forEach(function (u, k) {
           if (frames.indexOf(k) < 0) { try { URL.revokeObjectURL(u); } catch (e) {} urlCache.delete(k); }
         });
-        if (project.type === "builtin") return;
+        if (isStillProject()) return;
         for (let i = 0; i < frames.length; i++) {
           const n = frames[i];
           if (urlCache.has(n)) continue;
@@ -6129,6 +6357,18 @@
         get projectType() { return project.type; },
         get projectName() { return project && project.name; },
         get ready() { return bootPromise; },
+        openSeqModal: openSeqModal,
+        closeSeqModal: closeSeqModal,
+        seqAddFiles: seqAddFiles,
+        seqGetState: seqGetState,
+        seqSetFps: seqSetFps,
+        seqSetHold: seqSetHold,
+        seqApplyHoldAll: seqApplyHoldAll,
+        seqFitDuration: seqFitDuration,
+        seqExport: seqExportVideo,
+        seqExportZip: seqExportZip,
+        seqPreviewInViewer: seqPreviewInViewer,
+        seqParseWebMBlocks: parseWebMBlockCount,
         get fps() { return FPS; },
         get selection() { return selection ? selection.slice() : null; },
         get selViewOnly() { return selViewOnly; },
@@ -6337,7 +6577,9 @@
         $("fileInput").value = "";
       });
       $("projectSel").addEventListener("change", function () {
-        if ($("projectSel").value === "builtin") activateProject(builtinProject);
+        const v = $("projectSel").value;
+        if (v === "builtin") activateProject(builtinProject);
+        else if (v === "images" && seqState.project) activateProject(seqState.project);
         else if (loadedProject) activateProject(loadedProject);
       });
       $("fpsSel").addEventListener("change", function () {
@@ -6449,9 +6691,17 @@
       document.addEventListener("drop", function (e) {
         e.preventDefault();
         document.body.classList.remove("dragover");
-        const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-        if (f && /video|mp4|webm|quicktime|matroska/i.test(f.type || f.name)) loadVideoFile(f);
-        else if (f && /\.(mp4|webm|mov|m4v|mkv)$/i.test(f.name)) loadVideoFile(f);
+        if ($("seqModal") && $("seqModal").classList.contains("show")) return;
+        const list = e.dataTransfer && e.dataTransfer.files;
+        if (!list || !list.length) return;
+        const arr = [];
+        for (let i = 0; i < list.length; i++) arr.push(list[i]);
+        const imgs = arr.filter(seqIsImageFile);
+        const vids = arr.filter(function (f) {
+          return /video|mp4|webm|quicktime|matroska/i.test(f.type || f.name) || /\.(mp4|webm|mov|m4v|mkv)$/i.test(f.name);
+        });
+        if (imgs.length && !vids.length) { openSeqModal(); seqAddFiles(imgs); }
+        else if (vids.length) loadVideoFile(vids[0]);
       });
 
       applyMediaVol();
@@ -9695,6 +9945,1421 @@
           hasAudio: audioOk
         };
       }
+
+      var seqState = {
+        items: [],
+        nextId: 1,
+        fps: 24,
+        res: "first",
+        fit: "contain",
+        bg: "#000000",
+        loops: 1,
+        pingpong: false,
+        fade: 0,
+        quality: "mid",
+        format: "webm",
+        defaultHold: 1,
+        abort: false,
+        exporting: false,
+        lastBlob: null,
+        lastUrl: "",
+        lastName: "",
+        lastFrameCount: 0,
+        lastWidth: 0,
+        lastHeight: 0,
+        lastCodec: "",
+        project: null,
+        dragId: null,
+        support: { webcodecs: false, vp8: false, vp9: false, avc1: false }
+      };
+
+      function seqIsImageFile(f) {
+        if (!f) return false;
+        if (f.type && /^image\//i.test(f.type)) return true;
+        return /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(f.name || "");
+      }
+
+      function seqNaturalCmp(a, b) {
+        const an = (a && a.name) || "";
+        const bn = (b && b.name) || "";
+        return an.localeCompare(bn, undefined, { numeric: true, sensitivity: "base" });
+      }
+
+      function seqFormatSec(sec) {
+        if (!isFinite(sec)) return "0.00";
+        const n = Math.round(sec * 100) / 100;
+        return n.toFixed(2);
+      }
+
+      function seqFps() {
+        const v = Number(seqState.fps);
+        return (isFinite(v) && v > 0) ? v : 24;
+      }
+
+      function seqAppearances(n, pingpong) {
+        const c = [];
+        for (let i = 0; i < n; i++) c[i] = 1;
+        if (pingpong && n >= 2) {
+          for (let i = 1; i < n - 1; i++) c[i] += 1;
+        }
+        return c;
+      }
+
+      function seqClipCount() {
+        const n = seqState.items.length;
+        if (!n) return 0;
+        const cycle = seqState.pingpong && n >= 2 ? (2 * n - 2) : n;
+        return cycle * Math.max(1, seqState.loops | 0);
+      }
+
+      function seqHoldFrames() {
+        const items = seqState.items;
+        const n = items.length;
+        if (!n) return 0;
+        const loops = Math.max(1, seqState.loops | 0);
+        const app = seqAppearances(n, seqState.pingpong);
+        let s = 0;
+        for (let i = 0; i < n; i++) s += (app[i] || 1) * Math.max(1, items[i].hold | 0);
+        return s * loops;
+      }
+
+      function seqFadeFrames() {
+        const fade = Math.max(0, seqState.fade | 0);
+        const clips = seqClipCount();
+        return fade * Math.max(0, clips - 1);
+      }
+
+      function seqTotalFrames() {
+        if (!seqState.items.length) return 0;
+        return seqHoldFrames() + seqFadeFrames();
+      }
+
+      function seqDurationSec() {
+        return seqTotalFrames() / seqFps();
+      }
+
+      function seqTotalsText() {
+        const f = seqTotalFrames();
+        const fps = seqFps();
+        return f + "프레임 = " + seqFormatSec(f / fps) + "초 @" + fpsLabel(fps) + "fps";
+      }
+
+      function seqBuildClipList() {
+        const items = seqState.items;
+        const n = items.length;
+        if (!n) return [];
+        let order = [];
+        for (let i = 0; i < n; i++) order.push(i);
+        if (seqState.pingpong && n >= 2) {
+          for (let i = n - 2; i >= 1; i--) order.push(i);
+        }
+        const loops = Math.max(1, seqState.loops | 0);
+        const out = [];
+        for (let L = 0; L < loops; L++) {
+          for (let k = 0; k < order.length; k++) out.push(items[order[k]]);
+        }
+        return out;
+      }
+
+      function seqBuildTimeline() {
+        const clips = seqBuildClipList();
+        const fade = Math.max(0, seqState.fade | 0);
+        const frames = [];
+        for (let i = 0; i < clips.length; i++) {
+          const hold = Math.max(1, clips[i].hold | 0);
+          for (let h = 0; h < hold; h++) frames.push({ a: clips[i], b: null, t: 0 });
+          if (fade && i < clips.length - 1) {
+            const next = clips[i + 1];
+            for (let k = 1; k <= fade; k++) {
+              frames.push({ a: clips[i], b: next, t: k / (fade + 1) });
+            }
+          }
+        }
+        return frames;
+      }
+
+      function seqOutputSize() {
+        const items = seqState.items;
+        let w = 0, h = 0;
+        if (seqState.res === "1280x720") { w = 1280; h = 720; }
+        else if (seqState.res === "1920x1080") { w = 1920; h = 1080; }
+        else if (seqState.res === "custom") {
+          w = Math.max(16, $("seqCustomW").value | 0);
+          h = Math.max(16, $("seqCustomH").value | 0);
+        } else if (items[0]) {
+          w = items[0].w | 0;
+          h = items[0].h | 0;
+        }
+        w = Math.max(16, w & ~1);
+        h = Math.max(16, h & ~1);
+        return { w: w, h: h };
+      }
+
+      function seqDrawFitted(ctx, img, w, h, mode, bg, alpha) {
+        if (alpha == null) alpha = 1;
+        if (alpha >= 1) {
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = bg || "#000";
+          ctx.fillRect(0, 0, w, h);
+        }
+        const iw = img.naturalWidth || img.width || 0;
+        const ih = img.naturalHeight || img.height || 0;
+        if (!iw || !ih) return;
+        let dx, dy, dw, dh;
+        if (mode === "stretch") {
+          dx = 0; dy = 0; dw = w; dh = h;
+        } else {
+          const s = (mode === "cover") ? Math.max(w / iw, h / ih) : Math.min(w / iw, h / ih);
+          dw = iw * s;
+          dh = ih * s;
+          dx = (w - dw) / 2;
+          dy = (h - dh) / 2;
+        }
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(img, dx, dy, dw, dh);
+        ctx.globalAlpha = 1;
+      }
+
+      function seqRenderFrame(ctx, spec, w, h) {
+        const bg = seqState.bg || "#000";
+        const mode = seqState.fit || "contain";
+        seqDrawFitted(ctx, spec.a.img, w, h, mode, bg, 1);
+        if (spec.b && spec.t > 0) seqDrawFitted(ctx, spec.b.img, w, h, mode, bg, spec.t);
+      }
+
+      function seqGetState() {
+        return {
+          itemCount: seqState.items.length,
+          names: seqState.items.map(function (it) { return it.name; }),
+          holds: seqState.items.map(function (it) { return it.hold; }),
+          selected: seqState.items.map(function (it) { return !!it.sel; }),
+          fps: seqFps(),
+          totalFrames: seqTotalFrames(),
+          duration: seqDurationSec(),
+          totalsText: seqTotalsText(),
+          res: seqState.res,
+          fit: seqState.fit,
+          bg: seqState.bg,
+          loops: seqState.loops,
+          pingpong: !!seqState.pingpong,
+          fade: seqState.fade,
+          quality: seqState.quality,
+          format: seqState.format,
+          lastFrameCount: seqState.lastFrameCount,
+          lastWidth: seqState.lastWidth,
+          lastHeight: seqState.lastHeight,
+          lastCodec: seqState.lastCodec,
+          lastType: seqState.lastBlob ? seqState.lastBlob.type : "",
+          lastBytes: seqState.lastBlob ? seqState.lastBlob.size : 0,
+          support: seqState.support,
+          projectType: project && project.type,
+          viewerTotal: TOTAL,
+          viewerFps: FPS
+        };
+      }
+
+      function seqUpdateTotals() {
+        const el = $("seqTotals");
+        if (el) el.textContent = seqTotalsText();
+      }
+
+      function seqSetMsg(text, kind) {
+        const el = $("seqMsg");
+        if (!el) return;
+        el.className = kind ? kind : "";
+        el.id = "seqMsg";
+        if (kind) el.classList.add(kind);
+        el.textContent = text || "";
+      }
+
+      function seqSetProgress(done, total, label) {
+        const wrap = $("seqProgressWrap");
+        const bar = $("seqProgress");
+        const lab = $("seqProgressLabel");
+        if (!wrap) return;
+        if (total == null) {
+          wrap.classList.remove("show");
+          return;
+        }
+        wrap.classList.add("show");
+        if (bar) {
+          bar.max = Math.max(1, total);
+          bar.value = Math.max(0, done);
+        }
+        if (lab) lab.textContent = label || ((done || 0) + " / " + total);
+      }
+
+      function openSeqModal() {
+        const m = $("seqModal");
+        if (m) m.classList.add("show");
+        seqSyncResInputs();
+        seqSyncFpsInputs();
+        seqUpdateTotals();
+        seqRefreshSupport();
+      }
+
+      function closeSeqModal() {
+        if (seqState.exporting) return;
+        const m = $("seqModal");
+        if (m) m.classList.remove("show");
+      }
+
+      function seqRefreshSupport() {
+        const s = seqState.support;
+        s.webcodecs = typeof VideoEncoder === "function";
+        const mp4Btn = $("seqFmtMp4Btn");
+        if (mp4Btn) {
+          mp4Btn.disabled = !s.avc1;
+          mp4Btn.title = s.avc1 ? "H.264 MP4" : "이 브라우저는 MP4 인코딩을 지원하지 않아. WebM으로 만들 수 있어.";
+        }
+        if (!s.avc1 && seqState.format === "mp4") {
+          seqState.format = "webm";
+          seqSyncSeg("seqFmtSeg", "seqfmt", "webm");
+        }
+      }
+
+      async function seqProbeEncoders() {
+        const s = seqState.support;
+        s.webcodecs = typeof VideoEncoder === "function" && typeof VideoFrame === "function";
+        if (!s.webcodecs || !VideoEncoder.isConfigSupported) {
+          seqRefreshSupport();
+          return;
+        }
+        async function probe(codec) {
+          try {
+            const r = await VideoEncoder.isConfigSupported({
+              codec: codec, width: 64, height: 64, bitrate: 200000, framerate: 24
+            });
+            return !!(r && r.supported);
+          } catch (e) { return false; }
+        }
+        s.vp8 = await probe("vp8");
+        s.vp9 = await probe("vp09.00.10.08");
+        s.avc1 = (await probe("avc1.42001E")) || (await probe("avc1.42001F")) || (await probe("avc1.4D001E")) || (await probe("avc1.64001E"));
+        if (s.avc1) {
+          if (await probe("avc1.4D001E")) s.avcCodec = "avc1.4D001E";
+          else if (await probe("avc1.42001E")) s.avcCodec = "avc1.42001E";
+          else if (await probe("avc1.42001F")) s.avcCodec = "avc1.42001F";
+          else s.avcCodec = "avc1.64001E";
+        }
+        seqRefreshSupport();
+      }
+
+      function seqSyncSeg(id, attr, value) {
+        const root = $(id);
+        if (!root) return;
+        const btns = root.querySelectorAll("button");
+        for (let i = 0; i < btns.length; i++) {
+          btns[i].classList.toggle("active", btns[i].getAttribute("data-" + attr) === String(value));
+        }
+      }
+
+      function seqSyncFpsInputs() {
+        const fps = seqFps();
+        const presets = ["12", "24", "25", "30", "60"];
+        const isPre = presets.indexOf(String(fps)) >= 0 || presets.indexOf(String(Math.round(fps))) >= 0 && presets.indexOf(String(fps)) >= 0;
+        const exact = presets.indexOf(String(fps)) >= 0;
+        seqSyncSeg("seqFpsSeg", "seqfps", exact ? String(fps) : "custom");
+        const custom = $("seqFpsCustom");
+        if (custom) {
+          custom.classList.toggle("hidden", exact);
+          if (document.activeElement !== custom) custom.value = String(fps);
+        }
+      }
+
+      function seqSyncResInputs() {
+        seqSyncSeg("seqResSeg", "seqres", seqState.res);
+        const show = seqState.res === "custom";
+        ["seqCustomW", "seqCustomH", "seqResX"].forEach(function (id) {
+          const el = $(id);
+          if (el) el.classList.toggle("hidden", !show);
+        });
+        seqSyncSeg("seqFitSeg", "seqfit", seqState.fit);
+        seqSyncSeg("seqQualSeg", "seqqual", seqState.quality);
+        seqSyncSeg("seqFmtSeg", "seqfmt", seqState.format);
+        const bg = $("seqBg");
+        if (bg && document.activeElement !== bg) bg.value = seqState.bg || "#000000";
+        const loops = $("seqLoops");
+        if (loops && document.activeElement !== loops) loops.value = String(seqState.loops);
+        const fade = $("seqFade");
+        if (fade && document.activeElement !== fade) fade.value = String(seqState.fade);
+        const pp = $("seqPingpong");
+        if (pp) pp.checked = !!seqState.pingpong;
+      }
+
+      function seqSetFps(fps) {
+        fps = Number(fps);
+        if (!isFinite(fps) || fps <= 0) fps = 24;
+        if (fps > 240) fps = 240;
+        seqState.fps = fps;
+        seqSyncFpsInputs();
+        seqRenderStrip();
+        seqUpdateTotals();
+        return fps;
+      }
+
+      function seqSetHold(index, hold) {
+        const it = seqState.items[index];
+        if (!it) return;
+        hold = Math.max(1, Math.round(Number(hold)) || 1);
+        it.hold = hold;
+        seqRenderStrip();
+        seqUpdateTotals();
+      }
+
+      function seqApplyHoldAll(hold, selectedOnly) {
+        hold = Math.max(1, Math.round(Number(hold)) || 1);
+        seqState.defaultHold = hold;
+        const hasSel = seqState.items.some(function (it) { return it.sel; });
+        for (let i = 0; i < seqState.items.length; i++) {
+          if (selectedOnly && hasSel && !seqState.items[i].sel) continue;
+          seqState.items[i].hold = hold;
+        }
+        const holdEl = $("seqHoldAll");
+        if (holdEl && document.activeElement !== holdEl) holdEl.value = String(hold);
+        seqRenderStrip();
+        seqUpdateTotals();
+      }
+
+      function seqFitDuration(seconds) {
+        seconds = Number(seconds);
+        const fps = seqFps();
+        const items = seqState.items;
+        const n = items.length;
+        if (!n) return 0;
+        if (!isFinite(seconds) || seconds <= 0) seconds = n / fps;
+        const loops = Math.max(1, seqState.loops | 0);
+        const app = seqAppearances(n, seqState.pingpong);
+        let unit = 0;
+        for (let i = 0; i < n; i++) unit += (app[i] || 1) * loops;
+        const fadeTotal = seqFadeFrames();
+        let target = Math.max(1, Math.round(seconds * fps));
+        let holdBudget = target - fadeTotal;
+        if (holdBudget < unit) holdBudget = unit;
+        const weights = items.map(function (it) { return Math.max(1, it.hold | 0); });
+        const wsum = weights.reduce(function (a, b) { return a + b; }, 0);
+        const leftover = holdBudget - unit;
+        const raw = [];
+        let acc = 0;
+        for (let i = 0; i < n; i++) {
+          const share = leftover * (weights[i] / wsum);
+          const base = 1;
+          const extra = Math.floor(share + 1e-9);
+          raw.push({ i: i, hold: base + extra, frac: share - extra });
+          acc += (app[i] || 1) * loops * (base + extra);
+        }
+        let remain = holdBudget - acc;
+        raw.sort(function (a, b) { return b.frac - a.frac; });
+        let g = 0;
+        while (remain > 0) {
+          const it = raw[g % n];
+          const inc = (app[it.i] || 1) * loops;
+          if (remain < inc && g >= n) break;
+          if (remain >= inc) {
+            it.hold += 1;
+            remain -= inc;
+          }
+          g++;
+          if (g > n * 8 && remain < inc) break;
+        }
+        for (let i = 0; i < raw.length; i++) items[raw[i].i].hold = raw[i].hold;
+        seqRenderStrip();
+        seqUpdateTotals();
+        return seqTotalFrames();
+      }
+
+      function seqLoadFile(file) {
+        return new Promise(function (resolve, reject) {
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = function () {
+            resolve({
+              id: seqState.nextId++,
+              file: file,
+              url: url,
+              img: img,
+              name: file.name || ("이미지 " + seqState.nextId),
+              w: img.naturalWidth || img.width,
+              h: img.naturalHeight || img.height,
+              hold: Math.max(1, (seqState.defaultHold | 0) || 1),
+              sel: false
+            });
+          };
+          img.onerror = function () {
+            try { URL.revokeObjectURL(url); } catch (e) {}
+            reject(new Error(file.name || "이미지를 열 수 없어."));
+          };
+          img.src = url;
+        });
+      }
+
+      async function seqAddFiles(list) {
+        const arr = [];
+        if (!list) return [];
+        if (list.length != null && !Array.isArray(list)) {
+          for (let i = 0; i < list.length; i++) arr.push(list[i]);
+        } else {
+          for (let i = 0; i < list.length; i++) arr.push(list[i]);
+        }
+        const files = arr.filter(seqIsImageFile);
+        if (!files.length) {
+          seqSetMsg("이미지 파일을 넣어 줘.", "warn");
+          return [];
+        }
+        files.sort(function (a, b) {
+          const ap = a.webkitRelativePath || a.name || "";
+          const bp = b.webkitRelativePath || b.name || "";
+          return ap.localeCompare(bp, undefined, { numeric: true, sensitivity: "base" });
+        });
+        const added = [];
+        const failed = [];
+        for (let i = 0; i < files.length; i++) {
+          try { added.push(await seqLoadFile(files[i])); }
+          catch (e) { failed.push(files[i].name || ""); }
+        }
+        for (let i = 0; i < added.length; i++) seqState.items.push(added[i]);
+        seqRenderStrip();
+        seqUpdateTotals();
+        if (failed.length) seqSetMsg(failed.length + "장은 열지 못했어.", "warn");
+        else seqSetMsg(added.length + "장을 넣었어.", "ok");
+        return added;
+      }
+
+      function seqRevokeItem(it) {
+        const used = seqState.items.some(function (x) { return x !== it && x.url === it.url; });
+        if (!used && it.url) {
+          try { URL.revokeObjectURL(it.url); } catch (e) {}
+        }
+      }
+
+      function seqRemoveAt(index) {
+        const it = seqState.items[index];
+        if (!it) return;
+        seqState.items.splice(index, 1);
+        seqRevokeItem(it);
+        seqRenderStrip();
+        seqUpdateTotals();
+      }
+
+      function seqDuplicateAt(index) {
+        const it = seqState.items[index];
+        if (!it) return;
+        const copy = {
+          id: seqState.nextId++,
+          file: it.file,
+          url: it.url,
+          img: it.img,
+          name: it.name,
+          w: it.w,
+          h: it.h,
+          hold: it.hold,
+          sel: false
+        };
+        seqState.items.splice(index + 1, 0, copy);
+        seqRenderStrip();
+        seqUpdateTotals();
+      }
+
+      function seqClearItems() {
+        const items = seqState.items.splice(0, seqState.items.length);
+        items.forEach(seqRevokeItem);
+        seqRenderStrip();
+        seqUpdateTotals();
+        seqSetMsg("");
+      }
+
+      function seqSortItems() {
+        seqState.items.sort(seqNaturalCmp);
+        seqRenderStrip();
+      }
+
+      function seqReverseItems() {
+        seqState.items.reverse();
+        seqRenderStrip();
+      }
+
+      function seqMoveItem(from, to) {
+        const n = seqState.items.length;
+        if (from < 0 || from >= n) return;
+        if (to < 0) to = 0;
+        if (to >= n) to = n - 1;
+        if (from === to) return;
+        const it = seqState.items.splice(from, 1)[0];
+        seqState.items.splice(to, 0, it);
+        seqRenderStrip();
+      }
+
+      function seqRenderStrip() {
+        const strip = $("seqStrip");
+        if (!strip) return;
+        const fps = seqFps();
+        strip.innerHTML = "";
+        if (!seqState.items.length) {
+          const hint = document.createElement("div");
+          hint.className = "seq-empty";
+          hint.textContent = "아직 이미지가 없어.";
+          strip.appendChild(hint);
+          seqUpdateTotals();
+          return;
+        }
+        seqState.items.forEach(function (it, index) {
+          const el = document.createElement("div");
+          el.className = "seq-item" + (it.sel ? " sel" : "");
+          el.draggable = true;
+          el.dataset.id = String(it.id);
+          el.dataset.index = String(index);
+          const thumb = document.createElement("img");
+          thumb.alt = it.name;
+          thumb.src = it.url;
+          thumb.draggable = false;
+          const cap = document.createElement("div");
+          cap.className = "seq-name";
+          cap.textContent = (index + 1) + ". " + it.name;
+          cap.title = it.name + " (" + it.w + "×" + it.h + ")";
+          const holdRow = document.createElement("label");
+          holdRow.className = "seq-hold";
+          holdRow.appendChild(document.createTextNode("프레임 "));
+          const holdInp = document.createElement("input");
+          holdInp.type = "number";
+          holdInp.min = "1";
+          holdInp.step = "1";
+          holdInp.value = String(it.hold);
+          holdInp.title = "이 이미지를 유지할 프레임 수";
+          holdInp.addEventListener("click", function (e) { e.stopPropagation(); });
+          holdInp.addEventListener("change", function () {
+            it.hold = Math.max(1, Math.round(Number(holdInp.value)) || 1);
+            holdInp.value = String(it.hold);
+            const secInp = el.querySelector(".seq-sec input");
+            if (secInp && document.activeElement !== secInp) secInp.value = seqFormatSec(it.hold / fps);
+            seqUpdateTotals();
+          });
+          holdRow.appendChild(holdInp);
+          const secRow = document.createElement("label");
+          secRow.className = "seq-sec";
+          secRow.appendChild(document.createTextNode("초 "));
+          const secInp = document.createElement("input");
+          secInp.type = "number";
+          secInp.min = "0.01";
+          secInp.step = "0.01";
+          secInp.value = seqFormatSec(it.hold / fps);
+          secInp.title = "이 이미지를 유지할 시간(초). 프레임으로 바꿔 저장해.";
+          secInp.addEventListener("click", function (e) { e.stopPropagation(); });
+          secInp.addEventListener("change", function () {
+            const sec = Number(secInp.value);
+            it.hold = Math.max(1, Math.round((isFinite(sec) ? sec : 0) * fps) || 1);
+            holdInp.value = String(it.hold);
+            secInp.value = seqFormatSec(it.hold / fps);
+            seqUpdateTotals();
+          });
+          secRow.appendChild(secInp);
+          const acts = document.createElement("div");
+          acts.className = "seq-acts";
+          const dup = document.createElement("button");
+          dup.type = "button";
+          dup.textContent = "복제";
+          dup.title = "이 이미지 바로 뒤에 복제";
+          dup.addEventListener("click", function (e) { e.stopPropagation(); seqDuplicateAt(index); });
+          const del = document.createElement("button");
+          del.type = "button";
+          del.textContent = "삭제";
+          del.title = "목록에서 빼기";
+          del.addEventListener("click", function (e) { e.stopPropagation(); seqRemoveAt(index); });
+          acts.appendChild(dup);
+          acts.appendChild(del);
+          el.appendChild(thumb);
+          el.appendChild(cap);
+          el.appendChild(holdRow);
+          el.appendChild(secRow);
+          el.appendChild(acts);
+          el.addEventListener("click", function (e) {
+            if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON")) return;
+            if (e.ctrlKey || e.metaKey) it.sel = !it.sel;
+            else {
+              const was = it.sel;
+              seqState.items.forEach(function (x) { x.sel = false; });
+              it.sel = !was;
+            }
+            seqRenderStrip();
+          });
+          el.addEventListener("dragstart", function (e) {
+            seqState.dragId = it.id;
+            el.classList.add("dragging");
+            try { e.dataTransfer.setData("text/plain", String(it.id)); e.dataTransfer.effectAllowed = "move"; } catch (err) {}
+          });
+          el.addEventListener("dragend", function () {
+            seqState.dragId = null;
+            el.classList.remove("dragging");
+            const els = strip.querySelectorAll(".drag-over");
+            for (let i = 0; i < els.length; i++) els[i].classList.remove("drag-over");
+          });
+          el.addEventListener("dragover", function (e) {
+            e.preventDefault();
+            el.classList.add("drag-over");
+          });
+          el.addEventListener("dragleave", function () { el.classList.remove("drag-over"); });
+          el.addEventListener("drop", function (e) {
+            e.preventDefault();
+            el.classList.remove("drag-over");
+            const from = seqState.items.findIndex(function (x) { return x.id === seqState.dragId; });
+            const to = seqState.items.findIndex(function (x) { return x.id === it.id; });
+            if (from >= 0 && to >= 0) seqMoveItem(from, to);
+          });
+          strip.appendChild(el);
+        });
+        seqUpdateTotals();
+      }
+
+      function seqBitrate(w, h, fps, quality) {
+        const bpp = quality === "high" ? 0.22 : quality === "low" ? 0.05 : 0.11;
+        return Math.max(120000, Math.round(w * h * fps * bpp));
+      }
+
+      function ebmlVint(n, width) {
+        let w = width || 1;
+        while (w < 8 && n >= Math.pow(2, 7 * w) - 1) w++;
+        const bytes = new Uint8Array(w);
+        let v = n;
+        for (let i = w - 1; i >= 0; i--) {
+          bytes[i] = v & 0xff;
+          v = Math.floor(v / 256);
+        }
+        bytes[0] |= (1 << (8 - w));
+        return bytes;
+      }
+
+      function ebmlId(id) {
+        const bytes = [];
+        let v = id;
+        do { bytes.unshift(v & 0xff); v = Math.floor(v / 256); } while (v > 0);
+        return new Uint8Array(bytes);
+      }
+
+      function ebmlU(n) {
+        if (n < 0) n = 0;
+        if (n <= 0xff) return new Uint8Array([n]);
+        if (n <= 0xffff) return new Uint8Array([(n >> 8) & 0xff, n & 0xff]);
+        if (n <= 0xffffff) return new Uint8Array([(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff]);
+        let v = n, arr = [];
+        do { arr.unshift(v & 0xff); v = Math.floor(v / 256); } while (v > 0);
+        return new Uint8Array(arr);
+      }
+
+      function ebmlF64(x) {
+        const buf = new ArrayBuffer(8);
+        new DataView(buf).setFloat64(0, x, false);
+        return new Uint8Array(buf);
+      }
+
+      function ebmlStr(s) {
+        return new TextEncoder().encode(s);
+      }
+
+      function ebmlEl(id, payload) {
+        const idb = typeof id === "number" ? ebmlId(id) : id;
+        const body = payload instanceof Uint8Array ? payload : concatBytes(payload);
+        return concatBytes([idb, ebmlVint(body.length), body]);
+      }
+
+      function concatBytes(parts) {
+        let len = 0;
+        const arr = [];
+        for (let i = 0; i < parts.length; i++) {
+          const p = parts[i];
+          if (!p) continue;
+          const u = p instanceof Uint8Array ? p : (typeof p === "number" ? ebmlEl(p, new Uint8Array()) : p);
+          arr.push(u);
+          len += u.length;
+        }
+        const out = new Uint8Array(len);
+        let o = 0;
+        for (let i = 0; i < arr.length; i++) { out.set(arr[i], o); o += arr[i].length; }
+        return out;
+      }
+
+      function muxWebM(frames, opts) {
+        const scale = 1000;
+        const fps = opts.fps;
+        const durationTicks = frames.length * (1000000 / fps);
+        const defaultDurNs = Math.round(1000000000 / fps);
+        const codecId = opts.codecId || "V_VP8";
+        const header = concatBytes([
+          ebmlEl(0x1A45DFA3, concatBytes([
+            ebmlEl(0x4286, ebmlU(1)),
+            ebmlEl(0x42F7, ebmlU(1)),
+            ebmlEl(0x42F2, ebmlU(4)),
+            ebmlEl(0x42F3, ebmlU(8)),
+            ebmlEl(0x4282, ebmlStr("webm")),
+            ebmlEl(0x4287, ebmlU(2)),
+            ebmlEl(0x4285, ebmlU(2))
+          ]))
+        ]);
+        const info = ebmlEl(0x1549A966, concatBytes([
+          ebmlEl(0x2AD7B1, ebmlU(scale)),
+          ebmlEl(0x4489, ebmlF64(durationTicks)),
+          ebmlEl(0x4D80, ebmlStr("Frame Viewer")),
+          ebmlEl(0x5741, ebmlStr("Frame Viewer"))
+        ]));
+        const video = ebmlEl(0xE0, concatBytes([
+          ebmlEl(0x9A, ebmlU(2)),
+          ebmlEl(0xB0, ebmlU(opts.width)),
+          ebmlEl(0xBA, ebmlU(opts.height))
+        ]));
+        const track = ebmlEl(0xAE, concatBytes([
+          ebmlEl(0xD7, ebmlU(1)),
+          ebmlEl(0x73C5, ebmlU(1)),
+          ebmlEl(0x83, ebmlU(1)),
+          ebmlEl(0x86, ebmlStr(codecId)),
+          ebmlEl(0x23E383, ebmlU(defaultDurNs)),
+          video
+        ]));
+        const tracks = ebmlEl(0x1654AE6B, track);
+        const clusters = [];
+        for (let i = 0; i < frames.length; i++) {
+          const tc = Math.round(i * (1000000 / fps));
+          const data = frames[i].data;
+          const flags = frames[i].key ? 0x80 : 0x00;
+          const block = new Uint8Array(4 + data.length);
+          block[0] = 0x81;
+          block[1] = 0;
+          block[2] = 0;
+          block[3] = flags;
+          block.set(data, 4);
+          const cluster = ebmlEl(0x1F43B675, concatBytes([
+            ebmlEl(0xE7, ebmlU(tc)),
+            ebmlEl(0xA3, block)
+          ]));
+          clusters.push(cluster);
+        }
+        const segment = ebmlEl(0x18538067, concatBytes([info, tracks].concat(clusters)));
+        return concatBytes([header, segment]);
+      }
+
+      function parseWebMBlockCount(buf) {
+        const u8 = buf instanceof Uint8Array ? buf : (buf instanceof ArrayBuffer ? new Uint8Array(buf) : new Uint8Array(buf || 0));
+        let count = 0;
+        function readId(p) {
+          if (p >= u8.length) return null;
+          const b = u8[p];
+          let w = 1;
+          while (w <= 4 && (b & (0x80 >> (w - 1))) === 0) w++;
+          if (w > 4 || p + w > u8.length) return null;
+          let id = 0;
+          for (let i = 0; i < w; i++) id = (id << 8) | u8[p + i];
+          return { id: id, w: w };
+        }
+        function readVint(p) {
+          if (p >= u8.length) return null;
+          const b = u8[p];
+          let w = 1;
+          while (w <= 8 && (b & (0x80 >> (w - 1))) === 0) w++;
+          if (w > 8 || p + w > u8.length) return null;
+          let val = b & ((1 << (8 - w)) - 1);
+          for (let i = 1; i < w; i++) val = val * 256 + u8[p + i];
+          const unknown = val === (Math.pow(2, 7 * w) - 1);
+          return { val: val, w: w, unknown: unknown };
+        }
+        function walk(start, end) {
+          let p = start;
+          while (p < end) {
+            const id = readId(p);
+            if (!id) break;
+            p += id.w;
+            const sz = readVint(p);
+            if (!sz) break;
+            p += sz.w;
+            const payloadEnd = sz.unknown ? end : Math.min(end, p + sz.val);
+            if (id.id === 0xA3 || id.id === 0xA1) count++;
+            else if (id.id === 0x1A45DFA3 || id.id === 0x18538067 || id.id === 0x1549A966 || id.id === 0x1654AE6B || id.id === 0xAE || id.id === 0xE0 || id.id === 0x1F43B675) {
+              walk(p, payloadEnd);
+            }
+            p = payloadEnd;
+          }
+        }
+        walk(0, u8.length);
+        return count;
+      }
+
+      function u32(n) {
+        return new Uint8Array([(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff]);
+      }
+      function u16(n) {
+        return new Uint8Array([(n >>> 8) & 0xff, n & 0xff]);
+      }
+      function u8b(n) { return new Uint8Array([n & 0xff]); }
+      function fourcc(s) {
+        return new TextEncoder().encode(s);
+      }
+      function mp4Box(type, parts) {
+        const body = concatBytes([fourcc(type)].concat(parts || []));
+        const out = new Uint8Array(4 + body.length);
+        out.set(u32(out.length), 0);
+        out.set(body, 4);
+        return out;
+      }
+      function mp4FullBox(type, ver, flags, parts) {
+        return mp4Box(type, [new Uint8Array([ver, (flags >> 16) & 0xff, (flags >> 8) & 0xff, flags & 0xff])].concat(parts || []));
+      }
+
+      function muxMp4(frames, opts) {
+        const fps = opts.fps;
+        const timescale = Math.max(1, Math.round(fps * 1000));
+        const delta = 1000;
+        const duration = frames.length * delta;
+        const width = opts.width;
+        const height = opts.height;
+        const avcC = opts.avcC;
+        function zeros(n) { return new Uint8Array(n); }
+        const ftyp = mp4Box("ftyp", [fourcc("isom"), u32(0x200), fourcc("isom"), fourcc("iso2"), fourcc("avc1"), fourcc("mp41")]);
+        const mvhd = mp4FullBox("mvhd", 0, 0, [
+          u32(0), u32(0), u32(timescale), u32(duration),
+          u32(0x00010000), u16(0x0100), u16(0), u32(0), u32(0),
+          u32(0x00010000), zeros(8), u32(0x00010000), zeros(8), u32(0x40000000),
+          zeros(24), u32(2)
+        ]);
+        const tkhd = mp4FullBox("tkhd", 0, 0x7, [
+          u32(0), u32(0), u32(1), u32(0), u32(duration), u32(0), u32(0),
+          u16(0), u16(0), u16(0), u16(0),
+          u32(0x00010000), zeros(8), u32(0x00010000), zeros(8), u32(0x40000000),
+          u32(width << 16), u32(height << 16)
+        ]);
+        const mdhd = mp4FullBox("mdhd", 0, 0, [
+          u32(0), u32(0), u32(timescale), u32(duration), u16(0x55c4), u16(0)
+        ]);
+        const hdlr = mp4FullBox("hdlr", 0, 0, [
+          u32(0), fourcc("vide"), u32(0), u32(0), u32(0), ebmlStr("VideoHandler\u0000")
+        ]);
+        const vmhd = mp4FullBox("vmhd", 0, 1, [u16(0), u16(0), u16(0), u16(0)]);
+        const dref = mp4FullBox("dref", 0, 0, [u32(1), mp4FullBox("url ", 0, 1, [])]);
+        const dinf = mp4Box("dinf", [dref]);
+        const avcCBox = mp4Box("avcC", [avcC]);
+        const avc1 = mp4Box("avc1", [
+          zeros(6), u16(1), u16(0), u16(0), u32(0), u32(0), u32(0),
+          u16(width), u16(height), u32(0x00480000), u32(0x00480000), u32(0), u16(1),
+          u8b(0), zeros(31), u16(0x0018), u16(0xffff), avcCBox
+        ]);
+        const stsd = mp4FullBox("stsd", 0, 0, [u32(1), avc1]);
+        const stts = mp4FullBox("stts", 0, 0, [u32(1), u32(frames.length), u32(delta)]);
+        const keys = [];
+        for (let i = 0; i < frames.length; i++) if (frames[i].key) keys.push(i + 1);
+        if (!keys.length) keys.push(1);
+        const stssParts = [u32(keys.length)];
+        for (let i = 0; i < keys.length; i++) stssParts.push(u32(keys[i]));
+        const stss = mp4FullBox("stss", 0, 0, stssParts);
+        const stsc = mp4FullBox("stsc", 0, 0, [u32(1), u32(1), u32(frames.length), u32(1)]);
+        const stszParts = [u32(0), u32(frames.length)];
+        for (let i = 0; i < frames.length; i++) stszParts.push(u32(frames[i].data.length));
+        const stsz = mp4FullBox("stsz", 0, 0, stszParts);
+        const stco = mp4FullBox("stco", 0, 0, [u32(1), u32(0)]);
+        const stbl = mp4Box("stbl", [stsd, stts, stss, stsc, stsz, stco]);
+        const minf = mp4Box("minf", [vmhd, dinf, stbl]);
+        const mdia = mp4Box("mdia", [mdhd, hdlr, minf]);
+        const trak = mp4Box("trak", [tkhd, mdia]);
+        const moov = mp4Box("moov", [mvhd, trak]);
+        const mdatBody = concatBytes(frames.map(function (f) { return f.data; }));
+        const mdat = new Uint8Array(8 + mdatBody.length);
+        mdat.set(u32(mdat.length), 0);
+        mdat.set(fourcc("mdat"), 4);
+        mdat.set(mdatBody, 8);
+        const file = concatBytes([ftyp, moov, mdat]);
+        const offset = ftyp.length + moov.length + 8;
+        const stcoOff = (function findStco() {
+          const sig = fourcc("stco");
+          for (let i = 0; i < file.length - 16; i++) {
+            if (file[i] === sig[0] && file[i + 1] === sig[1] && file[i + 2] === sig[2] && file[i + 3] === sig[3]) {
+              return i + 12;
+            }
+          }
+          return -1;
+        })();
+        if (stcoOff >= 0) file.set(u32(offset), stcoOff);
+        return file;
+      }
+
+      function seqPickCodec(format) {
+        const s = seqState.support;
+        if (format === "mp4") {
+          if (!s.avc1) throw new Error("이 브라우저는 MP4 인코딩을 지원하지 않아.");
+          return { codec: s.avcCodec || "avc1.42001E", container: "mp4", codecId: "V_AVC" };
+        }
+        if (s.vp8) return { codec: "vp8", container: "webm", codecId: "V_VP8" };
+        if (s.vp9) return { codec: "vp09.00.10.08", container: "webm", codecId: "V_VP9" };
+        throw new Error("이 브라우저는 프레임 단위 영상 인코딩(WebCodecs)을 지원하지 않아. PNG 시퀀스 ZIP으로 받을 수 있어.");
+      }
+
+      function seqWaitEncoder(encoder) {
+        if (encoder.encodeQueueSize < 8) return Promise.resolve();
+        return new Promise(function (resolve) {
+          const prev = encoder.ondequeue;
+          encoder.ondequeue = function () {
+            if (prev) prev();
+            if (encoder.encodeQueueSize < 4) {
+              encoder.ondequeue = prev;
+              resolve();
+            }
+          };
+        });
+      }
+
+      async function seqEncodeFrames(timeline, size, format) {
+        const w = size.w, h = size.h;
+        const fps = seqFps();
+        const picked = seqPickCodec(format);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+        const chunks = [];
+        let avcC = null;
+        let error = null;
+        const encoder = new VideoEncoder({
+          output: function (chunk, meta) {
+            const data = new Uint8Array(chunk.byteLength);
+            chunk.copyTo(data);
+            chunks.push({ data: data, key: chunk.type === "key", ts: chunk.timestamp });
+            if (meta && meta.decoderConfig && meta.decoderConfig.description && !avcC) {
+              avcC = new Uint8Array(meta.decoderConfig.description);
+            }
+          },
+          error: function (e) { error = e; }
+        });
+        const bitrate = seqBitrate(w, h, fps, seqState.quality);
+        const encCfg = {
+          codec: picked.codec,
+          width: w,
+          height: h,
+          bitrate: bitrate,
+          framerate: fps,
+          latencyMode: "quality"
+        };
+        if (picked.container === "mp4") encCfg.avc = { format: "avc" };
+        try { encoder.configure(encCfg); }
+        catch (cfgErr) {
+          delete encCfg.latencyMode;
+          encoder.configure(encCfg);
+        }
+        const durUs = Math.max(1, Math.round(1000000 / fps));
+        for (let i = 0; i < timeline.length; i++) {
+          if (seqState.abort) break;
+          seqRenderFrame(ctx, timeline[i], w, h);
+          const vf = new VideoFrame(canvas, { timestamp: i * durUs, duration: durUs });
+          await seqWaitEncoder(encoder);
+          encoder.encode(vf, { keyFrame: true });
+          vf.close();
+          if (i % 3 === 0 || i === timeline.length - 1) {
+            seqSetProgress(i + 1, timeline.length, "인코딩 " + (i + 1) + " / " + timeline.length);
+            await new Promise(function (r) { setTimeout(r, 0); });
+          }
+        }
+        await encoder.flush();
+        encoder.close();
+        if (seqState.abort) throw new Error("cancelled");
+        if (error) throw error;
+        if (chunks.length !== timeline.length) {
+          throw new Error("인코딩된 프레임 수가 맞지 않아. (" + chunks.length + " / " + timeline.length + ")");
+        }
+        let bytes, mime, name, codecName = picked.codec;
+        if (picked.container === "mp4") {
+          if (!avcC) throw new Error("MP4에 필요한 코덱 정보를 받지 못했어.");
+          bytes = muxMp4(chunks, { fps: fps, width: w, height: h, avcC: avcC });
+          mime = "video/mp4";
+          name = "image-sequence.mp4";
+        } else {
+          bytes = muxWebM(chunks, { fps: fps, width: w, height: h, codecId: picked.codecId });
+          mime = "video/webm";
+          name = "image-sequence.webm";
+        }
+        const blob = new Blob([bytes], { type: mime });
+        return {
+          blob: blob,
+          bytes: bytes,
+          frameCount: chunks.length,
+          width: w,
+          height: h,
+          fps: fps,
+          duration: chunks.length / fps,
+          mime: mime,
+          name: name,
+          codec: codecName
+        };
+      }
+
+      async function seqExportVideo() {
+        if (seqState.exporting) return null;
+        if (!seqState.items.length) {
+          seqSetMsg("먼저 이미지를 넣어 줘.", "warn");
+          return null;
+        }
+        const timeline = seqBuildTimeline();
+        if (!timeline.length) {
+          seqSetMsg("만들 프레임이 없어.", "warn");
+          return null;
+        }
+        const size = seqOutputSize();
+        seqState.exporting = true;
+        seqState.abort = false;
+        $("seqExportBtn").disabled = true;
+        $("seqZipBtn").disabled = true;
+        $("seqCancelBtn").style.display = "";
+        seqSetMsg("영상을 만드는 중…");
+        seqSetProgress(0, timeline.length, "준비 중");
+        try {
+          await seqProbeEncoders();
+          const result = await seqEncodeFrames(timeline, size, seqState.format);
+          if (seqState.lastUrl) {
+            try { URL.revokeObjectURL(seqState.lastUrl); } catch (e) {}
+          }
+          seqState.lastBlob = result.blob;
+          seqState.lastUrl = URL.createObjectURL(result.blob);
+          seqState.lastName = result.name;
+          seqState.lastFrameCount = result.frameCount;
+          seqState.lastWidth = result.width;
+          seqState.lastHeight = result.height;
+          seqState.lastCodec = result.codec;
+          const vid = $("seqPreviewVid");
+          const box = $("seqResult");
+          if (vid) {
+            vid.src = seqState.lastUrl;
+            vid.controls = true;
+          }
+          if (box) box.classList.add("show");
+          const meta = $("seqVidMeta");
+          if (meta) {
+            meta.textContent = result.frameCount + "프레임 = " + seqFormatSec(result.duration) + "초 @" + fpsLabel(result.fps) + "fps · " +
+              result.width + "×" + result.height + " · " + (result.mime === "video/mp4" ? "MP4" : "WebM") +
+              " · " + Math.max(1, Math.round(result.blob.size / 1024)) + "KB";
+          }
+          seqSetMsg("영상을 만들었어. 「영상 받기」나 「뷰어에서 열기」를 누르면 돼.", "ok");
+          return result;
+        } catch (e) {
+          if (e && e.message === "cancelled") {
+            seqSetMsg("취소했어.", "warn");
+            return { cancelled: true };
+          }
+          seqSetMsg((e && e.message) ? e.message : "영상을 만들지 못했어.", "err");
+          throw e;
+        } finally {
+          seqState.exporting = false;
+          $("seqExportBtn").disabled = false;
+          $("seqZipBtn").disabled = false;
+          $("seqCancelBtn").style.display = "none";
+          seqSetProgress(null);
+        }
+      }
+
+      async function seqExportZip() {
+        if (seqState.exporting) return null;
+        if (!seqState.items.length) {
+          seqSetMsg("먼저 이미지를 넣어 줘.", "warn");
+          return null;
+        }
+        const timeline = seqBuildTimeline();
+        const size = seqOutputSize();
+        const w = size.w, h = size.h;
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d", { alpha: false });
+        seqState.exporting = true;
+        seqState.abort = false;
+        $("seqExportBtn").disabled = true;
+        $("seqZipBtn").disabled = true;
+        $("seqCancelBtn").style.display = "";
+        seqSetMsg("PNG 시퀀스를 만드는 중…");
+        const files = [];
+        try {
+          for (let i = 0; i < timeline.length; i++) {
+            if (seqState.abort) throw new Error("cancelled");
+            seqRenderFrame(ctx, timeline[i], w, h);
+            const blob = await new Promise(function (resolve) { canvas.toBlob(resolve, "image/png"); });
+            const data = new Uint8Array(await blob.arrayBuffer());
+            const name = "frames/f" + String(i + 1).padStart(5, "0") + ".png";
+            files.push({ name: name, data: data });
+            if (i % 2 === 0 || i === timeline.length - 1) {
+              seqSetProgress(i + 1, timeline.length, "PNG " + (i + 1) + " / " + timeline.length);
+              await new Promise(function (r) { setTimeout(r, 0); });
+            }
+          }
+          const zipBlob = makeStoreZip(files);
+          const blob = zipBlob instanceof Blob ? zipBlob : new Blob([zipBlob], { type: "application/zip" });
+          const a = document.createElement("a");
+          const url = URL.createObjectURL(blob);
+          a.href = url;
+          a.download = "image-sequence-frames.zip";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 4000);
+          seqSetMsg("PNG " + files.length + "장을 ZIP으로 받았어.", "ok");
+          return { blob: blob, frameCount: files.length };
+        } catch (e) {
+          if (e && e.message === "cancelled") {
+            seqSetMsg("취소했어.", "warn");
+            return { cancelled: true };
+          }
+          seqSetMsg((e && e.message) ? e.message : "ZIP을 만들지 못했어.", "err");
+          throw e;
+        } finally {
+          seqState.exporting = false;
+          $("seqExportBtn").disabled = false;
+          $("seqZipBtn").disabled = false;
+          $("seqCancelBtn").style.display = "none";
+          seqSetProgress(null);
+        }
+      }
+
+      function seqMakeImageProject() {
+        const timeline = seqBuildTimeline();
+        if (!timeline.length) return null;
+        const size = seqOutputSize();
+        const fps = seqFps();
+        const urls = {};
+        const fadeNeeded = timeline.some(function (sp) { return sp.b && sp.t > 0; });
+        const mixedSize = timeline.some(function (sp) { return sp.a.w !== size.w || sp.a.h !== size.h; });
+        let canvas, ctx;
+        if (fadeNeeded || mixedSize || seqState.fit !== "contain") {
+          canvas = document.createElement("canvas");
+          canvas.width = size.w;
+          canvas.height = size.h;
+          ctx = canvas.getContext("2d", { alpha: false });
+        }
+        function bakedUrl(spec) {
+          if (ctx && (spec.b || spec.a.w !== size.w || spec.a.h !== size.h || seqState.fit !== "contain")) {
+            seqRenderFrame(ctx, spec, size.w, size.h);
+            return canvas.toDataURL("image/jpeg", 0.92);
+          }
+          return spec.a.url;
+        }
+        for (let i = 0; i < timeline.length; i++) urls[i + 1] = bakedUrl(timeline[i]);
+        return {
+          id: "images",
+          type: "images",
+          name: "이미지 시퀀스 (" + timeline.length + "프레임)",
+          title: "",
+          total: timeline.length,
+          fps: fps,
+          duration: timeline.length / fps,
+          frameUrls: urls,
+          selection: null,
+          selText: "",
+          selViewOnly: false,
+          hasAudio: false,
+          frame: 1
+        };
+      }
+
+      function seqPreviewInViewer() {
+        const p = seqMakeImageProject();
+        if (!p) {
+          seqSetMsg("먼저 이미지를 넣어 줘.", "warn");
+          return null;
+        }
+        seqState.project = p;
+        activateProject(p);
+        closeSeqModal();
+        return p;
+      }
+
+      function seqOpenLastInViewer() {
+        if (!seqState.lastBlob) {
+          seqSetMsg("먼저 영상을 만들어 줘.", "warn");
+          return;
+        }
+        const file = new File([seqState.lastBlob], seqState.lastName || "sequence.webm", { type: seqState.lastBlob.type });
+        closeSeqModal();
+        loadVideoFile(file, { fps: seqFps(), total: seqState.lastFrameCount });
+      }
+
+      function seqDownloadLast() {
+        if (!seqState.lastBlob) return;
+        const a = document.createElement("a");
+        a.href = seqState.lastUrl || URL.createObjectURL(seqState.lastBlob);
+        a.download = seqState.lastName || "image-sequence.webm";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+
+      function seqReadControls() {
+        const loops = $("seqLoops");
+        if (loops) seqState.loops = Math.max(1, loops.value | 0);
+        const fade = $("seqFade");
+        if (fade) seqState.fade = Math.max(0, fade.value | 0);
+        const pp = $("seqPingpong");
+        if (pp) seqState.pingpong = !!pp.checked;
+        const bg = $("seqBg");
+        if (bg) seqState.bg = bg.value || "#000000";
+        const hold = $("seqHoldAll");
+        if (hold && hold.value) seqState.defaultHold = Math.max(1, Math.round(Number(hold.value)) || 1);
+        const cw = $("seqCustomW");
+        const ch = $("seqCustomH");
+        if (cw) cw.value = String(Math.max(16, (cw.value | 0) & ~1));
+        if (ch) ch.value = String(Math.max(16, (ch.value | 0) & ~1));
+        seqUpdateTotals();
+      }
+
+      function seqBindUi() {
+        function click(id, fn) {
+          const el = $(id);
+          if (el) el.addEventListener("click", fn);
+        }
+        click("seqBtn", openSeqModal);
+        click("emptySeqBtn", openSeqModal);
+        click("seqCloseBtn", closeSeqModal);
+        click("seqAddBtn", function () { $("seqFileInput").click(); });
+        click("seqAddDirBtn", function () { $("seqDirInput").click(); });
+        click("seqSortBtn", seqSortItems);
+        click("seqRevBtn", seqReverseItems);
+        click("seqClearBtn", seqClearItems);
+        click("seqApplyAllBtn", function () {
+          const v = Number($("seqHoldAll").value);
+          seqApplyHoldAll(v, false);
+        });
+        click("seqApplySelBtn", function () {
+          const v = Number($("seqHoldAll").value);
+          seqApplyHoldAll(v, true);
+        });
+        click("seqFitBtn", function () {
+          seqReadControls();
+          const sec = Number($("seqFitDur").value);
+          const total = seqFitDuration(sec);
+          seqSetMsg("전체 " + total + "프레임 = " + seqFormatSec(total / seqFps()) + "초로 맞췄어.", "ok");
+        });
+        click("seqExportBtn", function () {
+          seqReadControls();
+          seqExportVideo().catch(function () {});
+        });
+        click("seqZipBtn", function () {
+          seqReadControls();
+          seqExportZip().catch(function () {});
+        });
+        click("seqPreviewBtn", function () {
+          seqReadControls();
+          seqPreviewInViewer();
+        });
+        click("seqCancelBtn", function () { seqState.abort = true; });
+        click("seqDownloadBtn", seqDownloadLast);
+        click("seqOpenViewerBtn", function () {
+          if (seqState.exporting) return;
+          seqState.exporting = false;
+          seqOpenLastInViewer();
+        });
+        const fileInp = $("seqFileInput");
+        if (fileInp) fileInp.addEventListener("change", function () {
+          const files = fileInp.files;
+          if (files && files.length) seqAddFiles(files);
+          fileInp.value = "";
+        });
+        const dirInp = $("seqDirInput");
+        if (dirInp) dirInp.addEventListener("change", function () {
+          const files = dirInp.files;
+          if (files && files.length) seqAddFiles(files);
+          dirInp.value = "";
+        });
+        $("seqModal").addEventListener("click", function (e) {
+          if (e.target === $("seqModal") && !seqState.exporting) closeSeqModal();
+        });
+        const chrome = $("seqChrome");
+        ["dragenter", "dragover"].forEach(function (ev) {
+          chrome.addEventListener(ev, function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $("seqModal").classList.add("drag"); chrome.classList.add("dragover");
+          });
+        });
+        chrome.addEventListener("dragleave", function (e) {
+          if (!chrome.contains(e.relatedTarget)) { chrome.classList.remove("dragover"); $("seqModal").classList.remove("drag"); }
+        });
+        chrome.addEventListener("drop", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          chrome.classList.remove("dragover"); $("seqModal").classList.remove("drag");
+          const list = e.dataTransfer && e.dataTransfer.files;
+          if (list && list.length) seqAddFiles(list);
+        });
+        $("seqFpsSeg").addEventListener("click", function (e) {
+          const btn = e.target.closest("button");
+          if (!btn) return;
+          const v = btn.getAttribute("data-seqfps");
+          if (v === "custom") {
+            $("seqFpsCustom").classList.remove("hidden");
+            $("seqFpsCustom").focus();
+            seqSyncSeg("seqFpsSeg", "seqfps", "custom");
+          } else if (v) seqSetFps(Number(v));
+        });
+        $("seqFpsCustom").addEventListener("change", function () {
+          seqSetFps(Number($("seqFpsCustom").value));
+        });
+        $("seqResSeg").addEventListener("click", function (e) {
+          const btn = e.target.closest("button");
+          if (!btn) return;
+          const v = btn.getAttribute("data-seqres");
+          if (!v) return;
+          seqState.res = v;
+          seqSyncResInputs();
+        });
+        $("seqFitSeg").addEventListener("click", function (e) {
+          const btn = e.target.closest("button");
+          if (!btn) return;
+          const v = btn.getAttribute("data-seqfit");
+          if (!v) return;
+          seqState.fit = v;
+          seqSyncSeg("seqFitSeg", "seqfit", v);
+        });
+        $("seqQualSeg").addEventListener("click", function (e) {
+          const btn = e.target.closest("button");
+          if (!btn) return;
+          const v = btn.getAttribute("data-seqqual");
+          if (!v) return;
+          seqState.quality = v;
+          seqSyncSeg("seqQualSeg", "seqqual", v);
+        });
+        $("seqFmtSeg").addEventListener("click", function (e) {
+          const btn = e.target.closest("button");
+          if (!btn) return;
+          const v = btn.getAttribute("data-seqfmt");
+          if (!v) return;
+          if (v === "mp4" && !seqState.support.avc1) {
+            seqSetMsg("이 브라우저는 MP4 인코딩을 지원하지 않아. WebM으로 만들 수 있어.", "warn");
+            return;
+          }
+          seqState.format = v;
+          seqSyncSeg("seqFmtSeg", "seqfmt", v);
+        });
+        ["seqLoops", "seqFade", "seqPingpong", "seqBg", "seqCustomW", "seqCustomH"].forEach(function (id) {
+          const el = $(id);
+          if (!el) return;
+          el.addEventListener("change", seqReadControls);
+          el.addEventListener("input", function () {
+            if (id === "seqPingpong" || id === "seqLoops" || id === "seqFade") seqReadControls();
+          });
+        });
+        $("seqHoldAll").addEventListener("change", function () {
+          const hold = Math.max(1, Math.round(Number($("seqHoldAll").value)) || 1);
+          seqState.defaultHold = hold;
+          $("seqHoldAll").value = String(hold);
+          $("seqSecAll").value = seqFormatSec(hold / seqFps());
+        });
+        $("seqSecAll").addEventListener("change", function () {
+          const sec = Number($("seqSecAll").value);
+          const hold = Math.max(1, Math.round((isFinite(sec) ? sec : 0) * seqFps()) || 1);
+          seqState.defaultHold = hold;
+          $("seqHoldAll").value = String(hold);
+          $("seqSecAll").value = seqFormatSec(hold / seqFps());
+        });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && $("seqModal") && $("seqModal").classList.contains("show") && !seqState.exporting) {
+            if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+            closeSeqModal();
+          }
+        });
+        seqSyncResInputs();
+        seqSyncFpsInputs();
+        seqUpdateTotals();
+        seqProbeEncoders();
+      }
+
+      seqBindUi();
+
       async function boot() {
         setEmptyMode(true);
         updateProjectChrome();
